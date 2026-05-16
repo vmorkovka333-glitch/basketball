@@ -314,7 +314,7 @@ const FIRE_RATE = 5; // shots per second
 const BULLET_SPEED = 22;
 const BULLET_RANGE = 44;
 const PLAYER_SPEED = 6;
-const SPECIAL_COOLDOWN = 8;
+const SPECIAL_COOLDOWN = 3;
 const SPECIAL_RADIUS = 12;
 const SPECIAL_DAMAGE = 60;
 const MAX_PARTICLES = matchMedia('(pointer: coarse)').matches ? 250 : 320;
@@ -1477,9 +1477,9 @@ function startWave(waveNum) {
       );
       scene.add(mesh);
 
-      const baseHp = isDemodog ? 40 : 100;
-      const hp = isBoss ? baseHp * 8 : baseHp + (waveNum - 1) * 15;
-      const speed = Math.min(isDemodog ? 9 : 7 + waveNum * 0.2, 12);
+      const baseHp = isDemodog ? 90 : 220;
+      const hp = isBoss ? baseHp * 8 : baseHp + (waveNum - 1) * 25;
+      const speed = PLAYER_SPEED;
 
       // Health bar
       const hbGeo = new THREE.PlaneGeometry(0.8, 0.08);
@@ -1887,7 +1887,7 @@ function updateBullets(dt) {
     for (const enemy of enemies) {
       if (!enemy.alive) continue;
       if (b.mesh.position.distanceTo(enemy.mesh.position) < (enemy.isBoss ? 1.7 : 1.05)) {
-        const dmg = player.rapidFire ? 75 : 55;
+        const dmg = player.rapidFire ? 40 : 28;
         enemy.hp -= dmg;
         playHitEnemy();
         // Brief white emissive flash on the body
@@ -1990,8 +1990,8 @@ function updateSpores(dt) {
 }
 
 function triggerSpecial() {
-  if (!player.alive) return;
-  player.specialCooldown = 0;
+  if (player.specialCooldown > 0 || !player.alive) return;
+  player.specialCooldown = SPECIAL_COOLDOWN;
   playSpecialAbility();
   addShake(0.45);
   createShockwave(player.pos.clone());
