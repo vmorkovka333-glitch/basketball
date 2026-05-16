@@ -986,7 +986,7 @@ function buildDemogorgon(isBoss = false) {
     const angle = (i / 5) * Math.PI * 2;
     const petal = new THREE.Group();
     const ca = Math.cos(angle), sa = Math.sin(angle);
-    const L = 0.5 * scale, baseR = 0.06 * scale, spreadR = 0.16 * scale, halfW = 0.17 * scale, cup = 0.12 * scale;
+    const L = 0.32 * scale, baseR = 0.06 * scale, spreadR = 0.15 * scale, halfW = 0.17 * scale, cup = 0.11 * scale;
     // radial (outward in flower plane) and tangential basis
     const rx = ca, ry = sa, tx = -sa, ty = ca;
     const NU = 6, NV = 5;
@@ -1041,7 +1041,7 @@ function buildDemogorgon(isBoss = false) {
 
   // Deep wet gullet + pulsing inner glow (throatMesh)
   const gullet = new THREE.Mesh(
-    new THREE.ConeGeometry(0.11 * scale, 0.34 * scale, 14, 1, true),
+    new THREE.ConeGeometry(0.11 * scale, 0.22 * scale, 14, 1, true),
     new THREE.MeshStandardMaterial({ color: 0x2a0810, emissive: 0x6a0a1e, emissiveIntensity: 0.7, roughness: 0.6, side: THREE.DoubleSide })
   );
   gullet.position.z = -0.16 * scale;
