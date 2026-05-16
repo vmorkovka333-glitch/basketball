@@ -526,18 +526,8 @@ window.addEventListener('resize', () => {
 // 4. ENVIRONMENT
 // ============================================================
 function buildEnvironment() {
-  // Ground plane - Upside Down terrain
-  const gGeo = new THREE.PlaneGeometry(WORLD_SIZE * 2, WORLD_SIZE * 2, GROUND_SEGS, GROUND_SEGS);
-  const pos = gGeo.attributes.position;
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), z = pos.getZ(i);
-    const disp = Math.sin(x * 0.4) * Math.cos(z * 0.3) * 0.5
-                + Math.sin(x * 0.9 + 1.2) * 0.3
-                + Math.cos(z * 0.7 + 0.8) * 0.25
-                + (Math.random() - 0.5) * 0.15;
-    pos.setY(i, disp);
-  }
-  gGeo.computeVertexNormals();
+  // Flat ground plane - identical everywhere
+  const gGeo = new THREE.PlaneGeometry(WORLD_SIZE * 2, WORLD_SIZE * 2, 1, 1);
   // Uniform greyish ground
   const gMat = new THREE.MeshStandardMaterial({
     color: 0x5a5a60, emissive: 0x202024, emissiveIntensity: 0.4, roughness: 1, metalness: 0
@@ -986,7 +976,7 @@ function buildDemogorgon(isBoss = false) {
     const angle = (i / 5) * Math.PI * 2;
     const petal = new THREE.Group();
     const ca = Math.cos(angle), sa = Math.sin(angle);
-    const L = 0.32 * scale, baseR = 0.06 * scale, spreadR = 0.15 * scale, halfW = 0.17 * scale, cup = 0.11 * scale;
+    const L = 0.19 * scale, baseR = 0.06 * scale, spreadR = 0.12 * scale, halfW = 0.16 * scale, cup = 0.09 * scale;
     // radial (outward in flower plane) and tangential basis
     const rx = ca, ry = sa, tx = -sa, ty = ca;
     const NU = 6, NV = 5;
@@ -1014,7 +1004,7 @@ function buildDemogorgon(isBoss = false) {
     // Curved row of fangs down each edge, longest mid-petal
     for (let t = 0; t < 6; t++) {
       const u = 0.12 + t * 0.15;
-      const flen = (0.1 + Math.sin(Math.PI * u) * 0.14) * scale;
+      const flen = (0.08 + Math.sin(Math.PI * u) * 0.1) * scale;
       [-1, 1].forEach(edge => {
         const [bx, by, bz] = vert(u, edge * 0.92);
         const fang = new THREE.Mesh(new THREE.ConeGeometry(0.02 * scale, flen, 5), fangMat);
@@ -1041,7 +1031,7 @@ function buildDemogorgon(isBoss = false) {
 
   // Deep wet gullet + pulsing inner glow (throatMesh)
   const gullet = new THREE.Mesh(
-    new THREE.ConeGeometry(0.11 * scale, 0.22 * scale, 14, 1, true),
+    new THREE.ConeGeometry(0.1 * scale, 0.16 * scale, 14, 1, true),
     new THREE.MeshStandardMaterial({ color: 0x2a0810, emissive: 0x6a0a1e, emissiveIntensity: 0.7, roughness: 0.6, side: THREE.DoubleSide })
   );
   gullet.position.z = -0.16 * scale;
