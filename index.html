@@ -623,19 +623,46 @@ function buildEnvironment() {
 function buildElevenModel() {
   const group = new THREE.Group();
 
-  // Body - pink dress
-  const bodyGeo = new THREE.CylinderGeometry(0.22, 0.3, 0.7, 8);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xff7ab0, emissive: 0x9a3a6a, emissiveIntensity: 0.7, roughness: 0.7 });
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y = 0.55;
-  group.add(body);
+  // Eleven's iconic colorful patterned shirt (procedural texture)
+  const shirtTex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#0b0b14'; ctx.fillRect(0, 0, 128, 128);
+    const palette = ['#e23b3b', '#2f7ad8', '#f2c43b', '#3bbf63', '#8e44c8', '#e85aa0', '#28c0c0', '#f5f5f5'];
+    for (let i = 0; i < 30; i++) {
+      ctx.fillStyle = palette[(Math.random() * palette.length) | 0];
+      const w = 12 + Math.random() * 26, h = 12 + Math.random() * 26;
+      ctx.save();
+      ctx.translate(Math.random() * 128, Math.random() * 128);
+      ctx.rotate(Math.random() * Math.PI);
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.restore();
+    }
+    for (let i = 0; i < 4; i++) {
+      const cx = Math.random() * 128, cy = Math.random() * 128;
+      ctx.strokeStyle = '#f5f5f5'; ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let a = 0; a < 7; a += 0.2) {
+        const r = a * 1.8;
+        const px = cx + Math.cos(a) * r, py = cy + Math.sin(a) * r;
+        a === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    return t;
+  })();
+  const shirtMat = new THREE.MeshStandardMaterial({
+    map: shirtTex, emissiveMap: shirtTex, emissive: 0xffffff,
+    emissiveIntensity: 0.45, roughness: 0.75
+  });
 
-  // Blue jacket
-  const jacketGeo = new THREE.CylinderGeometry(0.24, 0.25, 0.45, 8);
-  const jacketMat = new THREE.MeshStandardMaterial({ color: 0x6ab0ec, emissive: 0x2a5a8a, emissiveIntensity: 0.7, roughness: 0.7 });
-  const jacket = new THREE.Mesh(jacketGeo, jacketMat);
-  jacket.position.y = 0.72;
-  group.add(jacket);
+  // Body - patterned shirt
+  const bodyGeo = new THREE.CylinderGeometry(0.23, 0.3, 0.72, 12);
+  const body = new THREE.Mesh(bodyGeo, shirtMat);
+  body.position.y = 0.6;
+  group.add(body);
 
   // Head
   const headGeo = new THREE.SphereGeometry(0.22, 12, 10);
@@ -644,13 +671,24 @@ function buildElevenModel() {
   head.position.y = 1.18;
   group.add(head);
 
-  // Buzzcut hair
-  const hairGeo = new THREE.SphereGeometry(0.225, 12, 8);
-  const hairMat = new THREE.MeshStandardMaterial({ color: 0x6a4424, emissive: 0x3a2410, emissiveIntensity: 0.7, roughness: 0.8 });
-  const hair = new THREE.Mesh(hairGeo, hairMat);
-  hair.position.y = 1.27;
-  hair.scale.set(1, 0.5, 1);
-  group.add(hair);
+  // Wavy shoulder-length brown hair
+  const hairMat = new THREE.MeshStandardMaterial({ color: 0x4a3018, emissive: 0x241608, emissiveIntensity: 0.5, roughness: 0.95 });
+  const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.245, 14, 12), hairMat);
+  hairCap.position.set(0, 1.235, -0.025);
+  hairCap.scale.set(1.05, 0.95, 1.08);
+  group.add(hairCap);
+  // Curly locks framing the face down to the shoulders
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    // skip directly in front of the face so features stay visible
+    if (Math.sin(a) > 0.55 && Math.abs(Math.cos(a)) < 0.5) continue;
+    const lock = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.24 + Math.random() * 0.08, 4, 6), hairMat);
+    const rad = 0.205;
+    lock.position.set(Math.cos(a) * rad, 1.0, Math.sin(a) * rad * 0.85 - 0.02);
+    lock.rotation.x = Math.sin(a) * 0.35;
+    lock.rotation.z = Math.cos(a) * 0.35;
+    group.add(lock);
+  }
 
   // Eyes
   [-0.08, 0.08].forEach(x => {
@@ -668,17 +706,17 @@ function buildElevenModel() {
   nose.position.set(0, 1.14, 0.21);
   group.add(nose);
 
-  // Lips
-  const lGeo = new THREE.BoxGeometry(0.1, 0.025, 0.02);
-  const lMat = new THREE.MeshLambertMaterial({ color: 0xff7799 });
-  const lips = new THREE.Mesh(lGeo, lMat);
-  lips.position.set(0, 1.08, 0.21);
-  group.add(lips);
+  // Smiling mouth
+  const smileMat = new THREE.MeshStandardMaterial({ color: 0xc85a6a, emissive: 0x6a2a33, emissiveIntensity: 0.5, roughness: 0.6 });
+  const smile = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.014, 6, 14, Math.PI), smileMat);
+  smile.position.set(0, 1.105, 0.205);
+  smile.rotation.z = Math.PI;
+  group.add(smile);
 
   // Arms
   [-1, 1].forEach((side, armIdx) => {
     const shoulderGeo = new THREE.CapsuleGeometry(0.06, 0.25, 4, 6);
-    const armMat = new THREE.MeshStandardMaterial({ color: 0x6ab0ec, emissive: 0x2a5a8a, emissiveIntensity: 0.7, roughness: 0.7 });
+    const armMat = new THREE.MeshStandardMaterial({ map: shirtTex, emissiveMap: shirtTex, emissive: 0xffffff, emissiveIntensity: 0.45, roughness: 0.75 });
     const arm = new THREE.Mesh(shoulderGeo, armMat);
     arm.position.set(side * 0.32, 0.8, 0);
     arm.rotation.z = side * 0.3;
@@ -700,7 +738,7 @@ function buildElevenModel() {
   // Legs
   [-1, 1].forEach((side, legIdx) => {
     const thighGeo = new THREE.CapsuleGeometry(0.07, 0.28, 4, 6);
-    const legMat = new THREE.MeshStandardMaterial({ color: 0xe28ab0, emissive: 0x8a3a60, emissiveIntensity: 0.7, roughness: 0.7 });
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x2a3550, emissive: 0x141c2e, emissiveIntensity: 0.6, roughness: 0.8 });
     const thigh = new THREE.Mesh(thighGeo, legMat);
     thigh.position.set(side * 0.12, 0.2, 0);
     thigh.userData.isLeg = true;
@@ -777,7 +815,7 @@ function buildElevenModel() {
 function buildDemogorgon(isBoss = false) {
   const group = new THREE.Group();
   const scale = isBoss ? 1.6 : 1.0;
-  const skinMat = new THREE.MeshStandardMaterial({ color: 0xd98a6a, emissive: 0x7a3a2a, emissiveIntensity: 0.8, roughness: 0.85, metalness: 0 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0x8f8275, emissive: 0x322820, emissiveIntensity: 0.55, roughness: 0.95, metalness: 0 });
   // Shared bioluminescent vein/ridge material - traces the silhouette in red neon
   const veinMat = new THREE.MeshBasicMaterial({ color: 0xff3355, toneMapped: false });
   group.userData.skinMats = [];
@@ -815,15 +853,17 @@ function buildDemogorgon(isBoss = false) {
   group.add(headMesh);
   group.userData.headMesh = headMesh;
 
-  // Eyes (4 glowing amber, slightly larger)
-  const eyePositions = [[-0.15,0.1],[0.15,0.1],[-0.05,0.22],[0.05,0.22]];
-  eyePositions.forEach(([ex, ey]) => {
-    const eGeo = new THREE.SphereGeometry(0.08 * scale, 6, 6);
-    const eMat = new THREE.MeshBasicMaterial({ color: 0xffae00, toneMapped: false });
-    const eyeMesh = new THREE.Mesh(eGeo, eMat);
-    eyeMesh.position.set(ex * scale, (1.78 + ey) * scale, (0.55) * scale);
-    group.add(eyeMesh);
-  });
+  // Faceless: no eyes — just smooth sinewy flesh and ridged skull folds
+  for (let i = 0; i < 4; i++) {
+    const fold = new THREE.Mesh(
+      new THREE.TorusGeometry(0.16 * scale, 0.025 * scale, 5, 10, Math.PI * 1.2),
+      trackSkin(skinMat.clone())
+    );
+    fold.position.set(0, (1.78 + (i - 1.5) * 0.12) * scale, 0.5 * scale);
+    fold.rotation.x = Math.PI / 2;
+    fold.rotation.z = Math.PI / 2;
+    group.add(fold);
+  }
 
   // Per-enemy head glow light (perf-capped; bosses prioritized & brighter)
   if (activeEnemyLights < MAX_ENEMY_LIGHTS) {
@@ -844,10 +884,10 @@ function buildDemogorgon(isBoss = false) {
   group.userData.petalMeshes = [];
   group.userData.mouthOpen = 0;
 
-  for (let i = 0; i < 6; i++) {
-    const angle = (i / 6) * Math.PI * 2;
+  for (let i = 0; i < 5; i++) {
+    const angle = (i / 5) * Math.PI * 2;
     const petalGeo = new THREE.BufferGeometry();
-    const s = 0.18 * scale;
+    const s = 0.22 * scale;
     const verts = new Float32Array([
       0, 0, 0,
       Math.cos(angle - 0.25) * s, Math.sin(angle - 0.25) * s, 0,
@@ -975,7 +1015,7 @@ function buildDemogorgon(isBoss = false) {
 function buildDemodog() {
   const group = new THREE.Group();
   const scale = 0.7;
-  const skinMat = new THREE.MeshStandardMaterial({ color: 0xd98a6a, emissive: 0x7a3a2a, emissiveIntensity: 0.8, roughness: 0.85, metalness: 0 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0x8f8275, emissive: 0x322820, emissiveIntensity: 0.55, roughness: 0.95, metalness: 0 });
   const veinMat = new THREE.MeshBasicMaterial({ color: 0xff3355, toneMapped: false });
   group.userData.skinMats = [];
   const trackSkin = m => { group.userData.skinMats.push(m); return m; };
