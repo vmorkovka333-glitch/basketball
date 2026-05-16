@@ -528,13 +528,10 @@ window.addEventListener('resize', () => {
 function buildEnvironment() {
   // Flat ground plane - identical everywhere
   const gGeo = new THREE.PlaneGeometry(WORLD_SIZE * 2, WORLD_SIZE * 2, 1, 1);
-  // Uniform greyish ground
-  const gMat = new THREE.MeshStandardMaterial({
-    color: 0x5a5a60, emissive: 0x202024, emissiveIntensity: 0.4, roughness: 1, metalness: 0
-  });
+  // Uniform greyish ground - same color everywhere, unaffected by lighting
+  const gMat = new THREE.MeshBasicMaterial({ color: 0x5a5a60 });
   const ground = new THREE.Mesh(gGeo, gMat);
   ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
   scene.add(ground);
 
   // Large faint radial glow under the play area
