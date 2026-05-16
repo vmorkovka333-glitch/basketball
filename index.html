@@ -1248,23 +1248,6 @@ function createBullet(origin, direction) {
   scene.add(mesh);
   const b = { mesh, dir: direction.clone().normalize(), dist: 0, alive: true };
   bullets.push(b);
-
-  // Bright muzzle/cast flash sprite at the origin
-  const flash = new THREE.Mesh(
-    new THREE.SphereGeometry(0.35, 8, 8),
-    new THREE.MeshBasicMaterial({ color: 0xff88dd, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })
-  );
-  flash.position.copy(origin);
-  scene.add(flash);
-  let fl = 0;
-  const animFlash = () => {
-    fl += 0.18;
-    flash.scale.setScalar(1 + fl * 2.5);
-    flash.material.opacity = Math.max(0, 0.95 - fl * 1.8);
-    if (flash.material.opacity <= 0) { scene.remove(flash); }
-    else requestAnimationFrame(animFlash);
-  };
-  animFlash();
 }
 
 function spawnParticles(pos, count, color) {
@@ -1752,11 +1735,6 @@ function updatePlayer(dt) {
       createBullet(origin, dir);
       playShoot();
       player.fireTimer = fireInterval;
-      // Hand glow
-      if (player.rightHand) {
-        player.rightHand.material.opacity = 0.8;
-        setTimeout(() => { if (player.rightHand) player.rightHand.material.opacity = 0; }, 100);
-      }
     }
   }
 
@@ -1908,8 +1886,8 @@ function updateBullets(dt) {
     let hit = false;
     for (const enemy of enemies) {
       if (!enemy.alive) continue;
-      if (b.mesh.position.distanceTo(enemy.mesh.position) < (enemy.isBoss ? 1.2 : 0.7)) {
-        const dmg = player.rapidFire ? 30 : 20;
+      if (b.mesh.position.distanceTo(enemy.mesh.position) < (enemy.isBoss ? 1.7 : 1.05)) {
+        const dmg = player.rapidFire ? 75 : 55;
         enemy.hp -= dmg;
         playHitEnemy();
         // Brief white emissive flash on the body
