@@ -538,42 +538,9 @@ function buildEnvironment() {
     pos.setY(i, disp);
   }
   gGeo.computeVertexNormals();
-  // Decayed organic Upside Down ground texture
-  const groundTex = (() => {
-    const c = document.createElement('canvas'); c.width = c.height = 512;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#15131c'; ctx.fillRect(0, 0, 512, 512);
-    // mottled dark blotches (ash / decay)
-    for (let i = 0; i < 900; i++) {
-      const r = 4 + Math.random() * 34;
-      const shade = 14 + Math.random() * 26;
-      ctx.fillStyle = `rgba(${shade},${shade + 4},${shade + 10},${0.10 + Math.random() * 0.22})`;
-      ctx.beginPath();
-      ctx.arc(Math.random() * 512, Math.random() * 512, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    // creeping biological veins / tendrils
-    for (let i = 0; i < 26; i++) {
-      ctx.strokeStyle = `rgba(${90 + Math.random() * 50},${30 + Math.random() * 20},${40 + Math.random() * 25},0.35)`;
-      ctx.lineWidth = 0.8 + Math.random() * 2.2;
-      ctx.beginPath();
-      let x = Math.random() * 512, y = Math.random() * 512;
-      ctx.moveTo(x, y);
-      const steps = 14 + (Math.random() * 18 | 0);
-      for (let s = 0; s < steps; s++) {
-        x += (Math.random() - 0.5) * 70;
-        y += (Math.random() - 0.5) * 70;
-        ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-    const t = new THREE.CanvasTexture(c);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.repeat.set(7, 7);
-    return t;
-  })();
+  // Uniform greyish ground
   const gMat = new THREE.MeshStandardMaterial({
-    map: groundTex, color: 0x2a2838, emissive: 0x0c0a14, emissiveIntensity: 0.5, roughness: 1, metalness: 0
+    color: 0x5a5a60, emissive: 0x202024, emissiveIntensity: 0.4, roughness: 1, metalness: 0
   });
   const ground = new THREE.Mesh(gGeo, gMat);
   ground.rotation.x = -Math.PI / 2;
