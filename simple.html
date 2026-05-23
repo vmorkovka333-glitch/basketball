@@ -43,7 +43,7 @@
   <div>РЕКОРД: <span id="best">0</span></div>
 </div>
 <button id="reset">СБРОС</button>
-<div id="hint">Тяни мяч и отпусти — бросок</div>
+<div id="hint">Тапни внизу — мяч переместится. Тяни мяч и отпусти — бросок.</div>
 
 <script>
 const canvas = document.getElementById('c');
@@ -65,7 +65,8 @@ window.addEventListener('resize', resize);
 
 // Game state
 const ball = { x: 0, y: 0, vx: 0, vy: 0, r: 22, free: false, held: false };
-const hoop = { x: 0, y: 0, w: 90, rimY: 0, side: 1, moveDir: 1 };
+const hoop = { x: 0, y: 0, w: 110, rimY: 0 };
+const FLOOR_RATIO = 0.78;
 let score = 0;
 let best = parseInt(localStorage.getItem('hoops_best') || '0', 10);
 let dragStart = null;
@@ -76,16 +77,20 @@ function positionHoop() {
   hoop.y = H * 0.18;
   hoop.x = W * 0.5;
   hoop.rimY = hoop.y + 30;
-  ball.x = W * 0.5;
-  ball.y = H * 0.78;
+  if (ball.startX === undefined) {
+    ball.startX = W * 0.5;
+    ball.startY = H * FLOOR_RATIO;
+  }
+  ball.x = ball.startX;
+  ball.y = ball.startY;
   ball.vx = 0;
   ball.vy = 0;
   ball.free = false;
 }
 
 function resetBall() {
-  ball.x = W * 0.5;
-  ball.y = H * 0.78;
+  ball.x = ball.startX;
+  ball.y = ball.startY;
   ball.vx = 0;
   ball.vy = 0;
   ball.free = false;
@@ -122,10 +127,16 @@ function onDown(e) {
   e.preventDefault();
   if (ball.free) return;
   const p = getPoint(e);
-  if (distToBall(p) < 80) {
+  if (distToBall(p) < 90) {
     ball.held = true;
     dragStart = { x: ball.x, y: ball.y };
     dragCur = p;
+  } else if (p.y > H * 0.55) {
+    // Tap on lower area: move ball to that X position (on the floor line)
+    ball.x = Math.max(40, Math.min(W - 40, p.x));
+    ball.y = H * FLOOR_RATIO;
+    ball.startX = ball.x;
+    ball.startY = ball.y;
   }
 }
 function onMove(e) {
@@ -139,7 +150,7 @@ function onUp(e) {
   ball.held = false;
   const dx = dragStart.x - dragCur.x;
   const dy = dragStart.y - dragCur.y;
-  const power = Math.min(Math.hypot(dx, dy), 200) * 0.09;
+  const power = Math.min(Math.hypot(dx, dy), 280) * 0.075;
   const ang = Math.atan2(dy, dx);
   ball.vx = Math.cos(ang) * power;
   ball.vy = Math.sin(ang) * power;
@@ -199,16 +210,8 @@ function update() {
 
     // Off screen reset
     if (ball.y > H + 100 || ball.x < -100 || ball.x > W + 100) {
-      // Miss = reset score on miss? Let's be friendly: just reset ball.
-      // For a challenge, comment in:
-      // if (!ball.scoredThis) { score = 0; document.getElementById('score').textContent = score; }
       resetBall();
     }
-
-    // Move hoop horizontally for difficulty
-    hoop.x += hoop.moveDir * 1.2 * (1 + score * 0.02);
-    if (hoop.x < W * 0.2) hoop.moveDir = 1;
-    if (hoop.x > W * 0.8) hoop.moveDir = -1;
   }
 }
 
@@ -229,6 +232,18 @@ function draw() {
   ctx.moveTo(0, H * 0.88);
   ctx.lineTo(W, H * 0.88);
   ctx.stroke();
+
+  // Movement line (where you can tap to position ball)
+  if (!ball.free && !ball.held) {
+    ctx.strokeStyle = 'rgba(74, 222, 128, 0.25)';
+    ctx.setLineDash([6, 8]);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(40, H * FLOOR_RATIO);
+    ctx.lineTo(W - 40, H * FLOOR_RATIO);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 
   // Backboard
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
@@ -278,7 +293,7 @@ function draw() {
   if (ball.held && dragCur && dragStart) {
     const dx = dragStart.x - dragCur.x;
     const dy = dragStart.y - dragCur.y;
-    const power = Math.min(Math.hypot(dx, dy), 200) * 0.09;
+    const power = Math.min(Math.hypot(dx, dy), 280) * 0.075;
     const ang = Math.atan2(dy, dx);
     let vx = Math.cos(ang) * power;
     let vy = Math.sin(ang) * power;
