@@ -2,7 +2,9 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
 <title>Hoops 2K26 - Browser Basketball</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -72,6 +74,69 @@
   }
   #controls b { color: #fbbf24; }
 
+  /* Touch controls */
+  #touch-controls { display: none; }
+  body.touch #touch-controls { display: block; }
+  body.touch #controls { display: none; }
+
+  #joystick {
+    position: fixed; left: 30px; bottom: 30px;
+    width: 140px; height: 140px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    z-index: 15;
+    touch-action: none;
+  }
+  #joystick-knob {
+    position: absolute; left: 50%; top: 50%;
+    width: 60px; height: 60px;
+    margin-left: -30px; margin-top: -30px;
+    background: rgba(255,255,255,0.45);
+    border: 2px solid rgba(255,255,255,0.6);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .tbtn {
+    position: fixed;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.4);
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 1px;
+    z-index: 15;
+    user-select: none;
+    touch-action: none;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+  }
+  #btn-shoot {
+    right: 30px; bottom: 30px;
+    width: 110px; height: 110px;
+    background: linear-gradient(135deg, #f97316, #ef4444);
+    box-shadow: 0 4px 20px rgba(239,68,68,0.4);
+    font-size: 16px;
+  }
+  #btn-jump {
+    right: 150px; bottom: 110px;
+    width: 75px; height: 75px;
+    background: rgba(34,197,94,0.7);
+  }
+  #btn-sprint {
+    right: 150px; bottom: 30px;
+    width: 75px; height: 75px;
+    background: rgba(250,204,21,0.7);
+    color: #000;
+  }
+  #btn-sprint.active { background: rgba(250,204,21,1); box-shadow: 0 0 20px rgba(250,204,21,0.8); }
+  #cam-area {
+    position: fixed; right: 0; top: 0;
+    width: 50%; height: 65%;
+    z-index: 5;
+    touch-action: none;
+  }
+
   #message {
     position: fixed; top: 38%; left: 50%; transform: translate(-50%, -50%);
     font-size: 64px; font-weight: bold;
@@ -90,6 +155,17 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     z-index: 100;
   }
+  body.touch #startscreen h1 { font-size: 56px !important; }
+  body.touch #startscreen h2 { font-size: 16px !important; }
+  body.touch #startscreen .info { font-size: 13px !important; padding: 0 20px; }
+  body.touch #startscreen .ctrl { display: none !important; }
+  body.touch #hud .score-value { font-size: 22px; }
+  body.touch #hud .timer { font-size: 20px; }
+  body.touch #hud { padding: 8px 12px; }
+  body.touch .panel { padding: 6px 10px; }
+  body.touch #power-meter { bottom: 160px; width: 260px; }
+  body.touch #power-label { bottom: 180px; }
+
   #startscreen h1 {
     font-size: 84px;
     background: linear-gradient(135deg, #fbbf24, #f97316, #ef4444);
@@ -159,6 +235,14 @@
 </div>
 
 <div id="message"></div>
+
+<div id="touch-controls">
+  <div id="cam-area"></div>
+  <div id="joystick"><div id="joystick-knob"></div></div>
+  <div class="tbtn" id="btn-shoot">SHOOT</div>
+  <div class="tbtn" id="btn-jump">JUMP</div>
+  <div class="tbtn" id="btn-sprint">RUN</div>
+</div>
 
 <div id="startscreen">
   <h1>HOOPS 2K26</h1>
@@ -517,8 +601,12 @@ const ballState = {
 };
 
 // ---------- Input ----------
+const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+if (isTouch) document.body.classList.add('touch');
+
 const keys = {};
 const mouse = { dx: 0, dy: 0, locked: false, down: false };
+const touchInput = { mx: 0, mz: 0, sprint: false, shootDown: false };
 
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
@@ -527,7 +615,7 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 
 canvas.addEventListener('click', () => {
-  if (!gameState.running) return;
+  if (!gameState.running || isTouch) return;
   if (!mouse.locked) canvas.requestPointerLock();
 });
 
@@ -552,6 +640,126 @@ document.addEventListener('mouseup', e => {
     mouse.down = false;
   }
 });
+
+// ---------- Touch Input ----------
+if (isTouch) {
+  const joy = document.getElementById('joystick');
+  const knob = document.getElementById('joystick-knob');
+  const camArea = document.getElementById('cam-area');
+  const btnShoot = document.getElementById('btn-shoot');
+  const btnJump = document.getElementById('btn-jump');
+  const btnSprint = document.getElementById('btn-sprint');
+
+  let joyId = null, joyCx = 0, joyCy = 0;
+  const joyRadius = 50;
+
+  joy.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    joyId = t.identifier;
+    const r = joy.getBoundingClientRect();
+    joyCx = r.left + r.width / 2;
+    joyCy = r.top + r.height / 2;
+    updateJoy(t.clientX, t.clientY);
+  }, { passive: false });
+
+  joy.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === joyId) updateJoy(t.clientX, t.clientY);
+    }
+  }, { passive: false });
+
+  const endJoy = e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joyId) {
+        joyId = null;
+        knob.style.left = '50%';
+        knob.style.top = '50%';
+        touchInput.mx = 0;
+        touchInput.mz = 0;
+      }
+    }
+  };
+  joy.addEventListener('touchend', endJoy);
+  joy.addEventListener('touchcancel', endJoy);
+
+  function updateJoy(x, y) {
+    let dx = x - joyCx;
+    let dy = y - joyCy;
+    const dist = Math.min(Math.hypot(dx, dy), joyRadius);
+    const ang = Math.atan2(dy, dx);
+    dx = Math.cos(ang) * dist;
+    dy = Math.sin(ang) * dist;
+    knob.style.left = `calc(50% + ${dx}px)`;
+    knob.style.top = `calc(50% + ${dy}px)`;
+    touchInput.mx = dx / joyRadius;
+    touchInput.mz = -dy / joyRadius;
+  }
+
+  // Camera swipe area
+  let camId = null, camLastX = 0, camLastY = 0;
+  camArea.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (camId !== null) return;
+    const t = e.changedTouches[0];
+    camId = t.identifier;
+    camLastX = t.clientX;
+    camLastY = t.clientY;
+  }, { passive: false });
+
+  camArea.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier === camId) {
+        const dx = t.clientX - camLastX;
+        const dy = t.clientY - camLastY;
+        camLastX = t.clientX;
+        camLastY = t.clientY;
+        playerState.facing -= dx * 0.006;
+        playerState.pitch -= dy * 0.004;
+        playerState.pitch = Math.max(-0.4, Math.min(0.5, playerState.pitch));
+      }
+    }
+  }, { passive: false });
+
+  const endCam = e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === camId) camId = null;
+    }
+  };
+  camArea.addEventListener('touchend', endCam);
+  camArea.addEventListener('touchcancel', endCam);
+
+  // Buttons
+  btnShoot.addEventListener('touchstart', e => {
+    e.preventDefault();
+    touchInput.shootDown = true;
+  }, { passive: false });
+  btnShoot.addEventListener('touchend', e => {
+    e.preventDefault();
+    if (touchInput.shootDown && ballState.holder === 'player') releaseShot();
+    touchInput.shootDown = false;
+  }, { passive: false });
+  btnShoot.addEventListener('touchcancel', e => { touchInput.shootDown = false; });
+
+  btnJump.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (playerState.onGround) {
+      playerState.yVel = 7;
+      playerState.onGround = false;
+    }
+  }, { passive: false });
+
+  btnSprint.addEventListener('touchstart', e => {
+    e.preventDefault();
+    touchInput.sprint = !touchInput.sprint;
+    btnSprint.classList.toggle('active', touchInput.sprint);
+  }, { passive: false });
+
+  // Prevent double-tap zoom
+  document.addEventListener('gesturestart', e => e.preventDefault());
+}
 
 // ---------- Game State ----------
 const gameState = {
@@ -742,8 +950,9 @@ function updatePlayer(dt) {
   if (keys['KeyS']) mz -= 1;
   if (keys['KeyA']) mx -= 1;
   if (keys['KeyD']) mx += 1;
+  if (isTouch) { mx += touchInput.mx; mz += touchInput.mz; }
 
-  const sprint = keys['ShiftLeft'] || keys['ShiftRight'] ? 1.8 : 1;
+  const sprint = (keys['ShiftLeft'] || keys['ShiftRight'] || touchInput.sprint) ? 1.8 : 1;
   const baseSpeed = 6 * sprint;
 
   const move = new THREE.Vector3();
@@ -790,7 +999,8 @@ function updatePlayer(dt) {
   }
 
   // Charging shot
-  if (mouse.down && ballState.holder === 'player' && !gameState.shotInAir) {
+  const shootHeld = mouse.down || touchInput.shootDown;
+  if (shootHeld && ballState.holder === 'player' && !gameState.shotInAir) {
     if (!gameState.charging) {
       gameState.charging = true;
       gameState.power = 0;
@@ -1121,7 +1331,7 @@ function startGame() {
   cpu.position.set(0, 0, -5);
   playerState.facing = Math.PI;
   gameState.running = true;
-  canvas.requestPointerLock();
+  if (!isTouch) canvas.requestPointerLock();
 }
 
 document.getElementById('startbtn').addEventListener('click', startGame);
