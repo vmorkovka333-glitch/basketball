@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Basketball - Simple</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; font-family: -apple-system, sans-serif; color: #fff; user-select: none; touch-action: none; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    padding: 16px 20px;
+    display: flex; justify-content: space-between;
+    pointer-events: none;
+    font-size: 22px; font-weight: bold;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+  }
+  #score { color: #4ade80; }
+  #best { color: #fbbf24; }
+  #hint {
+    position: fixed; bottom: 30px; left: 0; right: 0;
+    text-align: center;
+    font-size: 14px;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  #reset {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    padding: 6px 14px;
+    font-size: 13px;
+    border-radius: 16px;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div>СЧЁТ: <span id="score">0</span></div>
+  <div>РЕКОРД: <span id="best">0</span></div>
+</div>
+<button id="reset">СБРОС</button>
+<div id="hint">Тяни мяч и отпусти — бросок</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  positionHoop();
+}
+window.addEventListener('resize', resize);
+
+// Game state
+const ball = { x: 0, y: 0, vx: 0, vy: 0, r: 22, free: false, held: false };
+const hoop = { x: 0, y: 0, w: 90, rimY: 0, side: 1, moveDir: 1 };
+let score = 0;
+let best = parseInt(localStorage.getItem('hoops_best') || '0', 10);
+let dragStart = null;
+let dragCur = null;
+const G = 0.5;
+
+function positionHoop() {
+  hoop.y = H * 0.18;
+  hoop.x = W * 0.5;
+  hoop.rimY = hoop.y + 30;
+  ball.x = W * 0.5;
+  ball.y = H * 0.78;
+  ball.vx = 0;
+  ball.vy = 0;
+  ball.free = false;
+}
+
+function resetBall() {
+  ball.x = W * 0.5;
+  ball.y = H * 0.78;
+  ball.vx = 0;
+  ball.vy = 0;
+  ball.free = false;
+  ball.scoredThis = false;
+  ball.rimTouched = false;
+}
+
+document.getElementById('reset').addEventListener('click', () => {
+  score = 0;
+  document.getElementById('score').textContent = score;
+  resetBall();
+});
+
+// Input
+function getPoint(e) {
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX, y: t.clientY };
+}
+
+function distToBall(p) {
+  const dx = p.x - ball.x;
+  const dy = p.y - ball.y;
+  return Math.hypot(dx, dy);
+}
+
+canvas.addEventListener('touchstart', onDown, { passive: false });
+canvas.addEventListener('mousedown', onDown);
+canvas.addEventListener('touchmove', onMove, { passive: false });
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('touchend', onUp, { passive: false });
+canvas.addEventListener('mouseup', onUp);
+
+function onDown(e) {
+  e.preventDefault();
+  if (ball.free) return;
+  const p = getPoint(e);
+  if (distToBall(p) < 80) {
+    ball.held = true;
+    dragStart = { x: ball.x, y: ball.y };
+    dragCur = p;
+  }
+}
+function onMove(e) {
+  if (!ball.held) return;
+  e.preventDefault();
+  dragCur = getPoint(e);
+}
+function onUp(e) {
+  if (!ball.held) return;
+  e.preventDefault();
+  ball.held = false;
+  const dx = dragStart.x - dragCur.x;
+  const dy = dragStart.y - dragCur.y;
+  const power = Math.min(Math.hypot(dx, dy), 200) * 0.09;
+  const ang = Math.atan2(dy, dx);
+  ball.vx = Math.cos(ang) * power;
+  ball.vy = Math.sin(ang) * power;
+  if (Math.hypot(ball.vx, ball.vy) > 1) {
+    ball.free = true;
+    ball.scoredThis = false;
+    ball.rimTouched = false;
+  }
+  dragStart = null;
+  dragCur = null;
+}
+
+// Update / draw loop
+function update() {
+  if (ball.free) {
+    ball.vy += G;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // Rim posts (left and right edges of hoop)
+    const leftX = hoop.x - hoop.w / 2;
+    const rightX = hoop.x + hoop.w / 2;
+    [leftX, rightX].forEach(px => {
+      const dx = ball.x - px;
+      const dy = ball.y - hoop.rimY;
+      const d = Math.hypot(dx, dy);
+      if (d < ball.r + 4) {
+        const nx = dx / d, ny = dy / d;
+        const dot = ball.vx * nx + ball.vy * ny;
+        ball.vx -= 2 * dot * nx * 0.6;
+        ball.vy -= 2 * dot * ny * 0.6;
+        const overlap = ball.r + 4 - d;
+        ball.x += nx * overlap;
+        ball.y += ny * overlap;
+        ball.rimTouched = true;
+      }
+    });
+
+    // Score: ball center passes through rim line moving down
+    if (!ball.scoredThis
+        && ball.vy > 0
+        && ball.y > hoop.rimY
+        && ball.y - ball.vy <= hoop.rimY
+        && ball.x > hoop.x - hoop.w / 2 + 8
+        && ball.x < hoop.x + hoop.w / 2 - 8) {
+      ball.scoredThis = true;
+      const pts = ball.rimTouched ? 2 : 3; // swish = 3
+      score += pts;
+      document.getElementById('score').textContent = score;
+      if (score > best) {
+        best = score;
+        localStorage.setItem('hoops_best', best);
+        document.getElementById('best').textContent = best;
+      }
+      flashScore = 30;
+    }
+
+    // Off screen reset
+    if (ball.y > H + 100 || ball.x < -100 || ball.x > W + 100) {
+      // Miss = reset score on miss? Let's be friendly: just reset ball.
+      // For a challenge, comment in:
+      // if (!ball.scoredThis) { score = 0; document.getElementById('score').textContent = score; }
+      resetBall();
+    }
+
+    // Move hoop horizontally for difficulty
+    hoop.x += hoop.moveDir * 1.2 * (1 + score * 0.02);
+    if (hoop.x < W * 0.2) hoop.moveDir = 1;
+    if (hoop.x > W * 0.8) hoop.moveDir = -1;
+  }
+}
+
+let flashScore = 0;
+
+function draw() {
+  // Background gradient
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#2a1a4a');
+  g.addColorStop(1, '#0a0518');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // Floor line
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.88);
+  ctx.lineTo(W, H * 0.88);
+  ctx.stroke();
+
+  // Backboard
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  const bbW = hoop.w + 60;
+  const bbH = 60;
+  ctx.fillRect(hoop.x - bbW / 2, hoop.y - bbH, bbW, bbH);
+  ctx.strokeRect(hoop.x - bbW / 2, hoop.y - bbH, bbW, bbH);
+
+  // Square target on backboard
+  ctx.strokeStyle = '#ff5522';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(hoop.x - 20, hoop.y - 40, 40, 30);
+
+  // Rim
+  ctx.strokeStyle = '#ff4500';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(hoop.x - hoop.w / 2, hoop.rimY);
+  ctx.lineTo(hoop.x + hoop.w / 2, hoop.rimY);
+  ctx.stroke();
+
+  // Rim end-knobs
+  ctx.fillStyle = '#ff4500';
+  ctx.beginPath(); ctx.arc(hoop.x - hoop.w / 2, hoop.rimY, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hoop.x + hoop.w / 2, hoop.rimY, 5, 0, Math.PI * 2); ctx.fill();
+
+  // Net
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i <= 6; i++) {
+    const t = i / 6;
+    const x1 = hoop.x - hoop.w / 2 + t * hoop.w;
+    const x2 = hoop.x - hoop.w / 2 * 0.6 + t * hoop.w * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(x1, hoop.rimY);
+    ctx.lineTo(x2, hoop.rimY + 40);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.moveTo(hoop.x - hoop.w / 2 * 0.6, hoop.rimY + 40);
+  ctx.lineTo(hoop.x + hoop.w / 2 * 0.6, hoop.rimY + 40);
+  ctx.stroke();
+
+  // Trajectory preview while dragging
+  if (ball.held && dragCur && dragStart) {
+    const dx = dragStart.x - dragCur.x;
+    const dy = dragStart.y - dragCur.y;
+    const power = Math.min(Math.hypot(dx, dy), 200) * 0.09;
+    const ang = Math.atan2(dy, dx);
+    let vx = Math.cos(ang) * power;
+    let vy = Math.sin(ang) * power;
+    let px = ball.x, py = ball.y;
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    for (let i = 0; i < 25; i++) {
+      vy += G;
+      px += vx; py += vy;
+      if (py > H) break;
+      ctx.beginPath(); ctx.arc(px, py, 3 - i * 0.08, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Ball
+  ctx.save();
+  ctx.translate(ball.x, ball.y);
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath(); ctx.ellipse(0, ball.r + 4, ball.r * 0.8, 4, 0, 0, Math.PI * 2); ctx.fill();
+  // Body
+  const bg = ctx.createRadialGradient(-6, -6, 4, 0, 0, ball.r);
+  bg.addColorStop(0, '#ffb066');
+  bg.addColorStop(1, '#c95c14');
+  ctx.fillStyle = bg;
+  ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2); ctx.fill();
+  // Lines
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-ball.r, 0); ctx.lineTo(ball.r, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -ball.r); ctx.lineTo(0, ball.r); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.7, Math.PI * 0.2, Math.PI - Math.PI * 0.2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, ball.r * 0.7, Math.PI + Math.PI * 0.2, Math.PI * 2 - Math.PI * 0.2); ctx.stroke();
+  ctx.restore();
+
+  // Score flash
+  if (flashScore > 0) {
+    ctx.fillStyle = `rgba(74, 222, 128, ${flashScore / 30})`;
+    ctx.font = 'bold 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('+ ОЧКИ!', W / 2, H / 2);
+    flashScore--;
+  }
+}
+
+document.getElementById('best').textContent = best;
+resize();
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
