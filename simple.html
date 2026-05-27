@@ -10,11 +10,13 @@
   canvas { display: block; width: 100%; height: 100%; }
   #hud {
     position: fixed; top: 0; left: 0; right: 0;
-    padding: 16px 20px;
+    padding: 14px 20px;
     display: flex; justify-content: space-between;
     pointer-events: none;
-    font-size: 22px; font-weight: bold;
+    font-size: 20px; font-weight: bold;
     text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+    background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0));
+    z-index: 5;
   }
   #score { color: #4ade80; }
   #best { color: #fbbf24; }
@@ -74,9 +76,9 @@ let dragCur = null;
 const G = 0.5;
 
 function positionHoop() {
-  hoop.y = H * 0.18;
+  hoop.y = Math.max(H * 0.30, 110);
   hoop.x = W * 0.5;
-  hoop.rimY = hoop.y + 30;
+  hoop.rimY = hoop.y + 24;
   if (ball.startX === undefined) {
     ball.startX = W * 0.5;
     ball.startY = H * FLOOR_RATIO;
@@ -246,18 +248,18 @@ function draw() {
   }
 
   // Backboard
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 3;
-  const bbW = hoop.w + 60;
-  const bbH = 60;
+  const bbW = hoop.w + 50;
+  const bbH = 50;
   ctx.fillRect(hoop.x - bbW / 2, hoop.y - bbH, bbW, bbH);
   ctx.strokeRect(hoop.x - bbW / 2, hoop.y - bbH, bbW, bbH);
 
   // Square target on backboard
   ctx.strokeStyle = '#ff5522';
   ctx.lineWidth = 3;
-  ctx.strokeRect(hoop.x - 20, hoop.y - 40, 40, 30);
+  ctx.strokeRect(hoop.x - 18, hoop.y - 36, 36, 26);
 
   // Rim
   ctx.strokeStyle = '#ff4500';
