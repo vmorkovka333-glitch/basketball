@@ -47,7 +47,13 @@
 <button id="reset">СБРОС</button>
 <div id="hint">Тапни внизу — мяч переместится. Тяни мяч и отпусти — бросок.</div>
 
+<div id="err" style="position:fixed;top:60px;left:10px;right:10px;color:#ff7777;font-size:14px;background:rgba(0,0,0,0.7);padding:10px;border-radius:6px;display:none;z-index:30;"></div>
 <script>
+window.addEventListener('error', e => {
+  const err = document.getElementById('err');
+  if (err) { err.style.display = 'block'; err.textContent = 'JS Error: ' + (e.message || e.error || 'unknown'); }
+});
+try {
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let W, H;
@@ -69,8 +75,11 @@ window.addEventListener('resize', resize);
 const ball = { x: 0, y: 0, vx: 0, vy: 0, r: 22, free: false, held: false };
 const hoop = { x: 0, y: 0, w: 110, rimY: 0 };
 const FLOOR_RATIO = 0.78;
+function safeGet(k) { try { return localStorage.getItem(k); } catch(e) { return null; } }
+function safeSet(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
+
 let score = 0;
-let best = parseInt(localStorage.getItem('hoops_best') || '0', 10);
+let best = parseInt(safeGet('hoops_best') || '0', 10);
 let dragStart = null;
 let dragCur = null;
 const G = 0.5;
@@ -204,7 +213,7 @@ function update() {
       document.getElementById('score').textContent = score;
       if (score > best) {
         best = score;
-        localStorage.setItem('hoops_best', best);
+        safeSet('hoops_best', best);
         document.getElementById('best').textContent = best;
       }
       flashScore = 30;
@@ -349,6 +358,10 @@ function loop() {
   requestAnimationFrame(loop);
 }
 loop();
+} catch (err) {
+  const e = document.getElementById('err');
+  if (e) { e.style.display = 'block'; e.textContent = 'JS Error: ' + (err && err.message ? err.message : String(err)); }
+}
 </script>
 </body>
 </html>
