@@ -74,41 +74,38 @@
   }
   #controls b { color: #fbbf24; }
 
-  /* Touch controls */
-  #touch-controls { display: none; }
-  body.touch #touch-controls { display: block; }
+  /* On-screen controls (visible on both touch and desktop during play) */
+  #touch-controls { display: block; }
   body.touch #controls { display: none; }
-  body:not(.touch) #touch-controls { display: none !important; }
+  body.menu #touch-controls { display: none; }
 
-  #joystick {
-    position: fixed; left: 25px; bottom: 25px;
-    width: 160px; height: 160px;
-    background: rgba(74, 222, 128, 0.15);
-    border: 3px solid rgba(74, 222, 128, 0.7);
-    border-radius: 50%;
-    z-index: 15;
+  #dpad {
+    position: fixed; right: 25px; bottom: 25px;
+    width: 180px; height: 180px;
+    z-index: 16;
     touch-action: none;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  }
-  #joystick-knob {
-    position: absolute; left: 50%; top: 50%;
-    width: 70px; height: 70px;
-    margin-left: -35px; margin-top: -35px;
-    background: rgba(74, 222, 128, 0.6);
-    border: 3px solid rgba(255,255,255,0.9);
-    border-radius: 50%;
     pointer-events: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
   }
-  .joy-label {
-    position: absolute; left: 50%; bottom: -28px;
-    transform: translateX(-50%);
-    font-size: 11px; letter-spacing: 2px;
-    color: rgba(74, 222, 128, 0.9);
+  .dbtn {
+    position: absolute;
+    width: 60px; height: 60px;
+    background: rgba(74, 222, 128, 0.35);
+    border: 2px solid rgba(74, 222, 128, 0.9);
+    color: #fff;
+    font-size: 24px;
     font-weight: bold;
-    white-space: nowrap;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    user-select: none;
+    touch-action: none;
+    pointer-events: auto;
   }
+  .dbtn.active { background: rgba(74, 222, 128, 0.8); transform: scale(0.92); }
+  #dpad-up    { left: 60px; top: 0; }
+  #dpad-down  { left: 60px; top: 120px; }
+  #dpad-left  { left: 0;   top: 60px; }
+  #dpad-right { left: 120px; top: 60px; }
   .tbtn {
     position: fixed;
     border-radius: 50%;
@@ -126,20 +123,20 @@
   }
   .tbtn:active { transform: scale(0.92); }
   #btn-shoot {
-    right: 25px; bottom: 25px;
+    left: 25px; bottom: 25px;
     width: 120px; height: 120px;
     background: linear-gradient(135deg, #f97316, #ef4444);
     box-shadow: 0 4px 24px rgba(239,68,68,0.6);
     font-size: 17px;
   }
   #btn-jump {
-    right: 155px; bottom: 115px;
+    left: 155px; bottom: 115px;
     width: 80px; height: 80px;
     background: linear-gradient(135deg, #22c55e, #16a34a);
     font-size: 13px;
   }
   #btn-sprint {
-    right: 155px; bottom: 25px;
+    left: 155px; bottom: 25px;
     width: 80px; height: 80px;
     background: linear-gradient(135deg, #facc15, #ca8a04);
     color: #000;
@@ -147,8 +144,8 @@
   }
   #btn-sprint.active { box-shadow: 0 0 30px rgba(250,204,21,1); border-color: #fff; }
   #cam-area {
-    position: fixed; right: 0; top: 0;
-    width: 50%; height: 55%;
+    position: fixed; left: 0; top: 0;
+    width: 100%; height: 50%;
     z-index: 5;
     touch-action: none;
   }
@@ -174,7 +171,7 @@
   body.touch #startscreen h1 { font-size: 56px !important; }
   body.touch #startscreen h2 { font-size: 16px !important; }
   body.touch #startscreen .info { font-size: 13px !important; padding: 0 20px; }
-  body.touch #startscreen .ctrl { display: none !important; }
+  body.touch #startscreen .ctrl { display: grid !important; grid-template-columns: auto auto; font-size: 11px; max-width: 90vw; gap: 6px 12px; }
   body.touch #hud .score-value { font-size: 22px; }
   body.touch #hud .timer { font-size: 20px; }
   body.touch #hud { padding: 8px 12px; }
@@ -219,7 +216,7 @@
   }
 </style>
 </head>
-<body>
+<body class="menu">
 <canvas id="game"></canvas>
 
 <div id="hud">
@@ -239,12 +236,6 @@
   </div>
 </div>
 
-<div id="power-label">СИЛА БРОСКА</div>
-<div id="power-meter">
-  <div id="power-sweet"></div>
-  <div id="power-fill"></div>
-</div>
-
 <div id="controls">
   <b>WASD</b> двигаться &nbsp; | &nbsp; <b>Мышь</b> камера &nbsp; | &nbsp; <b>ЛКМ держать/отпустить</b> бросок &nbsp; | &nbsp;
   <b>SHIFT</b> бег &nbsp; | &nbsp; <b>ПРОБЕЛ</b> прыжок
@@ -254,7 +245,12 @@
 
 <div id="touch-controls">
   <div id="cam-area"></div>
-  <div id="joystick"><div id="joystick-knob"></div><div class="joy-label">ДВИЖЕНИЕ</div></div>
+  <div id="dpad">
+    <div class="dbtn" id="dpad-up">▲</div>
+    <div class="dbtn" id="dpad-left">◀</div>
+    <div class="dbtn" id="dpad-right">▶</div>
+    <div class="dbtn" id="dpad-down">▼</div>
+  </div>
   <div class="tbtn" id="btn-shoot">БРОСОК</div>
   <div class="tbtn" id="btn-jump">ПРЫЖОК</div>
   <div class="tbtn" id="btn-sprint">БЕГ</div>
@@ -269,19 +265,18 @@
     Отпусти меру силы в БЕЛОЙ зоне для идеального броска!
   </div>
   <div class="ctrl" id="ctrl-desktop">
-    <span><b>WASD</b></span><span>двигаться</span>
-    <span><b>Мышь</b></span><span>повернуть камеру</span>
-    <span><b>ЛКМ держать / отпустить</b></span><span>зарядить и бросить</span>
-    <span><b>SHIFT</b></span><span>бег</span>
-    <span><b>ПРОБЕЛ</b></span><span>прыжок</span>
-    <span><b>R</b></span><span>вернуть мяч</span>
-    <span><b>ESC</b></span><span>отпустить мышь</span>
+    <span><b>Кнопки ▲▼◀▶ снизу справа</b></span><span>движение игрока</span>
+    <span><b>WASD</b> (на клавиатуре)</span><span>тоже движение</span>
+    <span><b>Зажми и тяни верх экрана</b></span><span>повернуть камеру</span>
+    <span><b>БРОСОК</b> (одно нажатие)</span><span>бросить мяч</span>
+    <span><b>ПРЫЖОК</b></span><span>прыгнуть. У кольца = ДАНК!</span>
+    <span><b>БЕГ</b></span><span>включить/выключить бег</span>
   </div>
   <div class="ctrl" id="ctrl-touch" style="display:none">
-    <span><b>Джойстик слева</b></span><span>двигаться</span>
-    <span><b>Свайп справа</b></span><span>повернуть камеру</span>
-    <span><b>БРОСОК</b> держи/отпусти</span><span>зарядить и бросить</span>
-    <span><b>ПРЫЖОК</b></span><span>прыгнуть</span>
+    <span><b>Кнопки ▲▼◀▶ внизу справа</b></span><span>движение</span>
+    <span><b>Свайп верх экрана</b></span><span>повернуть камеру</span>
+    <span><b>БРОСОК</b></span><span>тап = бросить (анимация)</span>
+    <span><b>ПРЫЖОК</b></span><span>прыгнуть. У кольца = ДАНК!</span>
     <span><b>БЕГ</b></span><span>включить/выключить бег</span>
   </div>
   <button id="startbtn">НАЧАТЬ ИГРУ</button>
@@ -530,46 +525,158 @@ for (let i = 0; i < 250; i++) {
 scene.add(crowdGroup);
 
 // ---------- Player ----------
-function createPerson(color) {
+function createPerson(opts) {
   const g = new THREE.Group();
+  const jerseyColor = opts.jersey;
+  const shortsColor = opts.shorts;
+  const skinColor = opts.skin || 0x8b5a2b;
+
+  // Torso (jersey)
   const body = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.32, 0.9, 6, 12),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.7 })
+    new THREE.CapsuleGeometry(0.34, 0.85, 6, 12),
+    new THREE.MeshStandardMaterial({ color: jerseyColor, roughness: 0.7 })
   );
-  body.position.y = 0.85;
+  body.position.y = 1.0;
   body.castShadow = true;
   g.add(body);
 
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 16, 16),
-    new THREE.MeshStandardMaterial({ color: 0xe7b78a, roughness: 0.6 })
+  // Jersey number (canvas texture on chest)
+  const numCanvas = document.createElement('canvas');
+  numCanvas.width = 128; numCanvas.height = 128;
+  const nctx = numCanvas.getContext('2d');
+  nctx.fillStyle = 'rgba(0,0,0,0)';
+  nctx.fillRect(0, 0, 128, 128);
+  nctx.fillStyle = '#fff';
+  nctx.font = 'bold 80px sans-serif';
+  nctx.textAlign = 'center';
+  nctx.textBaseline = 'middle';
+  nctx.fillText(opts.number, 64, 64);
+  const numTex = new THREE.CanvasTexture(numCanvas);
+  numTex.colorSpace = THREE.SRGBColorSpace;
+  const numPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.5, 0.5),
+    new THREE.MeshBasicMaterial({ map: numTex, transparent: true })
   );
-  head.position.y = 1.65;
+  numPlane.position.set(0, 1.05, 0.36);
+  g.add(numPlane);
+
+  // Shorts
+  const shorts = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.32, 0.28, 0.35, 12),
+    new THREE.MeshStandardMaterial({ color: shortsColor, roughness: 0.7 })
+  );
+  shorts.position.y = 0.55;
+  shorts.castShadow = true;
+  g.add(shorts);
+
+  // Head
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.24, 16, 16),
+    new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
+  );
+  head.position.y = 1.8;
   head.castShadow = true;
   g.add(head);
 
+  // Hair / headband
+  if (opts.hair === 'headband') {
+    const band = new THREE.Mesh(
+      new THREE.TorusGeometry(0.24, 0.04, 8, 24),
+      new THREE.MeshStandardMaterial({ color: 0xffffff })
+    );
+    band.rotation.x = Math.PI / 2 + 0.1;
+    band.position.set(0, 1.92, 0);
+    g.add(band);
+    // Beard
+    const beard = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 12, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+      new THREE.MeshStandardMaterial({ color: 0x1a1208, roughness: 1 })
+    );
+    beard.position.set(0, 1.75, 0.05);
+    g.add(beard);
+  } else if (opts.hair === 'curly') {
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.26, 16, 12, 0, Math.PI * 2, 0, Math.PI / 1.7),
+      new THREE.MeshStandardMaterial({ color: 0x3a2510, roughness: 1 })
+    );
+    hair.position.y = 1.82;
+    g.add(hair);
+  }
+
   // Arms
-  const armMat = new THREE.MeshStandardMaterial({ color, roughness: 0.7 });
-  const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.55, 4, 8), armMat);
-  armL.position.set(-0.42, 1.0, 0); armL.castShadow = true; g.add(armL);
-  const armR = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.55, 4, 8), armMat);
-  armR.position.set(0.42, 1.0, 0); armR.castShadow = true; g.add(armR);
+  const armMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 });
+  const armL = new THREE.Group();
+  const armLMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.55, 4, 8), armMat);
+  armLMesh.position.y = -0.27; armLMesh.castShadow = true;
+  armL.add(armLMesh);
+  armL.position.set(-0.42, 1.32, 0);
+  g.add(armL);
 
-  // Legs
-  const legL = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.55, 4, 8), new THREE.MeshStandardMaterial({ color: 0x111122 }));
-  legL.position.set(-0.16, 0.3, 0); legL.castShadow = true; g.add(legL);
-  const legR = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.55, 4, 8), new THREE.MeshStandardMaterial({ color: 0x111122 }));
-  legR.position.set(0.16, 0.3, 0); legR.castShadow = true; g.add(legR);
+  const armR = new THREE.Group();
+  const armRMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.55, 4, 8), armMat);
+  armRMesh.position.y = -0.27; armRMesh.castShadow = true;
+  armR.add(armRMesh);
+  armR.position.set(0.42, 1.32, 0);
+  g.add(armR);
 
-  g.userData = { armL, armR, legL, legR };
+  // Legs (skin)
+  const legMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 });
+  const legL = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.48, 4, 8), legMat);
+  legL.position.set(-0.16, 0.25, 0); legL.castShadow = true; g.add(legL);
+  const legR = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.48, 4, 8), legMat);
+  legR.position.set(0.16, 0.25, 0); legR.castShadow = true; g.add(legR);
+
+  // Sneakers
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+  const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.36), shoeMat);
+  shoeL.position.set(-0.16, 0.0, 0.05); shoeL.castShadow = true; g.add(shoeL);
+  const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.36), shoeMat);
+  shoeR.position.set(0.16, 0.0, 0.05); shoeR.castShadow = true; g.add(shoeR);
+
+  // Name label above head
+  const nameCanvas = document.createElement('canvas');
+  nameCanvas.width = 256; nameCanvas.height = 64;
+  const ncctx = nameCanvas.getContext('2d');
+  ncctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ncctx.roundRect ? ncctx.roundRect(0,0,256,64,16) : ncctx.rect(0,0,256,64);
+  ncctx.fill();
+  ncctx.fillStyle = opts.nameColor || '#fff';
+  ncctx.font = 'bold 36px sans-serif';
+  ncctx.textAlign = 'center';
+  ncctx.textBaseline = 'middle';
+  ncctx.fillText(opts.name, 128, 36);
+  const nameTex = new THREE.CanvasTexture(nameCanvas);
+  nameTex.colorSpace = THREE.SRGBColorSpace;
+  const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTex, transparent: true }));
+  nameSprite.scale.set(1.4, 0.35, 1);
+  nameSprite.position.y = 2.35;
+  g.add(nameSprite);
+
+  g.userData = { armL, armR, legL, legR, body };
   return g;
 }
 
-const player = createPerson(0x4ade80);
+const player = createPerson({
+  name: 'ТЫ',
+  number: '23',
+  jersey: 0xfdb927,    // Lakers yellow
+  shorts: 0x552583,    // Lakers purple
+  skin: 0x6b4226,
+  hair: 'headband',
+  nameColor: '#fbbf24'
+});
 player.position.set(0, 0, 5);
 scene.add(player);
 
-const cpu = createPerson(0xf87171);
+const cpu = createPerson({
+  name: 'БОТ',
+  number: '30',
+  jersey: 0x1d428a,    // Warriors blue
+  shorts: 0xffc72c,    // Warriors gold
+  skin: 0xd4a574,
+  hair: 'curly',
+  nameColor: '#60a5fa'
+});
 cpu.position.set(0, 0, -5);
 scene.add(cpu);
 
@@ -635,7 +742,7 @@ if (isTouch) {
 
 const keys = {};
 const mouse = { dx: 0, dy: 0, locked: false, down: false };
-const touchInput = { mx: 0, mz: 0, sprint: false, shootDown: false };
+const touchInput = { up: false, down: false, left: false, right: false, sprint: false };
 
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
@@ -643,90 +750,54 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 
-canvas.addEventListener('click', () => {
-  if (!gameState.running || isTouch) return;
-  if (!mouse.locked) canvas.requestPointerLock();
-});
-
-document.addEventListener('pointerlockchange', () => {
-  mouse.locked = document.pointerLockElement === canvas;
-});
-
+// Desktop mouse: click-drag on cam-area to look around (no pointer lock)
+let mouseDragId = null, mouseDragX = 0, mouseDragY = 0;
 document.addEventListener('mousemove', e => {
-  if (mouse.locked) {
-    playerState.facing -= e.movementX * 0.0025;
-    playerState.pitch -= e.movementY * 0.0020;
+  if (mouseDragId !== null) {
+    const dx = e.clientX - mouseDragX;
+    const dy = e.clientY - mouseDragY;
+    mouseDragX = e.clientX;
+    mouseDragY = e.clientY;
+    playerState.facing -= dx * 0.006;
+    playerState.pitch -= dy * 0.004;
     playerState.pitch = Math.max(-0.4, Math.min(0.5, playerState.pitch));
   }
 });
 
-document.addEventListener('mousedown', e => {
-  if (e.button === 0 && mouse.locked) mouse.down = true;
-});
-document.addEventListener('mouseup', e => {
-  if (e.button === 0 && mouse.locked) {
-    if (mouse.down && ballState.holder === 'player') releaseShot();
-    mouse.down = false;
-  }
-});
-
-// ---------- Touch Input ----------
-if (isTouch) {
-  const joy = document.getElementById('joystick');
-  const knob = document.getElementById('joystick-knob');
+// ---------- On-screen Controls (D-pad + buttons) ----------
+{
   const camArea = document.getElementById('cam-area');
   const btnShoot = document.getElementById('btn-shoot');
   const btnJump = document.getElementById('btn-jump');
   const btnSprint = document.getElementById('btn-sprint');
 
-  let joyId = null, joyCx = 0, joyCy = 0;
-  const joyRadius = 50;
+  const dpadButtons = [
+    { el: document.getElementById('dpad-up'),    dir: 'up' },
+    { el: document.getElementById('dpad-down'),  dir: 'down' },
+    { el: document.getElementById('dpad-left'),  dir: 'left' },
+    { el: document.getElementById('dpad-right'), dir: 'right' },
+  ];
 
-  joy.addEventListener('touchstart', e => {
-    e.preventDefault();
-    const t = e.changedTouches[0];
-    joyId = t.identifier;
-    const r = joy.getBoundingClientRect();
-    joyCx = r.left + r.width / 2;
-    joyCy = r.top + r.height / 2;
-    updateJoy(t.clientX, t.clientY);
-  }, { passive: false });
-
-  joy.addEventListener('touchmove', e => {
-    e.preventDefault();
-    for (const t of e.changedTouches) {
-      if (t.identifier === joyId) updateJoy(t.clientX, t.clientY);
-    }
-  }, { passive: false });
-
-  const endJoy = e => {
-    for (const t of e.changedTouches) {
-      if (t.identifier === joyId) {
-        joyId = null;
-        knob.style.left = '50%';
-        knob.style.top = '50%';
-        touchInput.mx = 0;
-        touchInput.mz = 0;
-      }
-    }
-  };
-  joy.addEventListener('touchend', endJoy);
-  joy.addEventListener('touchcancel', endJoy);
-
-  function updateJoy(x, y) {
-    let dx = x - joyCx;
-    let dy = y - joyCy;
-    const dist = Math.min(Math.hypot(dx, dy), joyRadius);
-    const ang = Math.atan2(dy, dx);
-    dx = Math.cos(ang) * dist;
-    dy = Math.sin(ang) * dist;
-    knob.style.left = `calc(50% + ${dx}px)`;
-    knob.style.top = `calc(50% + ${dy}px)`;
-    touchInput.mx = dx / joyRadius;
-    touchInput.mz = -dy / joyRadius;
+  function setDpad(dir, on) {
+    touchInput[dir] = on;
+    const b = dpadButtons.find(b => b.dir === dir);
+    if (b) b.el.classList.toggle('active', on);
   }
 
-  // Camera swipe area
+  function addHoldHandler(el, onPress, onRelease) {
+    el.addEventListener('touchstart', e => { e.preventDefault(); onPress(); }, { passive: false });
+    el.addEventListener('touchend',   e => { e.preventDefault(); if (onRelease) onRelease(); }, { passive: false });
+    el.addEventListener('touchcancel', e => { if (onRelease) onRelease(); });
+    el.addEventListener('mousedown', e => { e.preventDefault(); onPress(); });
+    el.addEventListener('mouseup',   e => { if (onRelease) onRelease(); });
+    el.addEventListener('mouseleave', e => { if (onRelease) onRelease(); });
+  }
+
+  dpadButtons.forEach(b => {
+    addHoldHandler(b.el, () => setDpad(b.dir, true), () => setDpad(b.dir, false));
+  });
+
+  // Camera swipe area (mobile only - desktop uses pointer lock)
   let camId = null, camLastX = 0, camLastY = 0;
   camArea.addEventListener('touchstart', e => {
     e.preventDefault();
@@ -760,33 +831,36 @@ if (isTouch) {
   camArea.addEventListener('touchend', endCam);
   camArea.addEventListener('touchcancel', endCam);
 
-  // Buttons
-  btnShoot.addEventListener('touchstart', e => {
-    e.preventDefault();
-    touchInput.shootDown = true;
-  }, { passive: false });
-  btnShoot.addEventListener('touchend', e => {
-    e.preventDefault();
-    if (touchInput.shootDown && ballState.holder === 'player') releaseShot();
-    touchInput.shootDown = false;
-  }, { passive: false });
-  btnShoot.addEventListener('touchcancel', e => { touchInput.shootDown = false; });
+  // Desktop mouse drag on cam-area
+  camArea.addEventListener('mousedown', e => {
+    mouseDragId = 1;
+    mouseDragX = e.clientX;
+    mouseDragY = e.clientY;
+  });
+  document.addEventListener('mouseup', () => { mouseDragId = null; });
 
-  btnJump.addEventListener('touchstart', e => {
-    e.preventDefault();
+  // Buttons - shoot, jump, sprint
+  addHoldHandler(btnShoot,
+    () => {
+      if (ballState.holder === 'player' && !gameState.shotInAir && !gameState.charging) {
+        gameState.charging = true;
+        gameState.shotAnimT = 0;
+      }
+    });
+
+  addHoldHandler(btnJump, () => {
     if (playerState.onGround) {
       playerState.yVel = 7;
       playerState.onGround = false;
     }
-  }, { passive: false });
+  });
 
-  btnSprint.addEventListener('touchstart', e => {
-    e.preventDefault();
+  addHoldHandler(btnSprint, () => {
     touchInput.sprint = !touchInput.sprint;
     btnSprint.classList.toggle('active', touchInput.sprint);
-  }, { passive: false });
+  });
 
-  // Prevent double-tap zoom
+  // Prevent double-tap zoom on iOS
   document.addEventListener('gesturestart', e => e.preventDefault());
 }
 
@@ -797,18 +871,17 @@ const gameState = {
   scoreCpu: 0,
   quarter: 1,
   timeLeft: 120,
-  power: 0,
   charging: false,
+  shotAnimT: 0,
   shotInAir: false,
   shotShooter: null,
   shotTargetHoop: null,
   scoredThisShot: false,
-  rimTouched: false
+  rimTouched: false,
+  dunkAttempt: false,
+  shotPoints: 2
 };
 
-const powerMeter = document.getElementById('power-meter');
-const powerFill = document.getElementById('power-fill');
-const powerLabel = document.getElementById('power-label');
 const msgEl = document.getElementById('message');
 
 function showMessage(text, color = '#fbbf24', duration = 1400) {
@@ -825,13 +898,11 @@ function resetBallToPlayer() {
   ballState.vel.set(0, 0, 0);
   gameState.shotInAir = false;
   gameState.charging = false;
+  gameState.shotAnimT = 0;
   mouse.down = false;
-  powerMeter.style.display = 'none';
-  powerLabel.style.display = 'none';
 }
 
 function resetAfterScore(scorer) {
-  // Inbound to the other team
   if (scorer === 'player') {
     ballState.holder = 'cpu';
     cpu.position.set(2, 0, COURT_L/2 - 8);
@@ -845,47 +916,53 @@ function resetAfterScore(scorer) {
   ballState.vel.set(0, 0, 0);
   gameState.shotInAir = false;
   gameState.charging = false;
+  gameState.shotAnimT = 0;
   mouse.down = false;
-  powerMeter.style.display = 'none';
-  powerLabel.style.display = 'none';
   cpuState.cooldown = 1.5;
   cpuState.charging = false;
 }
 
 function releaseShot() {
   if (ballState.holder !== 'player') return;
-  const power = gameState.power; // 0..1
   gameState.charging = false;
-  powerMeter.style.display = 'none';
-  powerLabel.style.display = 'none';
+  gameState.shotAnimT = 0;
 
-  // Compute target hoop direction
   const target = playerHoop.rimPos.clone();
   const startPos = ball.position.clone();
   const horizontal = new THREE.Vector3(target.x - startPos.x, 0, target.z - startPos.z);
   const dist = horizontal.length();
   horizontal.normalize();
 
-  // Required launch params for arc: angle ~52deg, speed depends on dist + power adjustment
+  // DUNK: if jumping high enough and close to rim, slam it
+  const horizDistRim = Math.sqrt((player.position.x - target.x)**2 + (player.position.z - target.z)**2);
+  if (player.position.y > 0.8 && horizDistRim < 2.2) {
+    // Aim ball directly into the rim with strong downward
+    const dir = new THREE.Vector3(target.x - startPos.x, target.y - startPos.y, target.z - startPos.z).normalize();
+    ballState.vel.copy(dir).multiplyScalar(10);
+    ballState.vel.y = Math.max(ballState.vel.y, -2);
+    ballState.free = true;
+    ballState.holder = null;
+    ballState.pos.copy(startPos);
+    gameState.shotInAir = true;
+    gameState.shotShooter = 'player';
+    gameState.shotTargetHoop = playerHoop;
+    gameState.scoredThisShot = false;
+    gameState.rimTouched = false;
+    gameState.shotPoints = 2;
+    gameState.dunkAttempt = true;
+    showMessage('ДАНК!', '#fbbf24', 1200);
+    return;
+  }
+
+  // Standard shot - auto power based on distance (always reaches rim)
   const angle = THREE.MathUtils.degToRad(52);
   const g = 18;
   const dy = target.y - startPos.y;
-  // v^2 = g*d^2 / (2*cos^2(angle)*(d*tan(angle) - dy))
   const denom = 2 * Math.cos(angle) ** 2 * (dist * Math.tan(angle) - dy);
-  let baseSpeed = denom > 0 ? Math.sqrt(g * dist * dist / denom) : 12;
+  let speed = denom > 0 ? Math.sqrt(g * dist * dist / denom) : 12;
 
-  // Sweet spot is 0.65..0.77 of meter -> perfect speed match
-  // Outside sweet spot adds error
-  let speed = baseSpeed;
-  let accuracy = 1.0;
-  if (power < 0.55) { speed *= 0.78 + power * 0.3; accuracy = 0.45; }
-  else if (power > 0.82) { speed *= 1.08 + (power - 0.82) * 0.4; accuracy = 0.4; }
-  else if (power >= 0.65 && power <= 0.77) { accuracy = 1.0; }
-  else { accuracy = 0.75; }
-
-  // Distance-based difficulty
-  const baseAcc = THREE.MathUtils.clamp(1 - dist * 0.012, 0.55, 1);
-  accuracy *= baseAcc;
+  // Accuracy: close shots near-perfect, far shots noisier
+  const accuracy = THREE.MathUtils.clamp(1 - dist * 0.018, 0.55, 0.97);
 
   // Compute velocity
   const v = new THREE.Vector3();
@@ -893,11 +970,10 @@ function releaseShot() {
   v.z = horizontal.z * Math.cos(angle) * speed;
   v.y = Math.sin(angle) * speed;
 
-  // Add error based on (1 - accuracy)
-  const err = (1 - accuracy) * 1.6;
+  const err = (1 - accuracy) * 1.0;
   v.x += (Math.random() - 0.5) * err;
   v.z += (Math.random() - 0.5) * err;
-  v.y += (Math.random() - 0.5) * err * 0.6;
+  v.y += (Math.random() - 0.5) * err * 0.4;
 
   ballState.vel.copy(v);
   ballState.free = true;
@@ -908,8 +984,8 @@ function releaseShot() {
   gameState.shotTargetHoop = playerHoop;
   gameState.scoredThisShot = false;
   gameState.rimTouched = false;
+  gameState.dunkAttempt = false;
 
-  // Compute shot points (2 or 3)
   const distFromRimXZ = Math.sqrt((startPos.x - playerHoop.rimPos.x) ** 2 + (startPos.z - playerHoop.rimPos.z) ** 2);
   gameState.shotPoints = distFromRimXZ > 6.5 ? 3 : 2;
 }
@@ -979,7 +1055,10 @@ function updatePlayer(dt) {
   if (keys['KeyS']) mz -= 1;
   if (keys['KeyA']) mx -= 1;
   if (keys['KeyD']) mx += 1;
-  if (isTouch) { mx += touchInput.mx; mz += touchInput.mz; }
+  if (touchInput.up)    mz += 1;
+  if (touchInput.down)  mz -= 1;
+  if (touchInput.left)  mx -= 1;
+  if (touchInput.right) mx += 1;
 
   const sprint = (keys['ShiftLeft'] || keys['ShiftRight'] || touchInput.sprint) ? 1.8 : 1;
   const baseSpeed = 6 * sprint;
@@ -1018,27 +1097,22 @@ function updatePlayer(dt) {
   const swing = Math.sin(runWalkCycle) * 0.6;
   player.userData.legL.rotation.x = moving ? swing : 0;
   player.userData.legR.rotation.x = moving ? -swing : 0;
-  if (!gameState.charging) {
+  if (gameState.charging) {
+    // Arms rise smoothly during shot animation
+    const armAngle = -1.6 * Math.min(gameState.shotAnimT, 1);
+    player.userData.armL.rotation.x = armAngle;
+    player.userData.armR.rotation.x = armAngle;
+  } else {
     player.userData.armL.rotation.x = moving ? -swing * 0.5 : 0;
     player.userData.armR.rotation.x = moving ? swing * 0.5 : 0;
-  } else {
-    // Arms up while charging
-    player.userData.armL.rotation.x = -1.6;
-    player.userData.armR.rotation.x = -1.6;
   }
 
-  // Charging shot
-  const shootHeld = mouse.down || touchInput.shootDown;
-  if (shootHeld && ballState.holder === 'player' && !gameState.shotInAir) {
-    if (!gameState.charging) {
-      gameState.charging = true;
-      gameState.power = 0;
-      powerMeter.style.display = 'block';
-      powerLabel.style.display = 'block';
+  // Shoot animation: tap once → quick wind-up → release
+  if (gameState.charging && ballState.holder === 'player' && !gameState.shotInAir) {
+    gameState.shotAnimT += dt * 4; // wind-up speed
+    if (gameState.shotAnimT >= 1) {
+      releaseShot();
     }
-    gameState.power += dt * 1.05; // fills in ~0.95s
-    if (gameState.power > 1) gameState.power = 1;
-    powerFill.style.width = (gameState.power * 100) + '%';
   }
 
   // Steal: if player without ball gets close to CPU with ball
@@ -1123,29 +1197,26 @@ function updateCPU(dt) {
 
 function updateBall(dt) {
   if (ballState.holder === 'player') {
-    // Ball follows player's hand position
+    // Ball in right hand, at hip level. Lifts up during shot animation.
     const fwd = new THREE.Vector3(Math.sin(playerState.facing), 0, Math.cos(playerState.facing));
+    const right = new THREE.Vector3(Math.cos(playerState.facing), 0, -Math.sin(playerState.facing));
     const handPos = player.position.clone();
-    handPos.y += gameState.charging ? 1.95 : 1.2;
-    handPos.add(fwd.multiplyScalar(0.4));
+    const shotProgress = gameState.charging ? Math.min(gameState.shotAnimT, 1) : 0;
+    handPos.addScaledVector(right, 0.35 - shotProgress * 0.25);
+    handPos.addScaledVector(fwd, 0.25 + shotProgress * 0.3);
+    handPos.y += 1.0 + shotProgress * 1.1;
     ball.position.copy(handPos);
     ballState.pos.copy(ball.position);
-    // Dribble bounce when moving and not charging
-    if (!gameState.charging) {
-      const bounce = Math.abs(Math.sin(performance.now() * 0.008)) * 0.4;
-      ball.position.y = player.position.y + 0.4 + bounce;
-    }
   } else if (ballState.holder === 'cpu') {
     const fwd = new THREE.Vector3();
     cpu.getWorldDirection(fwd);
+    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
     const handPos = cpu.position.clone();
-    handPos.y += cpuState.charging ? 1.95 : 1.2;
-    handPos.add(fwd.multiplyScalar(0.4));
+    const shotP = cpuState.charging ? Math.min(cpuState.shotTimer, 1) : 0;
+    handPos.addScaledVector(right, 0.35 - shotP * 0.25);
+    handPos.addScaledVector(fwd, 0.25 + shotP * 0.3);
+    handPos.y += 1.0 + shotP * 1.1;
     ball.position.copy(handPos);
-    if (!cpuState.charging) {
-      const bounce = Math.abs(Math.sin(performance.now() * 0.008 + 1)) * 0.4;
-      ball.position.y = cpu.position.y + 0.4 + bounce;
-    }
   } else if (ballState.free) {
     // Physics
     ballState.vel.y -= 18 * dt;
@@ -1166,16 +1237,15 @@ function updateBall(dt) {
       }
     }
 
-    // Wall collisions (rough)
-    if (ballState.pos.x < -COURT_W/2 - 4 || ballState.pos.x > COURT_W/2 + 4 ||
-        ballState.pos.z < -COURT_L/2 - 4 || ballState.pos.z > COURT_L/2 + 4) {
-      // out of bounds - reset
-      ballState.vel.set(0, 0, 0);
-      if (gameState.shotInAir && !gameState.scoredThisShot) {
-        // missed shot recovery
-      }
-      resetBallToPlayer();
-    }
+    // Wall bounces: keep ball on court instead of resetting
+    const wallX = COURT_W/2 + 4;
+    const wallZ = COURT_L/2 + 4;
+    if (ballState.pos.x < -wallX) { ballState.pos.x = -wallX; ballState.vel.x = Math.abs(ballState.vel.x) * 0.55; }
+    if (ballState.pos.x >  wallX) { ballState.pos.x =  wallX; ballState.vel.x = -Math.abs(ballState.vel.x) * 0.55; }
+    if (ballState.pos.z < -wallZ) { ballState.pos.z = -wallZ; ballState.vel.z = Math.abs(ballState.vel.z) * 0.55; }
+    if (ballState.pos.z >  wallZ) { ballState.pos.z =  wallZ; ballState.vel.z = -Math.abs(ballState.vel.z) * 0.55; }
+    // Ceiling cap (so ball doesn't fly off the sky)
+    if (ballState.pos.y > 12) { ballState.pos.y = 12; ballState.vel.y = -Math.abs(ballState.vel.y) * 0.5; }
 
     ball.position.copy(ballState.pos);
 
@@ -1329,7 +1399,8 @@ function advanceQuarter() {
 
 function endGame() {
   gameState.running = false;
-  document.exitPointerLock();
+  document.body.classList.add('menu');
+  if (document.pointerLockElement) document.exitPointerLock();
   const end = document.getElementById('endscreen');
   const title = document.getElementById('end-title');
   const fs = document.getElementById('final-score');
@@ -1350,6 +1421,7 @@ function endGame() {
 function startGame() {
   document.getElementById('startscreen').style.display = 'none';
   document.getElementById('endscreen').style.display = 'none';
+  document.body.classList.remove('menu');
   gameState.scoreYou = 0;
   gameState.scoreCpu = 0;
   gameState.quarter = 1;
@@ -1360,7 +1432,6 @@ function startGame() {
   cpu.position.set(0, 0, -5);
   playerState.facing = Math.PI;
   gameState.running = true;
-  if (!isTouch) canvas.requestPointerLock();
 }
 
 document.getElementById('startbtn').addEventListener('click', startGame);
