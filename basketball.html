@@ -608,10 +608,10 @@ function makeFaceTexture(opts) {
   x.beginPath(); x.ellipse(256, 446, 60, 22, 0, 0, Math.PI*2); x.fill();
 
   // Beard (sculpted)
-  if (opts.beard) {
+  if (opts.beard === true || opts.beard === 'full') {
     const beardC = opts.beardColor || '#0a0503';
-    // Cheek + chin area
     x.fillStyle = beardC;
+    // Full beard covering cheeks and chin
     x.beginPath();
     x.moveTo(120, 320);
     x.bezierCurveTo(110, 400, 180, 480, 256, 480);
@@ -629,16 +629,42 @@ function makeFaceTexture(opts) {
     x.quadraticCurveTo(222, 388, 200, 372);
     x.closePath();
     x.fill();
-    // Beard texture noise (stubble dots)
+    // Stubble noise
     x.fillStyle = withAlpha(beardC, 0.55);
     for (let i = 0; i < 120; i++) {
       const dx = 130 + Math.random() * 260;
       const dy = 360 + Math.random() * 100;
-      // Limit to beard region (rough)
       x.beginPath(); x.arc(dx, dy, 1.4, 0, Math.PI*2); x.fill();
     }
+  } else if (opts.beard === 'short') {
+    const beardC = opts.beardColor || '#231a10';
+    // Short, close-cropped beard - just stubble shadow under jaw + chin strap
+    x.fillStyle = withAlpha(beardC, 0.55);
+    // Goatee
+    x.beginPath();
+    x.ellipse(256, 420, 38, 22, 0, 0, Math.PI*2);
+    x.fill();
+    // Chin strap (thin line along jawline)
+    x.strokeStyle = withAlpha(beardC, 0.45);
+    x.lineWidth = 10;
+    x.beginPath();
+    x.moveTo(150, 360);
+    x.quadraticCurveTo(256, 460, 362, 360);
+    x.stroke();
+    // Mustache (thin)
+    x.fillStyle = withAlpha(beardC, 0.6);
+    x.beginPath();
+    x.ellipse(256, 376, 38, 6, 0, 0, Math.PI*2);
+    x.fill();
+    // Stubble noise (lighter, wider)
+    x.fillStyle = withAlpha(beardC, 0.35);
+    for (let i = 0; i < 200; i++) {
+      const dx = 130 + Math.random() * 260;
+      const dy = 340 + Math.random() * 120;
+      x.beginPath(); x.arc(dx, dy, 1.0, 0, Math.PI*2); x.fill();
+    }
   } else {
-    // Light stubble
+    // Clean shaven - very light stubble
     x.fillStyle = withAlpha('#000', 0.08);
     for (let i = 0; i < 60; i++) {
       const dx = 150 + Math.random() * 220;
@@ -990,6 +1016,8 @@ function createPerson(opts) {
   g.add(nameSprite);
 
   g.userData = { armL, armR, legL, legR, body, head };
+  // Overall build scale (height, width)
+  if (opts.scale) g.scale.set(opts.scale.x || 1, opts.scale.y || 1, opts.scale.z || opts.scale.x || 1);
   return g;
 }
 
@@ -1010,7 +1038,8 @@ const player = createPerson({
   shoeColor: 0xfdb927,
   shoeStripe: 0x552583,
   tattoos: true,
-  nameColor: '#fbbf24'
+  nameColor: '#fbbf24',
+  scale: { x: 1.10, y: 1.12, z: 1.10 }   // taller, broader
 });
 player.position.set(0, 0, 5);
 scene.add(player);
@@ -1026,13 +1055,15 @@ const cpu = createPerson({
   skin: 0xc99465,
   hair: 'curly',
   hairColor: 0x231a10,
-  beard: false,
+  beard: 'short',
+  beardColor: '#231a10',
   browColor: '#1a0e05',
   eyeColor: '#2a1a08',
   shoeColor: 0xffffff,
   shoeStripe: 0x1d428a,
   tattoos: false,
-  nameColor: '#60a5fa'
+  nameColor: '#60a5fa',
+  scale: { x: 0.92, y: 0.94, z: 0.92 }   // shorter, leaner
 });
 cpu.position.set(0, 0, -5);
 scene.add(cpu);
