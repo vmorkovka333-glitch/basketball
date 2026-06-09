@@ -78,29 +78,41 @@
   #touch-controls { display: none; }
   body.touch #touch-controls { display: block; }
   body.touch #controls { display: none; }
+  body:not(.touch) #touch-controls { display: none !important; }
 
   #joystick {
-    position: fixed; left: 30px; bottom: 30px;
-    width: 140px; height: 140px;
-    background: rgba(255,255,255,0.08);
-    border: 2px solid rgba(255,255,255,0.25);
+    position: fixed; left: 25px; bottom: 25px;
+    width: 160px; height: 160px;
+    background: rgba(74, 222, 128, 0.15);
+    border: 3px solid rgba(74, 222, 128, 0.7);
     border-radius: 50%;
     z-index: 15;
     touch-action: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
   #joystick-knob {
     position: absolute; left: 50%; top: 50%;
-    width: 60px; height: 60px;
-    margin-left: -30px; margin-top: -30px;
-    background: rgba(255,255,255,0.45);
-    border: 2px solid rgba(255,255,255,0.6);
+    width: 70px; height: 70px;
+    margin-left: -35px; margin-top: -35px;
+    background: rgba(74, 222, 128, 0.6);
+    border: 3px solid rgba(255,255,255,0.9);
     border-radius: 50%;
     pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .joy-label {
+    position: absolute; left: 50%; bottom: -28px;
+    transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 2px;
+    color: rgba(74, 222, 128, 0.9);
+    font-weight: bold;
+    white-space: nowrap;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
   }
   .tbtn {
     position: fixed;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.4);
+    border: 3px solid rgba(255,255,255,0.6);
     color: #fff;
     font-weight: bold;
     font-size: 14px;
@@ -110,29 +122,33 @@
     touch-action: none;
     display: flex; align-items: center; justify-content: center;
     text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
   }
+  .tbtn:active { transform: scale(0.92); }
   #btn-shoot {
-    right: 30px; bottom: 30px;
-    width: 110px; height: 110px;
+    right: 25px; bottom: 25px;
+    width: 120px; height: 120px;
     background: linear-gradient(135deg, #f97316, #ef4444);
-    box-shadow: 0 4px 20px rgba(239,68,68,0.4);
-    font-size: 16px;
+    box-shadow: 0 4px 24px rgba(239,68,68,0.6);
+    font-size: 17px;
   }
   #btn-jump {
-    right: 150px; bottom: 110px;
-    width: 75px; height: 75px;
-    background: rgba(34,197,94,0.7);
+    right: 155px; bottom: 115px;
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    font-size: 13px;
   }
   #btn-sprint {
-    right: 150px; bottom: 30px;
-    width: 75px; height: 75px;
-    background: rgba(250,204,21,0.7);
+    right: 155px; bottom: 25px;
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #facc15, #ca8a04);
     color: #000;
+    font-size: 13px;
   }
-  #btn-sprint.active { background: rgba(250,204,21,1); box-shadow: 0 0 20px rgba(250,204,21,0.8); }
+  #btn-sprint.active { box-shadow: 0 0 30px rgba(250,204,21,1); border-color: #fff; }
   #cam-area {
     position: fixed; right: 0; top: 0;
-    width: 50%; height: 65%;
+    width: 50%; height: 55%;
     z-index: 5;
     touch-action: none;
   }
@@ -209,65 +225,72 @@
 <div id="hud">
   <div class="panel score-row">
     <div class="score-block">
-      <div class="score-label">DU</div>
+      <div class="score-label">ТЫ</div>
       <div class="score-value you" id="score-you">0</div>
     </div>
     <div class="score-block">
-      <div class="score-label">CPU</div>
+      <div class="score-label">БОТ</div>
       <div class="score-value cpu" id="score-cpu">0</div>
     </div>
   </div>
   <div class="panel" style="text-align:center;">
-    <div class="quarter" id="quarter">VIERTEL 1</div>
+    <div class="quarter" id="quarter">ЧЕТВЕРТЬ 1</div>
     <div class="timer" id="timer">2:00</div>
   </div>
 </div>
 
-<div id="power-label">SHOT POWER</div>
+<div id="power-label">СИЛА БРОСКА</div>
 <div id="power-meter">
   <div id="power-sweet"></div>
   <div id="power-fill"></div>
 </div>
 
 <div id="controls">
-  <b>WASD</b> Bewegen &nbsp; | &nbsp; <b>Maus</b> Umsehen &nbsp; | &nbsp; <b>LMB halten</b> Wurf laden &nbsp; | &nbsp;
-  <b>LMB loslassen</b> Werfen &nbsp; | &nbsp; <b>SHIFT</b> Sprint &nbsp; | &nbsp; <b>SPACE</b> Sprung
+  <b>WASD</b> двигаться &nbsp; | &nbsp; <b>Мышь</b> камера &nbsp; | &nbsp; <b>ЛКМ держать/отпустить</b> бросок &nbsp; | &nbsp;
+  <b>SHIFT</b> бег &nbsp; | &nbsp; <b>ПРОБЕЛ</b> прыжок
 </div>
 
 <div id="message"></div>
 
 <div id="touch-controls">
   <div id="cam-area"></div>
-  <div id="joystick"><div id="joystick-knob"></div></div>
-  <div class="tbtn" id="btn-shoot">SHOOT</div>
-  <div class="tbtn" id="btn-jump">JUMP</div>
-  <div class="tbtn" id="btn-sprint">RUN</div>
+  <div id="joystick"><div id="joystick-knob"></div><div class="joy-label">ДВИЖЕНИЕ</div></div>
+  <div class="tbtn" id="btn-shoot">БРОСОК</div>
+  <div class="tbtn" id="btn-jump">ПРЫЖОК</div>
+  <div class="tbtn" id="btn-sprint">БЕГ</div>
 </div>
 
 <div id="startscreen">
-  <h1>HOOPS 2K26</h1>
-  <h2>BROWSER BASKETBALL</h2>
+  <h1>БАСКЕТБОЛ</h1>
+  <h2>2K26 В БРАУЗЕРЕ</h2>
   <div class="info">
-    Eine Runde, 4 Viertel à 2 Minuten. Triff den Korb, schlag die CPU.
-    Den Ball aus dem 3er-Bereich versenken zählt drei Punkte.
-    Das Power-Meter im weißen Bereich loslassen für den perfekten Wurf!
+    4 четверти по 2 минуты. Забивай больше бота чтобы победить.
+    Бросок с дальней дуги — 3 очка, ближний — 2.
+    Отпусти меру силы в БЕЛОЙ зоне для идеального броска!
   </div>
-  <div class="ctrl">
-    <span><b>WASD</b></span><span>Bewegen</span>
-    <span><b>Maus</b></span><span>Kamera drehen</span>
-    <span><b>LMB halten / loslassen</b></span><span>Wurf laden &amp; werfen</span>
-    <span><b>SHIFT</b></span><span>Sprint</span>
-    <span><b>SPACE</b></span><span>Springen</span>
-    <span><b>R</b></span><span>Ball zurückholen</span>
-    <span><b>ESC</b></span><span>Maus freigeben</span>
+  <div class="ctrl" id="ctrl-desktop">
+    <span><b>WASD</b></span><span>двигаться</span>
+    <span><b>Мышь</b></span><span>повернуть камеру</span>
+    <span><b>ЛКМ держать / отпустить</b></span><span>зарядить и бросить</span>
+    <span><b>SHIFT</b></span><span>бег</span>
+    <span><b>ПРОБЕЛ</b></span><span>прыжок</span>
+    <span><b>R</b></span><span>вернуть мяч</span>
+    <span><b>ESC</b></span><span>отпустить мышь</span>
   </div>
-  <button id="startbtn">SPIEL STARTEN</button>
+  <div class="ctrl" id="ctrl-touch" style="display:none">
+    <span><b>Джойстик слева</b></span><span>двигаться</span>
+    <span><b>Свайп справа</b></span><span>повернуть камеру</span>
+    <span><b>БРОСОК</b> держи/отпусти</span><span>зарядить и бросить</span>
+    <span><b>ПРЫЖОК</b></span><span>прыгнуть</span>
+    <span><b>БЕГ</b></span><span>включить/выключить бег</span>
+  </div>
+  <button id="startbtn">НАЧАТЬ ИГРУ</button>
 </div>
 
 <div id="endscreen">
-  <h1 id="end-title">SPIEL VORBEI</h1>
+  <h1 id="end-title">ИГРА ОКОНЧЕНА</h1>
   <div class="final-score" id="final-score"></div>
-  <button id="restartbtn">NOCHMAL SPIELEN</button>
+  <button id="restartbtn">ИГРАТЬ ЕЩЁ</button>
 </div>
 
 <script type="importmap">
@@ -602,7 +625,13 @@ const ballState = {
 
 // ---------- Input ----------
 const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-if (isTouch) document.body.classList.add('touch');
+if (isTouch) {
+  document.body.classList.add('touch');
+  const ctrlD = document.getElementById('ctrl-desktop');
+  const ctrlT = document.getElementById('ctrl-touch');
+  if (ctrlD) ctrlD.style.display = 'none';
+  if (ctrlT) ctrlT.style.display = 'grid';
+}
 
 const keys = {};
 const mouse = { dx: 0, dy: 0, locked: false, down: false };
@@ -1017,7 +1046,7 @@ function updatePlayer(dt) {
     const d = player.position.distanceTo(cpu.position);
     if (d < 1.0 && Math.random() < 0.025) {
       ballState.holder = 'player';
-      showMessage('STEAL!', '#4ade80', 1000);
+      showMessage('ПЕРЕХВАТ!', '#4ade80', 1000);
     }
   }
 }
@@ -1229,10 +1258,10 @@ function checkHoop(hoop) {
       const pts = gameState.shotPoints || 2;
       if (gameState.shotShooter === 'player') {
         gameState.scoreYou += pts;
-        showMessage(pts === 3 ? 'THREE!' : 'BUCKET!', '#4ade80');
+        showMessage(pts === 3 ? 'ТРЁХОЧКОВЫЙ!' : 'ЗАБИЛ!', '#4ade80');
       } else {
         gameState.scoreCpu += pts;
-        showMessage(pts === 3 ? 'CPU 3!' : 'CPU SCORES', '#f87171');
+        showMessage(pts === 3 ? 'БОТ ЗАБИЛ 3!' : 'БОТ ЗАБИЛ', '#f87171');
       }
       // Net animation
       animateNet(hoop);
@@ -1284,7 +1313,7 @@ function updateHUD() {
   const m = Math.floor(gameState.timeLeft / 60);
   const s = Math.floor(gameState.timeLeft % 60);
   document.getElementById('timer').textContent = `${m}:${s.toString().padStart(2, '0')}`;
-  document.getElementById('quarter').textContent = `VIERTEL ${gameState.quarter}`;
+  document.getElementById('quarter').textContent = `ЧЕТВЕРТЬ ${gameState.quarter}`;
 }
 
 function advanceQuarter() {
@@ -1293,7 +1322,7 @@ function advanceQuarter() {
   } else {
     gameState.quarter++;
     gameState.timeLeft = 120;
-    showMessage(`VIERTEL ${gameState.quarter}`, '#fbbf24', 1800);
+    showMessage(`ЧЕТВЕРТЬ ${gameState.quarter}`, '#fbbf24', 1800);
     resetAfterScore(gameState.quarter % 2 === 0 ? 'player' : 'cpu');
   }
 }
@@ -1305,13 +1334,13 @@ function endGame() {
   const title = document.getElementById('end-title');
   const fs = document.getElementById('final-score');
   if (gameState.scoreYou > gameState.scoreCpu) {
-    title.textContent = 'DU GEWINNST!';
+    title.textContent = 'ТЫ ПОБЕДИЛ!';
     title.style.color = '#4ade80';
   } else if (gameState.scoreYou < gameState.scoreCpu) {
-    title.textContent = 'CPU GEWINNT';
+    title.textContent = 'БОТ ПОБЕДИЛ';
     title.style.color = '#f87171';
   } else {
-    title.textContent = 'UNENTSCHIEDEN';
+    title.textContent = 'НИЧЬЯ';
     title.style.color = '#fbbf24';
   }
   fs.textContent = `${gameState.scoreYou} : ${gameState.scoreCpu}`;
