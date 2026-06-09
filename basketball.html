@@ -686,7 +686,9 @@ const playerState = {
   onGround: true,
   hasBall: true,
   facing: 0, // yaw
-  pitch: 0
+  pitch: 0,
+  dunking: false,
+  dunkTarget: null
 };
 
 const cpuState = {
@@ -848,12 +850,7 @@ document.addEventListener('mousemove', e => {
       }
     });
 
-  addHoldHandler(btnJump, () => {
-    if (playerState.onGround) {
-      playerState.yVel = 7;
-      playerState.onGround = false;
-    }
-  });
+  addHoldHandler(btnJump, () => tryJumpOrDunk());
 
   addHoldHandler(btnSprint, () => {
     touchInput.sprint = !touchInput.sprint;
@@ -920,6 +917,50 @@ function resetAfterScore(scorer) {
   mouse.down = false;
   cpuState.cooldown = 1.5;
   cpuState.charging = false;
+}
+
+function tryJumpOrDunk() {
+  if (!playerState.onGround) return;
+  const rim = playerHoop.rimPos;
+  const dx = rim.x - player.position.x;
+  const dz = rim.z - player.position.z;
+  const horiz = Math.sqrt(dx*dx + dz*dz);
+  if (ballState.holder === 'player' && horiz < 4.0 && !gameState.shotInAir) {
+    // Dunk! Leap toward rim and slam
+    playerState.dunking = true;
+    playerState.dunkTarget = new THREE.Vector3(
+      rim.x - dx / horiz * 0.5,  // stop just short of rim
+      0,
+      rim.z - dz / horiz * 0.5
+    );
+    playerState.yVel = 10;
+    playerState.onGround = false;
+    showMessage('ДАНК!', '#fbbf24', 1000);
+    return;
+  }
+  // Regular jump
+  playerState.yVel = 7;
+  playerState.onGround = false;
+}
+
+function performDunkRelease() {
+  // Called when player reaches peak of dunk jump
+  const rim = playerHoop.rimPos.clone();
+  const startPos = ball.position.clone();
+  // Slam: ball aimed straight down into rim
+  const dir = new THREE.Vector3(rim.x - startPos.x, -1.5, rim.z - startPos.z);
+  dir.normalize();
+  ballState.vel.copy(dir.multiplyScalar(7));
+  ballState.free = true;
+  ballState.holder = null;
+  ballState.pos.copy(startPos);
+  gameState.shotInAir = true;
+  gameState.shotShooter = 'player';
+  gameState.shotTargetHoop = playerHoop;
+  gameState.scoredThisShot = false;
+  gameState.rimTouched = false;
+  gameState.shotPoints = 2;
+  gameState.dunkAttempt = true;
 }
 
 function releaseShot() {
@@ -1047,38 +1088,53 @@ function update(dt) {
 }
 
 function updatePlayer(dt) {
-  const forward = new THREE.Vector3(Math.sin(playerState.facing), 0, Math.cos(playerState.facing));
-  const right = new THREE.Vector3(Math.cos(playerState.facing), 0, -Math.sin(playerState.facing));
-
+  // World-space movement: ▲ = toward CPU hoop (-Z), ▼ = toward own hoop (+Z)
+  // ◀ = world left (-X), ▶ = world right (+X)
   let mx = 0, mz = 0;
-  if (keys['KeyW']) mz += 1;
-  if (keys['KeyS']) mz -= 1;
+  if (keys['KeyW']) mz -= 1;
+  if (keys['KeyS']) mz += 1;
   if (keys['KeyA']) mx -= 1;
   if (keys['KeyD']) mx += 1;
-  if (touchInput.up)    mz += 1;
-  if (touchInput.down)  mz -= 1;
+  if (touchInput.up)    mz -= 1;
+  if (touchInput.down)  mz += 1;
   if (touchInput.left)  mx -= 1;
   if (touchInput.right) mx += 1;
 
   const sprint = (keys['ShiftLeft'] || keys['ShiftRight'] || touchInput.sprint) ? 1.8 : 1;
   const baseSpeed = 6 * sprint;
 
-  const move = new THREE.Vector3();
-  move.addScaledVector(forward, mz);
-  move.addScaledVector(right, mx);
-  if (move.lengthSq() > 0) move.normalize().multiplyScalar(baseSpeed);
+  const move = new THREE.Vector3(mx, 0, mz);
+  if (move.lengthSq() > 0) {
+    move.normalize().multiplyScalar(baseSpeed);
+    // Player faces direction of movement
+    playerState.facing = Math.atan2(mx, mz);
+  }
 
-  player.position.x += move.x * dt;
-  player.position.z += move.z * dt;
+  // During dunk: move player toward rim
+  if (playerState.dunking && playerState.dunkTarget) {
+    const t = playerState.dunkTarget;
+    const dx = t.x - player.position.x;
+    const dz = t.z - player.position.z;
+    const d = Math.sqrt(dx*dx + dz*dz);
+    if (d > 0.1) {
+      const step = Math.min(14 * dt, d);
+      player.position.x += (dx / d) * step;
+      player.position.z += (dz / d) * step;
+      playerState.facing = Math.atan2(dx, dz);
+    }
+  } else {
+    player.position.x += move.x * dt;
+    player.position.z += move.z * dt;
+  }
 
   // Constrain to court bounds (with margin)
   player.position.x = THREE.MathUtils.clamp(player.position.x, -COURT_W/2 + 0.5, COURT_W/2 - 0.5);
   player.position.z = THREE.MathUtils.clamp(player.position.z, -COURT_L/2 + 0.5, COURT_L/2 - 0.5);
 
-  // Jump
+  // Jump (keyboard)
   if (keys['Space'] && playerState.onGround) {
-    playerState.yVel = 7;
-    playerState.onGround = false;
+    keys['Space'] = false; // single-shot
+    tryJumpOrDunk();
   }
   playerState.yVel -= 22 * dt;
   player.position.y += playerState.yVel * dt;
@@ -1086,6 +1142,13 @@ function updatePlayer(dt) {
     player.position.y = 0;
     playerState.yVel = 0;
     playerState.onGround = true;
+    playerState.dunking = false;
+    playerState.dunkTarget = null;
+  }
+
+  // Dunk: release ball at peak height
+  if (playerState.dunking && ballState.holder === 'player' && playerState.yVel <= 0 && player.position.y > 1.5) {
+    performDunkRelease();
   }
 
   // Face camera direction
@@ -1237,15 +1300,15 @@ function updateBall(dt) {
       }
     }
 
-    // Wall bounces: keep ball on court instead of resetting
-    const wallX = COURT_W/2 + 4;
-    const wallZ = COURT_L/2 + 4;
-    if (ballState.pos.x < -wallX) { ballState.pos.x = -wallX; ballState.vel.x = Math.abs(ballState.vel.x) * 0.55; }
-    if (ballState.pos.x >  wallX) { ballState.pos.x =  wallX; ballState.vel.x = -Math.abs(ballState.vel.x) * 0.55; }
-    if (ballState.pos.z < -wallZ) { ballState.pos.z = -wallZ; ballState.vel.z = Math.abs(ballState.vel.z) * 0.55; }
-    if (ballState.pos.z >  wallZ) { ballState.pos.z =  wallZ; ballState.vel.z = -Math.abs(ballState.vel.z) * 0.55; }
-    // Ceiling cap (so ball doesn't fly off the sky)
-    if (ballState.pos.y > 12) { ballState.pos.y = 12; ballState.vel.y = -Math.abs(ballState.vel.y) * 0.5; }
+    // Wall bounces: keep ball strictly on court
+    const wallX = COURT_W/2 - 0.5;
+    const wallZ = COURT_L/2 - 0.5;
+    if (ballState.pos.x < -wallX) { ballState.pos.x = -wallX; ballState.vel.x = Math.abs(ballState.vel.x) * 0.5; }
+    if (ballState.pos.x >  wallX) { ballState.pos.x =  wallX; ballState.vel.x = -Math.abs(ballState.vel.x) * 0.5; }
+    if (ballState.pos.z < -wallZ) { ballState.pos.z = -wallZ; ballState.vel.z = Math.abs(ballState.vel.z) * 0.5; }
+    if (ballState.pos.z >  wallZ) { ballState.pos.z =  wallZ; ballState.vel.z = -Math.abs(ballState.vel.z) * 0.5; }
+    // Ceiling cap
+    if (ballState.pos.y > 10) { ballState.pos.y = 10; ballState.vel.y = -Math.abs(ballState.vel.y) * 0.4; }
 
     ball.position.copy(ballState.pos);
 
@@ -1267,11 +1330,25 @@ function updateBall(dt) {
       }
     });
 
+    // After CPU shot misses or settles, give ball directly to player
+    if (gameState.shotInAir && gameState.shotShooter === 'cpu'
+        && ballState.vel.lengthSq() < 9
+        && ball.position.y < 1.5
+        && !gameState.scoredThisShot) {
+      ballState.holder = 'player';
+      ballState.free = false;
+      ballState.vel.set(0, 0, 0);
+      gameState.shotInAir = false;
+      cpuState.cooldown = 1.2;
+      return;
+    }
+
     // Pickup ball if player close and ball at low height after settling
     if (ball.position.y < 0.6 && Math.abs(ballState.vel.y) < 3) {
       const dP = player.position.distanceTo(new THREE.Vector3(ball.position.x, 0, ball.position.z));
       const dC = cpu.position.distanceTo(new THREE.Vector3(ball.position.x, 0, ball.position.z));
-      if (dP < 1.0 && dP <= dC) {
+      // Default: player gets the ball after any loose-ball settle
+      if (dP < 2.5 || (gameState.shotShooter === 'player' && !gameState.scoredThisShot)) {
         ballState.holder = 'player';
         ballState.free = false;
         ballState.vel.set(0, 0, 0);
@@ -1285,8 +1362,11 @@ function updateBall(dt) {
       }
     }
 
-    // If shot has been in air for too long without scoring, give to closer
+    // If shot has been in air for too long without scoring, give to player
     if (gameState.shotInAir && ballState.vel.lengthSq() < 0.2 && ball.position.y < 0.3) {
+      ballState.holder = 'player';
+      ballState.free = false;
+      ballState.vel.set(0, 0, 0);
       gameState.shotInAir = false;
     }
   }
@@ -1351,22 +1431,19 @@ function animateNet(hoop) {
 }
 
 function updateCamera() {
-  // Third-person behind player
-  const eyeOffset = new THREE.Vector3(
-    -Math.sin(playerState.facing) * 4.5,
-    2.4 + playerState.pitch * 2,
-    -Math.cos(playerState.facing) * 4.5
+  // Fixed broadcast camera: high view from player's side looking toward CPU hoop
+  const camPos = new THREE.Vector3(
+    player.position.x * 0.4,
+    8 + playerState.pitch * 4,
+    player.position.z + 9
   );
-  const camPos = player.position.clone().add(eyeOffset);
-  camPos.y += 1.0;
-  camera.position.lerp(camPos, 0.18);
+  camera.position.lerp(camPos, 0.1);
 
-  const lookAt = player.position.clone();
-  lookAt.y += 1.4;
-  // Add a bit of pitch
-  lookAt.x += Math.sin(playerState.facing) * 3;
-  lookAt.z += Math.cos(playerState.facing) * 3;
-  lookAt.y += playerState.pitch * 3;
+  const lookAt = new THREE.Vector3(
+    player.position.x * 0.3,
+    2 + playerState.pitch * 2,
+    player.position.z - 6
+  );
   camera.lookAt(lookAt);
 }
 
