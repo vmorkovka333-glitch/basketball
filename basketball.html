@@ -322,10 +322,14 @@ window.addEventListener('resize', () => {
 });
 
 // ---------- Lights ----------
-const hemi = new THREE.HemisphereLight(0x88aaff, 0x442266, 0.6);
+const hemi = new THREE.HemisphereLight(0xb6d8ff, 0x4d2a78, 0.9);
 scene.add(hemi);
 
-const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+const fill = new THREE.DirectionalLight(0xffeaa7, 0.5);
+fill.position.set(-10, 12, -8);
+scene.add(fill);
+
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
 sun.position.set(15, 30, 10);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -881,6 +885,15 @@ for (let i = 0; i < 3; i++) {
 }
 ball.add(ballLines);
 
+// Ground shadow for the ball
+const ballShadow = new THREE.Mesh(
+  new THREE.CircleGeometry(ballRadius * 1.5, 16),
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 })
+);
+ballShadow.rotation.x = -Math.PI / 2;
+ballShadow.position.y = 0.01;
+scene.add(ballShadow);
+
 const ballState = {
   pos: new THREE.Vector3(0, 0.18, 5),
   vel: new THREE.Vector3(),
@@ -1206,13 +1219,16 @@ function cpuShoot() {
   const denom = 2 * Math.cos(angle) ** 2 * (dist * Math.tan(angle) - dy);
   const baseSpeed = denom > 0 ? Math.sqrt(g * dist * dist / denom) : 12;
 
-  const accuracy = THREE.MathUtils.clamp(1 - dist * 0.025, 0.45, 0.85);
-  const err = (1 - accuracy) * 1.4;
+  let accuracy;
+  if (dist < 4)      accuracy = 0.95;
+  else if (dist < 7) accuracy = 0.88;
+  else               accuracy = THREE.MathUtils.clamp(0.80 - (dist - 7) * 0.02, 0.65, 0.85);
+  const err = (1 - accuracy) * 0.55;
 
   const v = new THREE.Vector3();
   v.x = horizontal.x * Math.cos(angle) * baseSpeed + (Math.random() - 0.5) * err;
   v.z = horizontal.z * Math.cos(angle) * baseSpeed + (Math.random() - 0.5) * err;
-  v.y = Math.sin(angle) * baseSpeed + (Math.random() - 0.5) * err * 0.5;
+  v.y = Math.sin(angle) * baseSpeed + (Math.random() - 0.5) * err * 0.3;
 
   ballState.vel.copy(v);
   ballState.free = true;
@@ -1318,18 +1334,28 @@ function updatePlayer(dt) {
 
   // Animate legs / arms
   const moving = move.lengthSq() > 0.1;
-  runWalkCycle += dt * (moving ? 10 * sprint : 0);
-  const swing = Math.sin(runWalkCycle) * 0.6;
+  const speedMul = sprint > 1.2 ? 14 : 10;
+  runWalkCycle += dt * (moving ? speedMul : 0);
+  const swing = Math.sin(runWalkCycle) * (sprint > 1.2 ? 0.8 : 0.55);
   player.userData.legL.rotation.x = moving ? swing : 0;
   player.userData.legR.rotation.x = moving ? -swing : 0;
-  if (gameState.charging) {
-    // Arms rise smoothly during shot animation
-    const armAngle = -1.6 * Math.min(gameState.shotAnimT, 1);
+
+  // Body lean forward when sprinting
+  player.userData.body.rotation.x = THREE.MathUtils.lerp(player.userData.body.rotation.x || 0, moving && sprint > 1.2 ? 0.18 : 0, 0.15);
+
+  if (gameState.charging || (playerState.dunking && ballState.holder === 'player')) {
+    // Arms rise smoothly during shot/dunk animation
+    const t = playerState.dunking ? 1 : Math.min(gameState.shotAnimT, 1);
+    const armAngle = -1.8 * t;
     player.userData.armL.rotation.x = armAngle;
     player.userData.armR.rotation.x = armAngle;
+  } else if (playerState.dunking) {
+    // Arm extended for dunk
+    player.userData.armR.rotation.x = -2.2;
+    player.userData.armL.rotation.x = -1.0;
   } else {
-    player.userData.armL.rotation.x = moving ? -swing * 0.5 : 0;
-    player.userData.armR.rotation.x = moving ? swing * 0.5 : 0;
+    player.userData.armL.rotation.x = moving ? -swing * 0.6 : 0;
+    player.userData.armR.rotation.x = moving ? swing * 0.6 : 0;
   }
 
   // Shoot animation: tap once → quick wind-up → release
@@ -1537,7 +1563,18 @@ function updateBall(dt) {
   if (ballState.free) {
     ballLines.rotation.x += dt * 8;
     ballLines.rotation.z += dt * 4;
+  } else {
+    // Subtle idle spin
+    ballLines.rotation.y += dt * 2;
   }
+
+  // Ground shadow follows ball, scales/fades with height
+  ballShadow.position.x = ball.position.x;
+  ballShadow.position.z = ball.position.z;
+  const h = Math.max(0, ball.position.y);
+  const sc = THREE.MathUtils.clamp(1.6 - h * 0.08, 0.4, 1.6);
+  ballShadow.scale.set(sc, sc, 1);
+  ballShadow.material.opacity = THREE.MathUtils.clamp(0.45 - h * 0.025, 0.1, 0.45);
 }
 
 function checkHoop(hoop) {
