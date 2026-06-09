@@ -1695,6 +1695,9 @@ function updateBall(dt) {
     handPos.y += 1.0 + shotP * 1.1;
     ball.position.copy(handPos);
   } else if (ballState.free) {
+    // Save previous position for swept rim detection
+    ballState.prevPos = ballState.prevPos || new THREE.Vector3();
+    ballState.prevPos.copy(ballState.pos);
     // Physics
     ballState.vel.y -= 18 * dt;
     ballState.pos.addScaledVector(ballState.vel, dt);
@@ -1808,11 +1811,38 @@ function checkHoop(hoop) {
   const dx = ball.position.x - rim.x;
   const dz = ball.position.z - rim.z;
   const horizDist = Math.sqrt(dx*dx + dz*dz);
-  const dy = ball.position.y - rim.y;
 
-  // Rim torus collision (approx) - if ball is at rim height and outside rim center but within rim ring
-  if (Math.abs(dy) < 0.12 && horizDist < hoop.rimRadius + 0.08 && horizDist > hoop.rimRadius - 0.1) {
-    // Bounce off rim
+  // Swept scoring: did the ball cross the rim plane downward this frame?
+  if (!gameState.scoredThisShot && hoop === gameState.shotTargetHoop && ballState.prevPos) {
+    const prevY = ballState.prevPos.y;
+    const currY = ballState.pos.y;
+    if (prevY > rim.y && currY <= rim.y && ballState.vel.y < 0) {
+      // Interpolate horizontal crossing point
+      const t = (prevY - rim.y) / (prevY - currY || 1e-6);
+      const cx = ballState.prevPos.x + (ballState.pos.x - ballState.prevPos.x) * t;
+      const cz = ballState.prevPos.z + (ballState.pos.z - ballState.prevPos.z) * t;
+      const cDist = Math.sqrt((cx - rim.x)**2 + (cz - rim.z)**2);
+      // Generous scoring radius (ball + small margin)
+      if (cDist < hoop.rimRadius - 0.05) {
+        gameState.scoredThisShot = true;
+        const pts = gameState.shotPoints || 2;
+        if (gameState.shotShooter === 'player') {
+          gameState.scoreYou += pts;
+          showMessage(pts === 3 ? 'ТРЁХОЧКОВЫЙ!' : 'ЗАБИЛ!', '#4ade80');
+        } else {
+          gameState.scoreCpu += pts;
+          showMessage(pts === 3 ? 'БОТ ЗАБИЛ 3!' : 'БОТ ЗАБИЛ', '#f87171');
+        }
+        animateNet(hoop);
+        setTimeout(() => resetAfterScore(gameState.shotShooter), 900);
+        return;
+      }
+    }
+  }
+
+  // Rim torus collision (bounce) - only if NOT in the scoring zone
+  const dy = ball.position.y - rim.y;
+  if (Math.abs(dy) < 0.12 && horizDist > hoop.rimRadius - 0.05 && horizDist < hoop.rimRadius + 0.10) {
     const nrm = new THREE.Vector3(dx, 0, dz).normalize();
     const vDotN = ballState.vel.x * nrm.x + ballState.vel.z * nrm.z;
     if (vDotN < 0) {
@@ -1820,27 +1850,6 @@ function checkHoop(hoop) {
       ballState.vel.z -= 2 * vDotN * nrm.z * 0.6;
       ballState.vel.y *= 0.6;
       gameState.rimTouched = true;
-    }
-  }
-
-  // Scoring: ball passes through rim from above
-  if (!gameState.scoredThisShot && hoop === gameState.shotTargetHoop) {
-    if (horizDist < hoop.rimRadius - 0.05
-        && Math.abs(dy) < 0.10
-        && ballState.vel.y < 0) {
-      // Score!
-      gameState.scoredThisShot = true;
-      const pts = gameState.shotPoints || 2;
-      if (gameState.shotShooter === 'player') {
-        gameState.scoreYou += pts;
-        showMessage(pts === 3 ? 'ТРЁХОЧКОВЫЙ!' : 'ЗАБИЛ!', '#4ade80');
-      } else {
-        gameState.scoreCpu += pts;
-        showMessage(pts === 3 ? 'БОТ ЗАБИЛ 3!' : 'БОТ ЗАБИЛ', '#f87171');
-      }
-      // Net animation
-      animateNet(hoop);
-      setTimeout(() => resetAfterScore(gameState.shotShooter), 900);
     }
   }
 }
