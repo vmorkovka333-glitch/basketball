@@ -74,33 +74,42 @@
   }
   #controls b { color: #fbbf24; }
 
-  /* Touch controls */
-  #touch-controls { display: none; }
-  body.touch #touch-controls { display: block; }
+  /* On-screen controls (visible on both touch and desktop during play) */
+  #touch-controls { display: block; }
   body.touch #controls { display: none; }
+  body.menu #touch-controls { display: none; }
 
-  #joystick {
-    position: fixed; left: 30px; bottom: 30px;
-    width: 140px; height: 140px;
-    background: rgba(255,255,255,0.08);
-    border: 2px solid rgba(255,255,255,0.25);
-    border-radius: 50%;
-    z-index: 15;
+  #dpad {
+    position: fixed; right: 25px; bottom: 25px;
+    width: 180px; height: 180px;
+    z-index: 16;
     touch-action: none;
-  }
-  #joystick-knob {
-    position: absolute; left: 50%; top: 50%;
-    width: 60px; height: 60px;
-    margin-left: -30px; margin-top: -30px;
-    background: rgba(255,255,255,0.45);
-    border: 2px solid rgba(255,255,255,0.6);
-    border-radius: 50%;
     pointer-events: none;
   }
+  .dbtn {
+    position: absolute;
+    width: 60px; height: 60px;
+    background: rgba(74, 222, 128, 0.35);
+    border: 2px solid rgba(74, 222, 128, 0.9);
+    color: #fff;
+    font-size: 24px;
+    font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    user-select: none;
+    touch-action: none;
+    pointer-events: auto;
+  }
+  .dbtn.active { background: rgba(74, 222, 128, 0.8); transform: scale(0.92); }
+  #dpad-up    { left: 60px; top: 0; }
+  #dpad-down  { left: 60px; top: 120px; }
+  #dpad-left  { left: 0;   top: 60px; }
+  #dpad-right { left: 120px; top: 60px; }
   .tbtn {
     position: fixed;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.4);
+    border: 3px solid rgba(255,255,255,0.6);
     color: #fff;
     font-weight: bold;
     font-size: 14px;
@@ -110,29 +119,45 @@
     touch-action: none;
     display: flex; align-items: center; justify-content: center;
     text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
   }
+  .tbtn:active { transform: scale(0.92); }
   #btn-shoot {
-    right: 30px; bottom: 30px;
-    width: 110px; height: 110px;
+    left: 25px; bottom: 25px;
+    width: 120px; height: 120px;
     background: linear-gradient(135deg, #f97316, #ef4444);
-    box-shadow: 0 4px 20px rgba(239,68,68,0.4);
-    font-size: 16px;
+    box-shadow: 0 4px 24px rgba(239,68,68,0.6);
+    font-size: 17px;
   }
   #btn-jump {
-    right: 150px; bottom: 110px;
-    width: 75px; height: 75px;
-    background: rgba(34,197,94,0.7);
+    left: 155px; bottom: 115px;
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    font-size: 13px;
   }
   #btn-sprint {
-    right: 150px; bottom: 30px;
-    width: 75px; height: 75px;
-    background: rgba(250,204,21,0.7);
+    left: 155px; bottom: 25px;
+    width: 70px; height: 70px;
+    background: linear-gradient(135deg, #facc15, #ca8a04);
     color: #000;
+    font-size: 12px;
   }
-  #btn-sprint.active { background: rgba(250,204,21,1); box-shadow: 0 0 20px rgba(250,204,21,0.8); }
+  #btn-sprint.active { box-shadow: 0 0 30px rgba(250,204,21,1); border-color: #fff; }
+  #btn-block {
+    left: 230px; bottom: 25px;
+    width: 70px; height: 70px;
+    background: linear-gradient(135deg, #38bdf8, #0369a1);
+    font-size: 12px;
+  }
+  #btn-steal {
+    left: 230px; bottom: 100px;
+    width: 70px; height: 70px;
+    background: linear-gradient(135deg, #a78bfa, #7c3aed);
+    font-size: 12px;
+  }
   #cam-area {
-    position: fixed; right: 0; top: 0;
-    width: 50%; height: 65%;
+    position: fixed; left: 0; top: 0;
+    width: 100%; height: 50%;
     z-index: 5;
     touch-action: none;
   }
@@ -158,7 +183,7 @@
   body.touch #startscreen h1 { font-size: 56px !important; }
   body.touch #startscreen h2 { font-size: 16px !important; }
   body.touch #startscreen .info { font-size: 13px !important; padding: 0 20px; }
-  body.touch #startscreen .ctrl { display: none !important; }
+  body.touch #startscreen .ctrl { display: grid !important; grid-template-columns: auto auto; font-size: 11px; max-width: 90vw; gap: 6px 12px; }
   body.touch #hud .score-value { font-size: 22px; }
   body.touch #hud .timer { font-size: 20px; }
   body.touch #hud { padding: 8px 12px; }
@@ -203,71 +228,78 @@
   }
 </style>
 </head>
-<body>
+<body class="menu">
 <canvas id="game"></canvas>
 
 <div id="hud">
   <div class="panel score-row">
     <div class="score-block">
-      <div class="score-label">DU</div>
+      <div class="score-label">ТЫ</div>
       <div class="score-value you" id="score-you">0</div>
     </div>
     <div class="score-block">
-      <div class="score-label">CPU</div>
+      <div class="score-label">БОТ</div>
       <div class="score-value cpu" id="score-cpu">0</div>
     </div>
   </div>
   <div class="panel" style="text-align:center;">
-    <div class="quarter" id="quarter">VIERTEL 1</div>
+    <div class="quarter" id="quarter">ЧЕТВЕРТЬ 1</div>
     <div class="timer" id="timer">2:00</div>
   </div>
 </div>
 
-<div id="power-label">SHOT POWER</div>
-<div id="power-meter">
-  <div id="power-sweet"></div>
-  <div id="power-fill"></div>
-</div>
-
 <div id="controls">
-  <b>WASD</b> Bewegen &nbsp; | &nbsp; <b>Maus</b> Umsehen &nbsp; | &nbsp; <b>LMB halten</b> Wurf laden &nbsp; | &nbsp;
-  <b>LMB loslassen</b> Werfen &nbsp; | &nbsp; <b>SHIFT</b> Sprint &nbsp; | &nbsp; <b>SPACE</b> Sprung
+  <b>WASD</b> двигаться &nbsp; | &nbsp; <b>Мышь</b> камера &nbsp; | &nbsp; <b>ЛКМ держать/отпустить</b> бросок &nbsp; | &nbsp;
+  <b>SHIFT</b> бег &nbsp; | &nbsp; <b>ПРОБЕЛ</b> прыжок
 </div>
 
 <div id="message"></div>
 
 <div id="touch-controls">
   <div id="cam-area"></div>
-  <div id="joystick"><div id="joystick-knob"></div></div>
-  <div class="tbtn" id="btn-shoot">SHOOT</div>
-  <div class="tbtn" id="btn-jump">JUMP</div>
-  <div class="tbtn" id="btn-sprint">RUN</div>
+  <div id="dpad">
+    <div class="dbtn" id="dpad-up">▲</div>
+    <div class="dbtn" id="dpad-left">◀</div>
+    <div class="dbtn" id="dpad-right">▶</div>
+    <div class="dbtn" id="dpad-down">▼</div>
+  </div>
+  <div class="tbtn" id="btn-shoot">БРОСОК</div>
+  <div class="tbtn" id="btn-jump">ПРЫЖОК</div>
+  <div class="tbtn" id="btn-sprint">БЕГ</div>
+  <div class="tbtn" id="btn-block">БЛОК</div>
+  <div class="tbtn" id="btn-steal">СТИЛ</div>
 </div>
 
 <div id="startscreen">
-  <h1>HOOPS 2K26</h1>
-  <h2>BROWSER BASKETBALL</h2>
+  <h1>БАСКЕТБОЛ</h1>
+  <h2>2K26 В БРАУЗЕРЕ</h2>
   <div class="info">
-    Eine Runde, 4 Viertel à 2 Minuten. Triff den Korb, schlag die CPU.
-    Den Ball aus dem 3er-Bereich versenken zählt drei Punkte.
-    Das Power-Meter im weißen Bereich loslassen für den perfekten Wurf!
+    4 четверти по 2 минуты. Забивай больше бота чтобы победить.
+    Бросок с дальней дуги — 3 очка, ближний — 2.
+    Отпусти меру силы в БЕЛОЙ зоне для идеального броска!
   </div>
-  <div class="ctrl">
-    <span><b>WASD</b></span><span>Bewegen</span>
-    <span><b>Maus</b></span><span>Kamera drehen</span>
-    <span><b>LMB halten / loslassen</b></span><span>Wurf laden &amp; werfen</span>
-    <span><b>SHIFT</b></span><span>Sprint</span>
-    <span><b>SPACE</b></span><span>Springen</span>
-    <span><b>R</b></span><span>Ball zurückholen</span>
-    <span><b>ESC</b></span><span>Maus freigeben</span>
+  <div class="ctrl" id="ctrl-desktop">
+    <span><b>Кнопки ▲▼◀▶ снизу справа</b></span><span>движение игрока</span>
+    <span><b>WASD</b> (на клавиатуре)</span><span>тоже движение</span>
+    <span><b>Зажми и тяни верх экрана</b></span><span>повернуть камеру</span>
+    <span><b>БРОСОК</b> (одно нажатие)</span><span>бросить мяч</span>
+    <span><b>ПРЫЖОК</b></span><span>прыгнуть. У кольца = ДАНК!</span>
+    <span><b>БЕГ</b></span><span>включить/выключить бег</span>
   </div>
-  <button id="startbtn">SPIEL STARTEN</button>
+  <div class="ctrl" id="ctrl-touch" style="display:none">
+    <span><b>Кнопки ▲▼◀▶ внизу справа</b></span><span>движение</span>
+    <span><b>Свайп верх экрана</b></span><span>повернуть камеру</span>
+    <span><b>БРОСОК</b></span><span>тап = бросить (анимация)</span>
+    <span><b>ПРЫЖОК</b></span><span>прыгнуть. У кольца = ДАНК!</span>
+    <span><b>БЕГ</b></span><span>включить/выключить бег</span>
+  </div>
+  <button id="startbtn">НАЧАТЬ ИГРУ</button>
 </div>
 
 <div id="endscreen">
-  <h1 id="end-title">SPIEL VORBEI</h1>
+  <h1 id="end-title">ИГРА ОКОНЧЕНА</h1>
   <div class="final-score" id="final-score"></div>
-  <button id="restartbtn">NOCHMAL SPIELEN</button>
+  <button id="restartbtn">ИГРАТЬ ЕЩЁ</button>
 </div>
 
 <script type="importmap">
@@ -292,8 +324,9 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0a18);
-scene.fog = new THREE.Fog(0x0a0a18, 30, 90);
+// Arena ambience: bright wood-paneled stadium look
+scene.background = new THREE.Color(0x1a3d6b);
+scene.fog = new THREE.Fog(0x2a5d9b, 60, 130);
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
 
@@ -304,10 +337,14 @@ window.addEventListener('resize', () => {
 });
 
 // ---------- Lights ----------
-const hemi = new THREE.HemisphereLight(0x88aaff, 0x442266, 0.6);
+const hemi = new THREE.HemisphereLight(0xb6d8ff, 0x4d2a78, 0.9);
 scene.add(hemi);
 
-const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+const fill = new THREE.DirectionalLight(0xffeaa7, 0.5);
+fill.position.set(-10, 12, -8);
+scene.add(fill);
+
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
 sun.position.set(15, 30, 10);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -368,7 +405,7 @@ courtTop.receiveShadow = true;
 scene.add(courtTop);
 
 // ---------- Arena walls ----------
-const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.9 });
+const wallMat = new THREE.MeshStandardMaterial({ color: 0x3a5070, roughness: 0.85 });
 function addWall(w, h, d, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
   m.position.set(x, y, z); m.receiveShadow = true; scene.add(m);
@@ -507,46 +544,597 @@ for (let i = 0; i < 250; i++) {
 scene.add(crowdGroup);
 
 // ---------- Player ----------
-function createPerson(color) {
+function makeFaceTexture(opts) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const x = c.getContext('2d');
+  const skin = '#' + opts.skin.toString(16).padStart(6, '0');
+  // Skin base with subtle gradient
+  const baseG = x.createRadialGradient(256, 220, 60, 256, 256, 280);
+  baseG.addColorStop(0, lighten(skin, 18));
+  baseG.addColorStop(0.6, skin);
+  baseG.addColorStop(1, darken(skin, 22));
+  x.fillStyle = baseG; x.fillRect(0, 0, 512, 512);
+
+  // Cheek blush
+  x.fillStyle = withAlpha(darken(skin, 15), 0.35);
+  x.beginPath(); x.ellipse(150, 280, 38, 22, 0, 0, Math.PI*2); x.fill();
+  x.beginPath(); x.ellipse(362, 280, 38, 22, 0, 0, Math.PI*2); x.fill();
+
+  // Forehead highlight
+  x.fillStyle = withAlpha('#ffffff', 0.18);
+  x.beginPath(); x.ellipse(256, 150, 90, 35, 0, 0, Math.PI*2); x.fill();
+
+  // Eye sockets (slight shadow)
+  x.fillStyle = withAlpha('#000000', 0.18);
+  x.beginPath(); x.ellipse(180, 230, 40, 22, 0, 0, Math.PI*2); x.fill();
+  x.beginPath(); x.ellipse(332, 230, 40, 22, 0, 0, Math.PI*2); x.fill();
+
+  // Eye whites
+  x.fillStyle = '#f8f4ec';
+  x.beginPath(); x.ellipse(180, 232, 28, 18, 0, 0, Math.PI*2); x.fill();
+  x.beginPath(); x.ellipse(332, 232, 28, 18, 0, 0, Math.PI*2); x.fill();
+  // Iris
+  x.fillStyle = opts.eyeColor || '#3a2210';
+  x.beginPath(); x.arc(180, 234, 12, 0, Math.PI*2); x.fill();
+  x.beginPath(); x.arc(332, 234, 12, 0, Math.PI*2); x.fill();
+  // Pupil
+  x.fillStyle = '#000';
+  x.beginPath(); x.arc(180, 234, 6, 0, Math.PI*2); x.fill();
+  x.beginPath(); x.arc(332, 234, 6, 0, Math.PI*2); x.fill();
+  // Eye highlight
+  x.fillStyle = '#fff';
+  x.beginPath(); x.arc(184, 230, 2.5, 0, Math.PI*2); x.fill();
+  x.beginPath(); x.arc(336, 230, 2.5, 0, Math.PI*2); x.fill();
+
+  // Eyebrows (thicker, curved)
+  x.strokeStyle = opts.browColor || '#1a0e05';
+  x.lineWidth = 9; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(146, 200); x.quadraticCurveTo(180, 188, 218, 198); x.stroke();
+  x.beginPath(); x.moveTo(294, 198); x.quadraticCurveTo(332, 188, 366, 200); x.stroke();
+
+  // Nose: bridge shading + nostrils
+  const noseG = x.createLinearGradient(220, 250, 292, 350);
+  noseG.addColorStop(0, withAlpha('#000', 0.0));
+  noseG.addColorStop(1, withAlpha('#000', 0.18));
+  x.fillStyle = noseG;
+  x.beginPath();
+  x.moveTo(256, 240); x.lineTo(228, 340); x.lineTo(284, 340); x.closePath();
+  x.fill();
+  // Nostrils
+  x.fillStyle = withAlpha('#000', 0.4);
+  x.beginPath(); x.ellipse(244, 348, 4, 3, 0, 0, Math.PI*2); x.fill();
+  x.beginPath(); x.ellipse(268, 348, 4, 3, 0, 0, Math.PI*2); x.fill();
+
+  // Lips
+  x.fillStyle = darken(skin, 30);
+  x.beginPath();
+  x.moveTo(208, 390);
+  x.quadraticCurveTo(256, 376, 304, 390);
+  x.quadraticCurveTo(256, 412, 208, 390);
+  x.closePath();
+  x.fill();
+  // Lip highlight
+  x.fillStyle = withAlpha('#ffffff', 0.25);
+  x.beginPath(); x.ellipse(256, 388, 18, 3, 0, 0, Math.PI*2); x.fill();
+
+  // Chin shadow
+  x.fillStyle = withAlpha('#000', 0.1);
+  x.beginPath(); x.ellipse(256, 446, 60, 22, 0, 0, Math.PI*2); x.fill();
+
+  // Beard (sculpted)
+  if (opts.beard === true || opts.beard === 'full') {
+    const beardC = opts.beardColor || '#0a0503';
+    x.fillStyle = beardC;
+    // Full beard covering cheeks and chin
+    x.beginPath();
+    x.moveTo(120, 320);
+    x.bezierCurveTo(110, 400, 180, 480, 256, 480);
+    x.bezierCurveTo(332, 480, 402, 400, 392, 320);
+    x.bezierCurveTo(380, 350, 340, 360, 320, 358);
+    x.bezierCurveTo(280, 370, 232, 370, 192, 358);
+    x.bezierCurveTo(172, 360, 132, 350, 120, 320);
+    x.closePath();
+    x.fill();
+    // Mustache
+    x.beginPath();
+    x.moveTo(200, 372);
+    x.quadraticCurveTo(256, 358, 312, 372);
+    x.quadraticCurveTo(290, 388, 256, 386);
+    x.quadraticCurveTo(222, 388, 200, 372);
+    x.closePath();
+    x.fill();
+    // Stubble noise
+    x.fillStyle = withAlpha(beardC, 0.55);
+    for (let i = 0; i < 120; i++) {
+      const dx = 130 + Math.random() * 260;
+      const dy = 360 + Math.random() * 100;
+      x.beginPath(); x.arc(dx, dy, 1.4, 0, Math.PI*2); x.fill();
+    }
+  } else if (opts.beard === 'short') {
+    const beardC = opts.beardColor || '#231a10';
+    // Short, close-cropped beard - just stubble shadow under jaw + chin strap
+    x.fillStyle = withAlpha(beardC, 0.55);
+    // Goatee
+    x.beginPath();
+    x.ellipse(256, 420, 38, 22, 0, 0, Math.PI*2);
+    x.fill();
+    // Chin strap (thin line along jawline)
+    x.strokeStyle = withAlpha(beardC, 0.45);
+    x.lineWidth = 10;
+    x.beginPath();
+    x.moveTo(150, 360);
+    x.quadraticCurveTo(256, 460, 362, 360);
+    x.stroke();
+    // Mustache (thin)
+    x.fillStyle = withAlpha(beardC, 0.6);
+    x.beginPath();
+    x.ellipse(256, 376, 38, 6, 0, 0, Math.PI*2);
+    x.fill();
+    // Stubble noise (lighter, wider)
+    x.fillStyle = withAlpha(beardC, 0.35);
+    for (let i = 0; i < 200; i++) {
+      const dx = 130 + Math.random() * 260;
+      const dy = 340 + Math.random() * 120;
+      x.beginPath(); x.arc(dx, dy, 1.0, 0, Math.PI*2); x.fill();
+    }
+  } else {
+    // Clean shaven - very light stubble
+    x.fillStyle = withAlpha('#000', 0.08);
+    for (let i = 0; i < 60; i++) {
+      const dx = 150 + Math.random() * 220;
+      const dy = 380 + Math.random() * 80;
+      x.beginPath(); x.arc(dx, dy, 1.0, 0, Math.PI*2); x.fill();
+    }
+  }
+
+  // Side jaw shading
+  x.fillStyle = withAlpha('#000', 0.12);
+  x.beginPath(); x.ellipse(80, 320, 50, 120, 0, 0, Math.PI*2); x.fill();
+  x.beginPath(); x.ellipse(432, 320, 50, 120, 0, 0, Math.PI*2); x.fill();
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+// Color helpers
+function hexToRgb(h) {
+  h = h.replace('#','');
+  return { r: parseInt(h.slice(0,2),16), g: parseInt(h.slice(2,4),16), b: parseInt(h.slice(4,6),16) };
+}
+function rgbToHex(r,g,b) {
+  const c = v => Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0');
+  return '#' + c(r) + c(g) + c(b);
+}
+function lighten(h, p) { const {r,g,b} = hexToRgb(h); return rgbToHex(r + 255*p/100, g + 255*p/100, b + 255*p/100); }
+function darken(h, p)  { return lighten(h, -p); }
+function withAlpha(h, a) { const {r,g,b} = hexToRgb(h); return `rgba(${r|0},${g|0},${b|0},${a})`; }
+
+function makeJerseyTexture(opts) {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 1024;
+  const x = c.getContext('2d');
+  const jc = '#' + opts.jersey.toString(16).padStart(6, '0');
+  // Fabric base with subtle vertical gradient + texture
+  const baseG = x.createLinearGradient(0, 0, 0, 1024);
+  baseG.addColorStop(0, lighten(jc, 10));
+  baseG.addColorStop(1, darken(jc, 18));
+  x.fillStyle = baseG; x.fillRect(0, 0, 1024, 1024);
+  // Fabric noise
+  for (let i = 0; i < 2000; i++) {
+    x.fillStyle = withAlpha('#ffffff', 0.015 + Math.random() * 0.02);
+    x.fillRect(Math.random() * 1024, Math.random() * 1024, 1, 1);
+  }
+  // Side panels (different tone)
+  x.fillStyle = withAlpha(darken(jc, 25), 0.45);
+  x.fillRect(0, 0, 80, 1024);
+  x.fillRect(944, 0, 80, 1024);
+  // Stripe across chest
+  if (opts.stripeColor !== undefined) {
+    x.fillStyle = '#' + opts.stripeColor.toString(16).padStart(6, '0');
+    x.fillRect(0, 470, 1024, 18);
+  }
+  // Neckline collar
+  x.fillStyle = darken(jc, 35);
+  x.beginPath();
+  x.moveTo(400, 0); x.lineTo(624, 0); x.lineTo(560, 80);
+  x.lineTo(464, 80); x.closePath();
+  x.fill();
+  // Team name + player last name
+  x.fillStyle = opts.textColor || '#fff';
+  x.font = 'bold 90px sans-serif';
+  x.textAlign = 'center';
+  x.fillText(opts.team || '', 512, 200);
+  // Player last name (top arc style)
+  if (opts.lastName) {
+    x.font = 'bold 100px sans-serif';
+    x.fillText(opts.lastName, 512, 320);
+  }
+  // Big number
+  x.font = 'bold 440px sans-serif';
+  x.strokeStyle = darken(opts.textColor || '#fff', 30);
+  x.lineWidth = 14;
+  x.strokeText(opts.number, 512, 800);
+  x.fillText(opts.number, 512, 800);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+function makeSkinTexture(opts, withTattoos) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const x = c.getContext('2d');
+  const skin = '#' + opts.skin.toString(16).padStart(6, '0');
+  // Base + vein/muscle hints
+  x.fillStyle = skin;
+  x.fillRect(0, 0, 256, 256);
+  // Muscle shading
+  x.fillStyle = withAlpha('#000', 0.10);
+  x.beginPath(); x.ellipse(128, 100, 70, 24, 0, 0, Math.PI*2); x.fill();
+  x.fillStyle = withAlpha('#ffffff', 0.05);
+  x.beginPath(); x.ellipse(128, 60, 60, 18, 0, 0, Math.PI*2); x.fill();
+  // Tattoos (procedural geometric pattern)
+  if (withTattoos) {
+    x.strokeStyle = withAlpha('#000', 0.55);
+    x.lineWidth = 2;
+    // Tribal stripes around upper arm
+    for (let i = 0; i < 4; i++) {
+      x.beginPath();
+      const y = 40 + i * 12;
+      for (let xv = 0; xv < 256; xv += 8) {
+        x.lineTo(xv, y + Math.sin(xv * 0.1 + i) * 3);
+      }
+      x.stroke();
+    }
+    // Star
+    x.fillStyle = withAlpha('#000', 0.55);
+    x.beginPath();
+    const cx = 128, cy = 160;
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 - Math.PI/2;
+      const r = i % 2 === 0 ? 18 : 8;
+      x.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+    x.closePath(); x.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function createPerson(opts) {
   const g = new THREE.Group();
+  const jerseyColor = opts.jersey;
+  const shortsColor = opts.shorts;
+  const skinColor = opts.skin || 0x8b5a2b;
+
+  // Torso (jersey) with texture (team logo + number on front)
+  const jerseyTex = makeJerseyTexture(opts);
   const body = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.32, 0.9, 6, 12),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.7 })
+    new THREE.CapsuleGeometry(0.36, 0.85, 10, 20),
+    new THREE.MeshStandardMaterial({ map: jerseyTex, color: 0xffffff, roughness: 0.55 })
   );
-  body.position.y = 0.85;
+  body.position.y = 1.0;
   body.castShadow = true;
   g.add(body);
 
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 16, 16),
-    new THREE.MeshStandardMaterial({ color: 0xe7b78a, roughness: 0.6 })
+  // Shorts (slimmer top, wider bottom) with stripe band
+  const shorts = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.32, 0.36, 0.50, 20),
+    new THREE.MeshStandardMaterial({ color: shortsColor, roughness: 0.6 })
   );
-  head.position.y = 1.65;
+  shorts.position.y = 0.52;
+  shorts.castShadow = true;
+  g.add(shorts);
+  // Waistband
+  const waist = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.33, 0.33, 0.08, 20),
+    new THREE.MeshStandardMaterial({ color: jerseyColor })
+  );
+  waist.position.y = 0.74;
+  g.add(waist);
+  // Shorts side stripe
+  const stripeMat = new THREE.MeshStandardMaterial({ color: opts.stripeColor !== undefined ? opts.stripeColor : 0xffffff });
+  for (let side = 0; side < 2; side++) {
+    const sx = side === 0 ? -0.345 : 0.345;
+    const sp = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.45, 0.06), stripeMat);
+    sp.position.set(sx, 0.52, 0); g.add(sp);
+  }
+
+  // Neck
+  const neck = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1, 0.13, 0.14, 14),
+    new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
+  );
+  neck.position.y = 1.55;
+  neck.castShadow = true;
+  g.add(neck);
+
+  // Head with face texture
+  const faceTex = makeFaceTexture(opts);
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.245, 48, 32),
+    new THREE.MeshStandardMaterial({ map: faceTex, color: 0xffffff, roughness: 0.55 })
+  );
+  head.position.y = 1.80;
   head.castShadow = true;
+  head.rotation.y = Math.PI;  // face points toward player's local +Z (forward)
   g.add(head);
+  // Slight head squash for more human shape
+  head.scale.set(1.0, 1.05, 0.98);
 
-  // Arms
-  const armMat = new THREE.MeshStandardMaterial({ color, roughness: 0.7 });
-  const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.55, 4, 8), armMat);
-  armL.position.set(-0.42, 1.0, 0); armL.castShadow = true; g.add(armL);
-  const armR = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.55, 4, 8), armMat);
-  armR.position.set(0.42, 1.0, 0); armR.castShadow = true; g.add(armR);
+  // Ears
+  const earMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 });
+  const earL = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), earMat);
+  earL.position.set(-0.225, 1.79, 0.02); earL.scale.set(0.6, 1, 1); g.add(earL);
+  const earR = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), earMat);
+  earR.position.set(0.225, 1.79, 0.02); earR.scale.set(0.6, 1, 1); g.add(earR);
 
-  // Legs
-  const legL = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.55, 4, 8), new THREE.MeshStandardMaterial({ color: 0x111122 }));
-  legL.position.set(-0.16, 0.3, 0); legL.castShadow = true; g.add(legL);
-  const legR = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.55, 4, 8), new THREE.MeshStandardMaterial({ color: 0x111122 }));
-  legR.position.set(0.16, 0.3, 0); legR.castShadow = true; g.add(legR);
+  // Hair styles
+  if (opts.hair === 'short') {
+    // Close-cropped hair cap
+    const hairMat = new THREE.MeshStandardMaterial({ color: opts.hairColor || 0x0a0503, roughness: 1 });
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.252, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2.2),
+      hairMat
+    );
+    hair.position.y = 1.82;
+    g.add(hair);
+    // Subtle hairline at temples
+    const sideMat = new THREE.MeshStandardMaterial({ color: opts.hairColor || 0x0a0503 });
+    for (let i = -1; i <= 1; i += 2) {
+      const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), sideMat);
+      tuft.position.set(i * 0.20, 1.76, 0.05);
+      g.add(tuft);
+    }
+  } else if (opts.hair === 'headband') {
+    const band = new THREE.Mesh(
+      new THREE.TorusGeometry(0.252, 0.05, 16, 36),
+      new THREE.MeshStandardMaterial({ color: 0xf8f8f8, roughness: 0.85 })
+    );
+    band.rotation.x = Math.PI / 2 + 0.14;
+    band.position.set(0, 1.94, 0);
+    g.add(band);
+  } else if (opts.hair === 'curly') {
+    // Layered curls
+    const hairMat = new THREE.MeshStandardMaterial({ color: opts.hairColor || 0x231a10, roughness: 1 });
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.275, 32, 24, 0, Math.PI * 2, 0, Math.PI / 1.7),
+      hairMat
+    );
+    hair.position.y = 1.83;
+    g.add(hair);
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      const t = (i % 3) / 3;
+      const r = 0.20 + t * 0.07;
+      const curl = new THREE.Mesh(new THREE.SphereGeometry(0.055 + t*0.02, 10, 10), hairMat);
+      curl.position.set(Math.cos(a) * r, 1.95 - t * 0.05, Math.sin(a) * r);
+      g.add(curl);
+    }
+  }
 
-  g.userData = { armL, armR, legL, legR };
+  // Shoulders (caps)
+  const shoulderMat = new THREE.MeshStandardMaterial({ color: jerseyColor, roughness: 0.55 });
+  const shdL = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 14), shoulderMat);
+  shdL.position.set(-0.40, 1.45, 0); g.add(shdL);
+  const shdR = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 14), shoulderMat);
+  shdR.position.set(0.40, 1.45, 0); g.add(shdR);
+
+  // Arms with upper/forearm + hand for better animation
+  const skinTex = makeSkinTexture(opts, opts.tattoos);
+  const armMat = new THREE.MeshStandardMaterial({ map: skinTex, color: 0xffffff, roughness: 0.55 });
+  const handMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.55 });
+  function makeArm() {
+    const grp = new THREE.Group();
+    const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.32, 8, 14), armMat);
+    upper.position.y = -0.18; upper.castShadow = true;
+    grp.add(upper);
+    // Elbow joint
+    const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 12), handMat);
+    elbow.position.y = -0.36;
+    grp.add(elbow);
+    const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.28, 8, 14), handMat);
+    fore.position.y = -0.52; fore.castShadow = true;
+    grp.add(fore);
+    // Hand - palm + fingers
+    const handGroup = new THREE.Group();
+    handGroup.position.y = -0.70;
+    // Palm
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.10, 0.06), handMat);
+    palm.castShadow = true;
+    handGroup.add(palm);
+    // Knuckles ridge
+    const knuckles = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.03, 0.06), handMat);
+    knuckles.position.set(0, 0.06, 0);
+    handGroup.add(knuckles);
+    // 4 fingers (index, middle, ring, pinky)
+    const fingerLengths = [0.085, 0.095, 0.090, 0.075];
+    const fingerXs = [-0.045, -0.015, 0.015, 0.045];
+    for (let i = 0; i < 4; i++) {
+      // 2 segments per finger
+      const f1 = new THREE.Mesh(new THREE.CapsuleGeometry(0.014, 0.035, 4, 6), handMat);
+      f1.position.set(fingerXs[i], 0.085 + fingerLengths[i] * 0.3, 0);
+      f1.castShadow = true;
+      handGroup.add(f1);
+      const f2 = new THREE.Mesh(new THREE.CapsuleGeometry(0.013, 0.030, 4, 6), handMat);
+      f2.position.set(fingerXs[i], 0.085 + fingerLengths[i] * 0.85, 0);
+      f2.castShadow = true;
+      handGroup.add(f2);
+    }
+    // Thumb (to the side)
+    const thumb1 = new THREE.Mesh(new THREE.CapsuleGeometry(0.018, 0.035, 4, 6), handMat);
+    thumb1.position.set(-0.075, 0.02, 0.018);
+    thumb1.rotation.z = 0.7;
+    thumb1.castShadow = true;
+    handGroup.add(thumb1);
+    const thumb2 = new THREE.Mesh(new THREE.CapsuleGeometry(0.016, 0.030, 4, 6), handMat);
+    thumb2.position.set(-0.105, 0.055, 0.018);
+    thumb2.rotation.z = 0.6;
+    thumb2.castShadow = true;
+    handGroup.add(thumb2);
+    grp.add(handGroup);
+    // Wristband
+    const band = new THREE.Mesh(
+      new THREE.TorusGeometry(0.085, 0.028, 10, 20),
+      new THREE.MeshStandardMaterial({ color: 0xffffff })
+    );
+    band.rotation.x = Math.PI / 2;
+    band.position.y = -0.63;
+    grp.add(band);
+    return grp;
+  }
+  const armL = makeArm(); armL.position.set(-0.42, 1.42, 0); g.add(armL);
+  const armR = makeArm(); armR.position.set(0.42, 1.42, 0); g.add(armR);
+
+  // Legs (upper + lower + knee + sock)
+  const legMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.55 });
+  function makeLeg() {
+    const grp = new THREE.Group();
+    const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.14, 0.30, 8, 14), legMat);
+    upper.position.y = -0.16; upper.castShadow = true;
+    grp.add(upper);
+    const knee = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 12), legMat);
+    knee.position.y = -0.34;
+    grp.add(knee);
+    const lower = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.30, 8, 14), legMat);
+    lower.position.y = -0.50; lower.castShadow = true;
+    grp.add(lower);
+    // Sock
+    const sock = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.125, 0.125, 0.16, 14),
+      new THREE.MeshStandardMaterial({ color: 0xffffff })
+    );
+    sock.position.y = -0.66;
+    grp.add(sock);
+    // Sock stripe
+    const ss = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.126, 0.126, 0.025, 14),
+      new THREE.MeshStandardMaterial({ color: opts.stripeColor !== undefined ? opts.stripeColor : 0x000000 })
+    );
+    ss.position.y = -0.63;
+    grp.add(ss);
+    return grp;
+  }
+  const legL = makeLeg(); legL.position.set(-0.16, 0.42, 0); g.add(legL);
+  const legR = makeLeg(); legR.position.set(0.16, 0.42, 0); g.add(legR);
+
+  // Sneakers (sole + upper + tongue + side stripe)
+  const shoeUpper = new THREE.MeshStandardMaterial({ color: opts.shoeColor || 0xeeeeee, roughness: 0.45 });
+  const shoeSole  = new THREE.MeshStandardMaterial({ color: 0x222222 });
+  function makeShoe() {
+    const sg = new THREE.Group();
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.10, 0.40), shoeUpper);
+    top.position.y = 0.06; top.castShadow = true; sg.add(top);
+    // Toe cap (rounded)
+    const toe = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10, 0, Math.PI*2, 0, Math.PI/2), shoeUpper);
+    toe.position.set(0, 0.06, 0.20);
+    toe.rotation.x = Math.PI / 2;
+    sg.add(toe);
+    // Sole
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.05, 0.44), shoeSole);
+    sole.position.y = 0.005; sg.add(sole);
+    // Tongue
+    const tongue = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.08), shoeUpper);
+    tongue.position.set(0, 0.11, 0.0); sg.add(tongue);
+    // Lace dots
+    for (let i = 0; i < 3; i++) {
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+      dot.position.set(0, 0.13, -0.02 + i * 0.04);
+      sg.add(dot);
+    }
+    // Swoosh stripe each side
+    const stripeMat2 = new THREE.MeshStandardMaterial({ color: opts.shoeStripe || 0xff5522 });
+    for (let side = 0; side < 2; side++) {
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.06, 0.20), stripeMat2);
+      stripe.position.set(side === 0 ? 0.112 : -0.112, 0.06, 0.02);
+      sg.add(stripe);
+    }
+    return sg;
+  }
+  const shoeL = makeShoe(); shoeL.position.set(-0.16, 0.0, 0.05); g.add(shoeL);
+  const shoeR = makeShoe(); shoeR.position.set(0.16, 0.0, 0.05); g.add(shoeR);
+
+  // Name label sprite above head
+  const nameCanvas = document.createElement('canvas');
+  nameCanvas.width = 512; nameCanvas.height = 96;
+  const ncctx = nameCanvas.getContext('2d');
+  ncctx.fillStyle = 'rgba(0,0,0,0.78)';
+  if (ncctx.roundRect) { ncctx.beginPath(); ncctx.roundRect(0, 0, 512, 96, 22); ncctx.fill(); }
+  else ncctx.fillRect(0, 0, 512, 96);
+  ncctx.strokeStyle = opts.nameColor || '#fff';
+  ncctx.lineWidth = 4;
+  if (ncctx.roundRect) { ncctx.beginPath(); ncctx.roundRect(3, 3, 506, 90, 20); ncctx.stroke(); }
+  ncctx.fillStyle = opts.nameColor || '#fff';
+  ncctx.font = 'bold 50px sans-serif';
+  ncctx.textAlign = 'center';
+  ncctx.textBaseline = 'middle';
+  ncctx.fillText(opts.name + ' #' + opts.number, 256, 52);
+  const nameTex = new THREE.CanvasTexture(nameCanvas);
+  nameTex.colorSpace = THREE.SRGBColorSpace;
+  const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTex, transparent: true, depthTest: false }));
+  nameSprite.scale.set(1.8, 0.35, 1);
+  nameSprite.position.y = 2.5;
+  nameSprite.renderOrder = 999;
+  g.add(nameSprite);
+
+  g.userData = { armL, armR, legL, legR, body, head };
+  // Overall build scale (height, width)
+  if (opts.scale) g.scale.set(opts.scale.x || 1, opts.scale.y || 1, opts.scale.z || opts.scale.x || 1);
   return g;
 }
 
-const player = createPerson(0x4ade80);
+const player = createPerson({
+  name: 'ЛЕБРОН',
+  lastName: 'JAMES',
+  number: '23',
+  team: 'LAKERS',
+  jersey: 0xfdb927,
+  shorts: 0x552583,
+  stripeColor: 0xffffff,
+  textColor: '#552583',
+  skin: 0x6b4226,
+  hair: 'short',
+  hairColor: 0x0a0503,
+  beard: true,
+  beardColor: '#0a0503',
+  browColor: '#0a0503',
+  eyeColor: '#3a1f08',
+  shoeColor: 0xfdb927,
+  shoeStripe: 0x552583,
+  tattoos: true,
+  nameColor: '#fbbf24',
+  scale: { x: 1.10, y: 1.12, z: 1.10 }
+});
 player.position.set(0, 0, 5);
 scene.add(player);
 
-const cpu = createPerson(0xf87171);
+const cpu = createPerson({
+  name: 'КАРРИ',
+  lastName: 'CURRY',
+  number: '30',
+  team: 'WARRIORS',
+  jersey: 0x1d428a,
+  shorts: 0xffc72c,
+  stripeColor: 0xffffff,
+  textColor: '#ffc72c',
+  skin: 0xc99465,
+  hair: 'curly',
+  hairColor: 0x231a10,
+  beard: 'short',
+  beardColor: '#231a10',
+  browColor: '#1a0e05',
+  eyeColor: '#2a1a08',
+  shoeColor: 0xffffff,
+  shoeStripe: 0x1d428a,
+  tattoos: false,
+  nameColor: '#60a5fa',
+  scale: { x: 0.92, y: 0.94, z: 0.92 }   // shorter, leaner
+});
 cpu.position.set(0, 0, -5);
 scene.add(cpu);
 
@@ -556,7 +1144,10 @@ const playerState = {
   onGround: true,
   hasBall: true,
   facing: 0, // yaw
-  pitch: 0
+  pitch: 0,
+  dunking: false,
+  dunkTarget: null,
+  blocking: false
 };
 
 const cpuState = {
@@ -591,6 +1182,15 @@ for (let i = 0; i < 3; i++) {
 }
 ball.add(ballLines);
 
+// Ground shadow for the ball
+const ballShadow = new THREE.Mesh(
+  new THREE.CircleGeometry(ballRadius * 1.5, 16),
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 })
+);
+ballShadow.rotation.x = -Math.PI / 2;
+ballShadow.position.y = 0.01;
+scene.add(ballShadow);
+
 const ballState = {
   pos: new THREE.Vector3(0, 0.18, 5),
   vel: new THREE.Vector3(),
@@ -602,11 +1202,17 @@ const ballState = {
 
 // ---------- Input ----------
 const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-if (isTouch) document.body.classList.add('touch');
+if (isTouch) {
+  document.body.classList.add('touch');
+  const ctrlD = document.getElementById('ctrl-desktop');
+  const ctrlT = document.getElementById('ctrl-touch');
+  if (ctrlD) ctrlD.style.display = 'none';
+  if (ctrlT) ctrlT.style.display = 'grid';
+}
 
 const keys = {};
 const mouse = { dx: 0, dy: 0, locked: false, down: false };
-const touchInput = { mx: 0, mz: 0, sprint: false, shootDown: false };
+const touchInput = { up: false, down: false, left: false, right: false, sprint: false };
 
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
@@ -614,90 +1220,56 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 
-canvas.addEventListener('click', () => {
-  if (!gameState.running || isTouch) return;
-  if (!mouse.locked) canvas.requestPointerLock();
-});
-
-document.addEventListener('pointerlockchange', () => {
-  mouse.locked = document.pointerLockElement === canvas;
-});
-
+// Desktop mouse: click-drag on cam-area to look around (no pointer lock)
+let mouseDragId = null, mouseDragX = 0, mouseDragY = 0;
 document.addEventListener('mousemove', e => {
-  if (mouse.locked) {
-    playerState.facing -= e.movementX * 0.0025;
-    playerState.pitch -= e.movementY * 0.0020;
+  if (mouseDragId !== null) {
+    const dx = e.clientX - mouseDragX;
+    const dy = e.clientY - mouseDragY;
+    mouseDragX = e.clientX;
+    mouseDragY = e.clientY;
+    playerState.facing -= dx * 0.006;
+    playerState.pitch -= dy * 0.004;
     playerState.pitch = Math.max(-0.4, Math.min(0.5, playerState.pitch));
   }
 });
 
-document.addEventListener('mousedown', e => {
-  if (e.button === 0 && mouse.locked) mouse.down = true;
-});
-document.addEventListener('mouseup', e => {
-  if (e.button === 0 && mouse.locked) {
-    if (mouse.down && ballState.holder === 'player') releaseShot();
-    mouse.down = false;
-  }
-});
-
-// ---------- Touch Input ----------
-if (isTouch) {
-  const joy = document.getElementById('joystick');
-  const knob = document.getElementById('joystick-knob');
+// ---------- On-screen Controls (D-pad + buttons) ----------
+{
   const camArea = document.getElementById('cam-area');
   const btnShoot = document.getElementById('btn-shoot');
   const btnJump = document.getElementById('btn-jump');
   const btnSprint = document.getElementById('btn-sprint');
+  const btnBlock = document.getElementById('btn-block');
+  const btnSteal = document.getElementById('btn-steal');
 
-  let joyId = null, joyCx = 0, joyCy = 0;
-  const joyRadius = 50;
+  const dpadButtons = [
+    { el: document.getElementById('dpad-up'),    dir: 'up' },
+    { el: document.getElementById('dpad-down'),  dir: 'down' },
+    { el: document.getElementById('dpad-left'),  dir: 'left' },
+    { el: document.getElementById('dpad-right'), dir: 'right' },
+  ];
 
-  joy.addEventListener('touchstart', e => {
-    e.preventDefault();
-    const t = e.changedTouches[0];
-    joyId = t.identifier;
-    const r = joy.getBoundingClientRect();
-    joyCx = r.left + r.width / 2;
-    joyCy = r.top + r.height / 2;
-    updateJoy(t.clientX, t.clientY);
-  }, { passive: false });
-
-  joy.addEventListener('touchmove', e => {
-    e.preventDefault();
-    for (const t of e.changedTouches) {
-      if (t.identifier === joyId) updateJoy(t.clientX, t.clientY);
-    }
-  }, { passive: false });
-
-  const endJoy = e => {
-    for (const t of e.changedTouches) {
-      if (t.identifier === joyId) {
-        joyId = null;
-        knob.style.left = '50%';
-        knob.style.top = '50%';
-        touchInput.mx = 0;
-        touchInput.mz = 0;
-      }
-    }
-  };
-  joy.addEventListener('touchend', endJoy);
-  joy.addEventListener('touchcancel', endJoy);
-
-  function updateJoy(x, y) {
-    let dx = x - joyCx;
-    let dy = y - joyCy;
-    const dist = Math.min(Math.hypot(dx, dy), joyRadius);
-    const ang = Math.atan2(dy, dx);
-    dx = Math.cos(ang) * dist;
-    dy = Math.sin(ang) * dist;
-    knob.style.left = `calc(50% + ${dx}px)`;
-    knob.style.top = `calc(50% + ${dy}px)`;
-    touchInput.mx = dx / joyRadius;
-    touchInput.mz = -dy / joyRadius;
+  function setDpad(dir, on) {
+    touchInput[dir] = on;
+    const b = dpadButtons.find(b => b.dir === dir);
+    if (b) b.el.classList.toggle('active', on);
   }
 
-  // Camera swipe area
+  function addHoldHandler(el, onPress, onRelease) {
+    el.addEventListener('touchstart', e => { e.preventDefault(); onPress(); }, { passive: false });
+    el.addEventListener('touchend',   e => { e.preventDefault(); if (onRelease) onRelease(); }, { passive: false });
+    el.addEventListener('touchcancel', e => { if (onRelease) onRelease(); });
+    el.addEventListener('mousedown', e => { e.preventDefault(); onPress(); });
+    el.addEventListener('mouseup',   e => { if (onRelease) onRelease(); });
+    el.addEventListener('mouseleave', e => { if (onRelease) onRelease(); });
+  }
+
+  dpadButtons.forEach(b => {
+    addHoldHandler(b.el, () => setDpad(b.dir, true), () => setDpad(b.dir, false));
+  });
+
+  // Camera swipe area (mobile only - desktop uses pointer lock)
   let camId = null, camLastX = 0, camLastY = 0;
   camArea.addEventListener('touchstart', e => {
     e.preventDefault();
@@ -731,33 +1303,34 @@ if (isTouch) {
   camArea.addEventListener('touchend', endCam);
   camArea.addEventListener('touchcancel', endCam);
 
-  // Buttons
-  btnShoot.addEventListener('touchstart', e => {
-    e.preventDefault();
-    touchInput.shootDown = true;
-  }, { passive: false });
-  btnShoot.addEventListener('touchend', e => {
-    e.preventDefault();
-    if (touchInput.shootDown && ballState.holder === 'player') releaseShot();
-    touchInput.shootDown = false;
-  }, { passive: false });
-  btnShoot.addEventListener('touchcancel', e => { touchInput.shootDown = false; });
+  // Desktop mouse drag on cam-area
+  camArea.addEventListener('mousedown', e => {
+    mouseDragId = 1;
+    mouseDragX = e.clientX;
+    mouseDragY = e.clientY;
+  });
+  document.addEventListener('mouseup', () => { mouseDragId = null; });
 
-  btnJump.addEventListener('touchstart', e => {
-    e.preventDefault();
-    if (playerState.onGround) {
-      playerState.yVel = 7;
-      playerState.onGround = false;
-    }
-  }, { passive: false });
+  // Buttons - shoot, jump, sprint
+  addHoldHandler(btnShoot,
+    () => {
+      if (ballState.holder === 'player' && !gameState.shotInAir && !gameState.charging) {
+        gameState.charging = true;
+        gameState.shotAnimT = 0;
+      }
+    });
 
-  btnSprint.addEventListener('touchstart', e => {
-    e.preventDefault();
+  addHoldHandler(btnJump, () => tryJumpOrDunk());
+
+  addHoldHandler(btnSprint, () => {
     touchInput.sprint = !touchInput.sprint;
     btnSprint.classList.toggle('active', touchInput.sprint);
-  }, { passive: false });
+  });
 
-  // Prevent double-tap zoom
+  addHoldHandler(btnBlock, () => tryBlock());
+  addHoldHandler(btnSteal, () => trySteal());
+
+  // Prevent double-tap zoom on iOS
   document.addEventListener('gesturestart', e => e.preventDefault());
 }
 
@@ -768,18 +1341,17 @@ const gameState = {
   scoreCpu: 0,
   quarter: 1,
   timeLeft: 120,
-  power: 0,
   charging: false,
+  shotAnimT: 0,
   shotInAir: false,
   shotShooter: null,
   shotTargetHoop: null,
   scoredThisShot: false,
-  rimTouched: false
+  rimTouched: false,
+  dunkAttempt: false,
+  shotPoints: 2
 };
 
-const powerMeter = document.getElementById('power-meter');
-const powerFill = document.getElementById('power-fill');
-const powerLabel = document.getElementById('power-label');
 const msgEl = document.getElementById('message');
 
 function showMessage(text, color = '#fbbf24', duration = 1400) {
@@ -796,13 +1368,11 @@ function resetBallToPlayer() {
   ballState.vel.set(0, 0, 0);
   gameState.shotInAir = false;
   gameState.charging = false;
+  gameState.shotAnimT = 0;
   mouse.down = false;
-  powerMeter.style.display = 'none';
-  powerLabel.style.display = 'none';
 }
 
 function resetAfterScore(scorer) {
-  // Inbound to the other team
   if (scorer === 'player') {
     ballState.holder = 'cpu';
     cpu.position.set(2, 0, COURT_L/2 - 8);
@@ -816,47 +1386,144 @@ function resetAfterScore(scorer) {
   ballState.vel.set(0, 0, 0);
   gameState.shotInAir = false;
   gameState.charging = false;
+  gameState.shotAnimT = 0;
   mouse.down = false;
-  powerMeter.style.display = 'none';
-  powerLabel.style.display = 'none';
   cpuState.cooldown = 1.5;
   cpuState.charging = false;
 }
 
+function tryBlock() {
+  // Jump straight up and try to swat the ball if CPU shot is in flight nearby
+  if (!playerState.onGround) return;
+  playerState.yVel = 9;
+  playerState.onGround = false;
+  playerState.blocking = true;
+  // Raise arms in animation
+  setTimeout(() => { playerState.blocking = false; }, 600);
+
+  // If CPU shot in air and ball near player at jump peak, swat it
+  if (ballState.free && gameState.shotShooter === 'cpu') {
+    const d = Math.sqrt((ball.position.x - player.position.x)**2 + (ball.position.z - player.position.z)**2);
+    if (d < 2.5 && ball.position.y < 4.5 && ball.position.y > 1.5) {
+      // Block: deflect the ball downward
+      ballState.vel.y = -6;
+      ballState.vel.x *= -0.4;
+      ballState.vel.z *= -0.4;
+      gameState.scoredThisShot = true; // shot can no longer count
+      gameState.shotInAir = false;
+      showMessage('БЛОК!', '#38bdf8', 1200);
+    }
+  }
+}
+
+function trySteal() {
+  // Try to steal the ball from CPU if close enough
+  if (ballState.holder !== 'cpu') return;
+  const d = player.position.distanceTo(cpu.position);
+  if (d < 2.2) {
+    // 70% chance to steal when close
+    if (Math.random() < 0.7) {
+      ballState.holder = 'player';
+      cpuState.cooldown = 1.5;
+      cpuState.charging = false;
+      showMessage('ПЕРЕХВАТ!', '#a78bfa', 1200);
+    } else {
+      showMessage('Не вышло...', '#888', 800);
+    }
+  }
+}
+
+function tryJumpOrDunk() {
+  if (!playerState.onGround) return;
+  const rim = playerHoop.rimPos;
+  const dx = rim.x - player.position.x;
+  const dz = rim.z - player.position.z;
+  const horiz = Math.sqrt(dx*dx + dz*dz);
+  if (ballState.holder === 'player' && horiz < 4.0 && !gameState.shotInAir) {
+    // Dunk! Leap toward rim and slam
+    playerState.dunking = true;
+    playerState.dunkTarget = new THREE.Vector3(
+      rim.x - dx / horiz * 0.5,  // stop just short of rim
+      0,
+      rim.z - dz / horiz * 0.5
+    );
+    playerState.yVel = 10;
+    playerState.onGround = false;
+    showMessage('ДАНК!', '#fbbf24', 1000);
+    return;
+  }
+  // Regular jump
+  playerState.yVel = 7;
+  playerState.onGround = false;
+}
+
+function performDunkRelease() {
+  // Called when player reaches peak of dunk jump
+  const rim = playerHoop.rimPos.clone();
+  const startPos = ball.position.clone();
+  // Slam: ball aimed straight down into rim
+  const dir = new THREE.Vector3(rim.x - startPos.x, -1.5, rim.z - startPos.z);
+  dir.normalize();
+  ballState.vel.copy(dir.multiplyScalar(7));
+  ballState.free = true;
+  ballState.holder = null;
+  ballState.pos.copy(startPos);
+  gameState.shotInAir = true;
+  gameState.shotShooter = 'player';
+  gameState.shotTargetHoop = playerHoop;
+  gameState.scoredThisShot = false;
+  gameState.shotWasAboveRim = false;
+  gameState.rimTouched = false;
+  gameState.shotPoints = 2;
+  gameState.dunkAttempt = true;
+}
+
 function releaseShot() {
   if (ballState.holder !== 'player') return;
-  const power = gameState.power; // 0..1
   gameState.charging = false;
-  powerMeter.style.display = 'none';
-  powerLabel.style.display = 'none';
+  gameState.shotAnimT = 0;
 
-  // Compute target hoop direction
   const target = playerHoop.rimPos.clone();
   const startPos = ball.position.clone();
   const horizontal = new THREE.Vector3(target.x - startPos.x, 0, target.z - startPos.z);
   const dist = horizontal.length();
   horizontal.normalize();
 
-  // Required launch params for arc: angle ~52deg, speed depends on dist + power adjustment
+  // DUNK: if jumping high enough and close to rim, slam it
+  const horizDistRim = Math.sqrt((player.position.x - target.x)**2 + (player.position.z - target.z)**2);
+  if (player.position.y > 0.8 && horizDistRim < 2.2) {
+    // Aim ball directly into the rim with strong downward
+    const dir = new THREE.Vector3(target.x - startPos.x, target.y - startPos.y, target.z - startPos.z).normalize();
+    ballState.vel.copy(dir).multiplyScalar(10);
+    ballState.vel.y = Math.max(ballState.vel.y, -2);
+    ballState.free = true;
+    ballState.holder = null;
+    ballState.pos.copy(startPos);
+    gameState.shotInAir = true;
+    gameState.shotShooter = 'player';
+    gameState.shotTargetHoop = playerHoop;
+    gameState.scoredThisShot = false;
+  gameState.shotWasAboveRim = false;
+    gameState.rimTouched = false;
+    gameState.shotPoints = 2;
+    gameState.dunkAttempt = true;
+    showMessage('ДАНК!', '#fbbf24', 1200);
+    return;
+  }
+
+  // Standard shot - auto power based on distance (always reaches rim)
   const angle = THREE.MathUtils.degToRad(52);
   const g = 18;
   const dy = target.y - startPos.y;
-  // v^2 = g*d^2 / (2*cos^2(angle)*(d*tan(angle) - dy))
   const denom = 2 * Math.cos(angle) ** 2 * (dist * Math.tan(angle) - dy);
-  let baseSpeed = denom > 0 ? Math.sqrt(g * dist * dist / denom) : 12;
+  let speed = denom > 0 ? Math.sqrt(g * dist * dist / denom) : 12;
 
-  // Sweet spot is 0.65..0.77 of meter -> perfect speed match
-  // Outside sweet spot adds error
-  let speed = baseSpeed;
-  let accuracy = 1.0;
-  if (power < 0.55) { speed *= 0.78 + power * 0.3; accuracy = 0.45; }
-  else if (power > 0.82) { speed *= 1.08 + (power - 0.82) * 0.4; accuracy = 0.4; }
-  else if (power >= 0.65 && power <= 0.77) { accuracy = 1.0; }
-  else { accuracy = 0.75; }
-
-  // Distance-based difficulty
-  const baseAcc = THREE.MathUtils.clamp(1 - dist * 0.012, 0.55, 1);
-  accuracy *= baseAcc;
+  // Accuracy: near-perfect close, very good mid, still good from three
+  // < 4m: 98%, 4-7m: 92%, 7m+: 78%
+  let accuracy;
+  if (dist < 5)       accuracy = 0.995;
+  else if (dist < 9)  accuracy = 0.97;
+  else                accuracy = THREE.MathUtils.clamp(0.92 - (dist - 9) * 0.01, 0.82, 0.95);
 
   // Compute velocity
   const v = new THREE.Vector3();
@@ -864,11 +1531,10 @@ function releaseShot() {
   v.z = horizontal.z * Math.cos(angle) * speed;
   v.y = Math.sin(angle) * speed;
 
-  // Add error based on (1 - accuracy)
-  const err = (1 - accuracy) * 1.6;
+  const err = (1 - accuracy) * 0.25;
   v.x += (Math.random() - 0.5) * err;
   v.z += (Math.random() - 0.5) * err;
-  v.y += (Math.random() - 0.5) * err * 0.6;
+  v.y += (Math.random() - 0.5) * err * 0.3;
 
   ballState.vel.copy(v);
   ballState.free = true;
@@ -878,9 +1544,10 @@ function releaseShot() {
   gameState.shotShooter = 'player';
   gameState.shotTargetHoop = playerHoop;
   gameState.scoredThisShot = false;
+  gameState.shotWasAboveRim = false;
   gameState.rimTouched = false;
+  gameState.dunkAttempt = false;
 
-  // Compute shot points (2 or 3)
   const distFromRimXZ = Math.sqrt((startPos.x - playerHoop.rimPos.x) ** 2 + (startPos.z - playerHoop.rimPos.z) ** 2);
   gameState.shotPoints = distFromRimXZ > 6.5 ? 3 : 2;
 }
@@ -898,13 +1565,16 @@ function cpuShoot() {
   const denom = 2 * Math.cos(angle) ** 2 * (dist * Math.tan(angle) - dy);
   const baseSpeed = denom > 0 ? Math.sqrt(g * dist * dist / denom) : 12;
 
-  const accuracy = THREE.MathUtils.clamp(1 - dist * 0.025, 0.45, 0.85);
-  const err = (1 - accuracy) * 1.4;
+  let accuracy;
+  if (dist < 5)       accuracy = 0.94;
+  else if (dist < 9)  accuracy = 0.85;
+  else                accuracy = THREE.MathUtils.clamp(0.78 - (dist - 9) * 0.012, 0.70, 0.85);
+  const err = (1 - accuracy) * 0.30;
 
   const v = new THREE.Vector3();
   v.x = horizontal.x * Math.cos(angle) * baseSpeed + (Math.random() - 0.5) * err;
   v.z = horizontal.z * Math.cos(angle) * baseSpeed + (Math.random() - 0.5) * err;
-  v.y = Math.sin(angle) * baseSpeed + (Math.random() - 0.5) * err * 0.5;
+  v.y = Math.sin(angle) * baseSpeed + (Math.random() - 0.5) * err * 0.3;
 
   ballState.vel.copy(v);
   ballState.free = true;
@@ -913,6 +1583,7 @@ function cpuShoot() {
   gameState.shotShooter = 'cpu';
   gameState.shotTargetHoop = cpuHoop;
   gameState.scoredThisShot = false;
+  gameState.shotWasAboveRim = false;
   gameState.rimTouched = false;
   const distFromRimXZ = Math.sqrt((startPos.x - cpuHoop.rimPos.x) ** 2 + (startPos.z - cpuHoop.rimPos.z) ** 2);
   gameState.shotPoints = distFromRimXZ > 6.5 ? 3 : 2;
@@ -942,35 +1613,53 @@ function update(dt) {
 }
 
 function updatePlayer(dt) {
-  const forward = new THREE.Vector3(Math.sin(playerState.facing), 0, Math.cos(playerState.facing));
-  const right = new THREE.Vector3(Math.cos(playerState.facing), 0, -Math.sin(playerState.facing));
-
+  // World-space movement: ▲ = toward CPU hoop (-Z), ▼ = toward own hoop (+Z)
+  // ◀ = world left (-X), ▶ = world right (+X)
   let mx = 0, mz = 0;
-  if (keys['KeyW']) mz += 1;
-  if (keys['KeyS']) mz -= 1;
+  if (keys['KeyW']) mz -= 1;
+  if (keys['KeyS']) mz += 1;
   if (keys['KeyA']) mx -= 1;
   if (keys['KeyD']) mx += 1;
-  if (isTouch) { mx += touchInput.mx; mz += touchInput.mz; }
+  if (touchInput.up)    mz -= 1;
+  if (touchInput.down)  mz += 1;
+  if (touchInput.left)  mx -= 1;
+  if (touchInput.right) mx += 1;
 
   const sprint = (keys['ShiftLeft'] || keys['ShiftRight'] || touchInput.sprint) ? 1.8 : 1;
   const baseSpeed = 6 * sprint;
 
-  const move = new THREE.Vector3();
-  move.addScaledVector(forward, mz);
-  move.addScaledVector(right, mx);
-  if (move.lengthSq() > 0) move.normalize().multiplyScalar(baseSpeed);
+  const move = new THREE.Vector3(mx, 0, mz);
+  if (move.lengthSq() > 0) {
+    move.normalize().multiplyScalar(baseSpeed);
+    // Player faces direction of movement
+    playerState.facing = Math.atan2(mx, mz);
+  }
 
-  player.position.x += move.x * dt;
-  player.position.z += move.z * dt;
+  // During dunk: move player toward rim
+  if (playerState.dunking && playerState.dunkTarget) {
+    const t = playerState.dunkTarget;
+    const dx = t.x - player.position.x;
+    const dz = t.z - player.position.z;
+    const d = Math.sqrt(dx*dx + dz*dz);
+    if (d > 0.1) {
+      const step = Math.min(14 * dt, d);
+      player.position.x += (dx / d) * step;
+      player.position.z += (dz / d) * step;
+      playerState.facing = Math.atan2(dx, dz);
+    }
+  } else {
+    player.position.x += move.x * dt;
+    player.position.z += move.z * dt;
+  }
 
   // Constrain to court bounds (with margin)
   player.position.x = THREE.MathUtils.clamp(player.position.x, -COURT_W/2 + 0.5, COURT_W/2 - 0.5);
   player.position.z = THREE.MathUtils.clamp(player.position.z, -COURT_L/2 + 0.5, COURT_L/2 - 0.5);
 
-  // Jump
+  // Jump (keyboard)
   if (keys['Space'] && playerState.onGround) {
-    playerState.yVel = 7;
-    playerState.onGround = false;
+    keys['Space'] = false; // single-shot
+    tryJumpOrDunk();
   }
   playerState.yVel -= 22 * dt;
   player.position.y += playerState.yVel * dt;
@@ -978,6 +1667,13 @@ function updatePlayer(dt) {
     player.position.y = 0;
     playerState.yVel = 0;
     playerState.onGround = true;
+    playerState.dunking = false;
+    playerState.dunkTarget = null;
+  }
+
+  // Dunk: release ball at peak height
+  if (playerState.dunking && ballState.holder === 'player' && playerState.yVel <= 0 && player.position.y > 1.5) {
+    performDunkRelease();
   }
 
   // Face camera direction
@@ -985,31 +1681,39 @@ function updatePlayer(dt) {
 
   // Animate legs / arms
   const moving = move.lengthSq() > 0.1;
-  runWalkCycle += dt * (moving ? 10 * sprint : 0);
-  const swing = Math.sin(runWalkCycle) * 0.6;
+  const speedMul = sprint > 1.2 ? 14 : 10;
+  runWalkCycle += dt * (moving ? speedMul : 0);
+  const swing = Math.sin(runWalkCycle) * (sprint > 1.2 ? 0.8 : 0.55);
   player.userData.legL.rotation.x = moving ? swing : 0;
   player.userData.legR.rotation.x = moving ? -swing : 0;
-  if (!gameState.charging) {
-    player.userData.armL.rotation.x = moving ? -swing * 0.5 : 0;
-    player.userData.armR.rotation.x = moving ? swing * 0.5 : 0;
+
+  // Body lean forward when sprinting
+  player.userData.body.rotation.x = THREE.MathUtils.lerp(player.userData.body.rotation.x || 0, moving && sprint > 1.2 ? 0.18 : 0, 0.15);
+
+  if (playerState.blocking) {
+    // Both arms fully extended up for block
+    player.userData.armL.rotation.x = -2.6;
+    player.userData.armR.rotation.x = -2.6;
+  } else if (gameState.charging || (playerState.dunking && ballState.holder === 'player')) {
+    const t = playerState.dunking ? 1 : Math.min(gameState.shotAnimT, 1);
+    const armAngle = -1.8 * t;
+    player.userData.armL.rotation.x = armAngle;
+    player.userData.armR.rotation.x = armAngle;
+  } else if (playerState.dunking) {
+    // Arm extended for dunk
+    player.userData.armR.rotation.x = -2.2;
+    player.userData.armL.rotation.x = -1.0;
   } else {
-    // Arms up while charging
-    player.userData.armL.rotation.x = -1.6;
-    player.userData.armR.rotation.x = -1.6;
+    player.userData.armL.rotation.x = moving ? -swing * 0.6 : 0;
+    player.userData.armR.rotation.x = moving ? swing * 0.6 : 0;
   }
 
-  // Charging shot
-  const shootHeld = mouse.down || touchInput.shootDown;
-  if (shootHeld && ballState.holder === 'player' && !gameState.shotInAir) {
-    if (!gameState.charging) {
-      gameState.charging = true;
-      gameState.power = 0;
-      powerMeter.style.display = 'block';
-      powerLabel.style.display = 'block';
+  // Shoot animation: tap once → quick wind-up → release
+  if (gameState.charging && ballState.holder === 'player' && !gameState.shotInAir) {
+    gameState.shotAnimT += dt * 4; // wind-up speed
+    if (gameState.shotAnimT >= 1) {
+      releaseShot();
     }
-    gameState.power += dt * 1.05; // fills in ~0.95s
-    if (gameState.power > 1) gameState.power = 1;
-    powerFill.style.width = (gameState.power * 100) + '%';
   }
 
   // Steal: if player without ball gets close to CPU with ball
@@ -1017,7 +1721,7 @@ function updatePlayer(dt) {
     const d = player.position.distanceTo(cpu.position);
     if (d < 1.0 && Math.random() < 0.025) {
       ballState.holder = 'player';
-      showMessage('STEAL!', '#4ade80', 1000);
+      showMessage('ПЕРЕХВАТ!', '#4ade80', 1000);
     }
   }
 }
@@ -1094,30 +1798,30 @@ function updateCPU(dt) {
 
 function updateBall(dt) {
   if (ballState.holder === 'player') {
-    // Ball follows player's hand position
+    // Ball in right hand, at hip level. Lifts up during shot animation.
     const fwd = new THREE.Vector3(Math.sin(playerState.facing), 0, Math.cos(playerState.facing));
+    const right = new THREE.Vector3(Math.cos(playerState.facing), 0, -Math.sin(playerState.facing));
     const handPos = player.position.clone();
-    handPos.y += gameState.charging ? 1.95 : 1.2;
-    handPos.add(fwd.multiplyScalar(0.4));
+    const shotProgress = gameState.charging ? Math.min(gameState.shotAnimT, 1) : 0;
+    handPos.addScaledVector(right, 0.35 - shotProgress * 0.25);
+    handPos.addScaledVector(fwd, 0.25 + shotProgress * 0.3);
+    handPos.y += 1.0 + shotProgress * 1.1;
     ball.position.copy(handPos);
     ballState.pos.copy(ball.position);
-    // Dribble bounce when moving and not charging
-    if (!gameState.charging) {
-      const bounce = Math.abs(Math.sin(performance.now() * 0.008)) * 0.4;
-      ball.position.y = player.position.y + 0.4 + bounce;
-    }
   } else if (ballState.holder === 'cpu') {
     const fwd = new THREE.Vector3();
     cpu.getWorldDirection(fwd);
+    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
     const handPos = cpu.position.clone();
-    handPos.y += cpuState.charging ? 1.95 : 1.2;
-    handPos.add(fwd.multiplyScalar(0.4));
+    const shotP = cpuState.charging ? Math.min(cpuState.shotTimer, 1) : 0;
+    handPos.addScaledVector(right, 0.35 - shotP * 0.25);
+    handPos.addScaledVector(fwd, 0.25 + shotP * 0.3);
+    handPos.y += 1.0 + shotP * 1.1;
     ball.position.copy(handPos);
-    if (!cpuState.charging) {
-      const bounce = Math.abs(Math.sin(performance.now() * 0.008 + 1)) * 0.4;
-      ball.position.y = cpu.position.y + 0.4 + bounce;
-    }
   } else if (ballState.free) {
+    // Save previous position for swept rim detection
+    ballState.prevPos = ballState.prevPos || new THREE.Vector3();
+    ballState.prevPos.copy(ballState.pos);
     // Physics
     ballState.vel.y -= 18 * dt;
     ballState.pos.addScaledVector(ballState.vel, dt);
@@ -1137,16 +1841,15 @@ function updateBall(dt) {
       }
     }
 
-    // Wall collisions (rough)
-    if (ballState.pos.x < -COURT_W/2 - 4 || ballState.pos.x > COURT_W/2 + 4 ||
-        ballState.pos.z < -COURT_L/2 - 4 || ballState.pos.z > COURT_L/2 + 4) {
-      // out of bounds - reset
-      ballState.vel.set(0, 0, 0);
-      if (gameState.shotInAir && !gameState.scoredThisShot) {
-        // missed shot recovery
-      }
-      resetBallToPlayer();
-    }
+    // Wall bounces: keep ball strictly on court
+    const wallX = COURT_W/2 - 0.5;
+    const wallZ = COURT_L/2 - 0.5;
+    if (ballState.pos.x < -wallX) { ballState.pos.x = -wallX; ballState.vel.x = Math.abs(ballState.vel.x) * 0.5; }
+    if (ballState.pos.x >  wallX) { ballState.pos.x =  wallX; ballState.vel.x = -Math.abs(ballState.vel.x) * 0.5; }
+    if (ballState.pos.z < -wallZ) { ballState.pos.z = -wallZ; ballState.vel.z = Math.abs(ballState.vel.z) * 0.5; }
+    if (ballState.pos.z >  wallZ) { ballState.pos.z =  wallZ; ballState.vel.z = -Math.abs(ballState.vel.z) * 0.5; }
+    // Ceiling cap
+    if (ballState.pos.y > 10) { ballState.pos.y = 10; ballState.vel.y = -Math.abs(ballState.vel.y) * 0.4; }
 
     ball.position.copy(ballState.pos);
 
@@ -1168,11 +1871,25 @@ function updateBall(dt) {
       }
     });
 
+    // After CPU shot misses or settles, give ball directly to player
+    if (gameState.shotInAir && gameState.shotShooter === 'cpu'
+        && ballState.vel.lengthSq() < 9
+        && ball.position.y < 1.5
+        && !gameState.scoredThisShot) {
+      ballState.holder = 'player';
+      ballState.free = false;
+      ballState.vel.set(0, 0, 0);
+      gameState.shotInAir = false;
+      cpuState.cooldown = 1.2;
+      return;
+    }
+
     // Pickup ball if player close and ball at low height after settling
     if (ball.position.y < 0.6 && Math.abs(ballState.vel.y) < 3) {
       const dP = player.position.distanceTo(new THREE.Vector3(ball.position.x, 0, ball.position.z));
       const dC = cpu.position.distanceTo(new THREE.Vector3(ball.position.x, 0, ball.position.z));
-      if (dP < 1.0 && dP <= dC) {
+      // Default: player gets the ball after any loose-ball settle
+      if (dP < 2.5 || (gameState.shotShooter === 'player' && !gameState.scoredThisShot)) {
         ballState.holder = 'player';
         ballState.free = false;
         ballState.vel.set(0, 0, 0);
@@ -1186,8 +1903,11 @@ function updateBall(dt) {
       }
     }
 
-    // If shot has been in air for too long without scoring, give to closer
+    // If shot has been in air for too long without scoring, give to player
     if (gameState.shotInAir && ballState.vel.lengthSq() < 0.2 && ball.position.y < 0.3) {
+      ballState.holder = 'player';
+      ballState.free = false;
+      ballState.vel.set(0, 0, 0);
       gameState.shotInAir = false;
     }
   }
@@ -1196,7 +1916,32 @@ function updateBall(dt) {
   if (ballState.free) {
     ballLines.rotation.x += dt * 8;
     ballLines.rotation.z += dt * 4;
+  } else {
+    // Subtle idle spin
+    ballLines.rotation.y += dt * 2;
   }
+
+  // Ground shadow follows ball, scales/fades with height
+  ballShadow.position.x = ball.position.x;
+  ballShadow.position.z = ball.position.z;
+  const h = Math.max(0, ball.position.y);
+  const sc = THREE.MathUtils.clamp(1.6 - h * 0.08, 0.4, 1.6);
+  ballShadow.scale.set(sc, sc, 1);
+  ballShadow.material.opacity = THREE.MathUtils.clamp(0.45 - h * 0.025, 0.1, 0.45);
+}
+
+function scoreShot(hoop) {
+  gameState.scoredThisShot = true;
+  const pts = gameState.shotPoints || 2;
+  if (gameState.shotShooter === 'player') {
+    gameState.scoreYou += pts;
+    showMessage(pts === 3 ? 'ТРЁХОЧКОВЫЙ!' : 'ЗАБИЛ!', '#4ade80');
+  } else {
+    gameState.scoreCpu += pts;
+    showMessage(pts === 3 ? 'БОТ ЗАБИЛ 3!' : 'БОТ ЗАБИЛ', '#f87171');
+  }
+  animateNet(hoop);
+  setTimeout(() => resetAfterScore(gameState.shotShooter), 900);
 }
 
 function checkHoop(hoop) {
@@ -1206,37 +1951,49 @@ function checkHoop(hoop) {
   const horizDist = Math.sqrt(dx*dx + dz*dz);
   const dy = ball.position.y - rim.y;
 
-  // Rim torus collision (approx) - if ball is at rim height and outside rim center but within rim ring
-  if (Math.abs(dy) < 0.12 && horizDist < hoop.rimRadius + 0.08 && horizDist > hoop.rimRadius - 0.1) {
-    // Bounce off rim
-    const nrm = new THREE.Vector3(dx, 0, dz).normalize();
-    const vDotN = ballState.vel.x * nrm.x + ballState.vel.z * nrm.z;
-    if (vDotN < 0) {
-      ballState.vel.x -= 2 * vDotN * nrm.x * 0.6;
-      ballState.vel.z -= 2 * vDotN * nrm.z * 0.6;
-      ballState.vel.y *= 0.6;
-      gameState.rimTouched = true;
+  if (!gameState.scoredThisShot && hoop === gameState.shotTargetHoop) {
+    const scoreRadius = hoop.rimRadius + 0.05;  // very generous (0.50m)
+
+    // Track if ball has ever been above rim during this shot
+    if (ball.position.y > rim.y + 0.05 && horizDist < scoreRadius * 1.5) {
+      gameState.shotWasAboveRim = true;
+    }
+
+    // METHOD 1: Swept plane crossing (precise interpolation)
+    if (ballState.prevPos && ballState.prevPos.y > rim.y && ball.position.y <= rim.y && ballState.vel.y < 0) {
+      const denom = (ballState.prevPos.y - ball.position.y) || 1e-6;
+      const t = (ballState.prevPos.y - rim.y) / denom;
+      const cx = ballState.prevPos.x + (ball.position.x - ballState.prevPos.x) * t;
+      const cz = ballState.prevPos.z + (ball.position.z - ballState.prevPos.z) * t;
+      const cDist = Math.sqrt((cx - rim.x)**2 + (cz - rim.z)**2);
+      if (cDist < scoreRadius) {
+        scoreShot(hoop);
+        return;
+      }
+    }
+
+    // METHOD 2: Ball currently in rim opening cylinder while descending
+    if (horizDist < scoreRadius && ballState.vel.y < 0 && dy > -0.4 && dy < 0.25) {
+      scoreShot(hoop);
+      return;
+    }
+
+    // METHOD 3: Ball was above rim and is now below — counts as a make
+    if (gameState.shotWasAboveRim && ball.position.y < rim.y - 0.05 && ballState.vel.y < 0 && horizDist < scoreRadius * 1.2) {
+      scoreShot(hoop);
+      return;
     }
   }
 
-  // Scoring: ball passes through rim from above
-  if (!gameState.scoredThisShot && hoop === gameState.shotTargetHoop) {
-    if (horizDist < hoop.rimRadius - 0.05
-        && Math.abs(dy) < 0.10
-        && ballState.vel.y < 0) {
-      // Score!
-      gameState.scoredThisShot = true;
-      const pts = gameState.shotPoints || 2;
-      if (gameState.shotShooter === 'player') {
-        gameState.scoreYou += pts;
-        showMessage(pts === 3 ? 'THREE!' : 'BUCKET!', '#4ade80');
-      } else {
-        gameState.scoreCpu += pts;
-        showMessage(pts === 3 ? 'CPU 3!' : 'CPU SCORES', '#f87171');
-      }
-      // Net animation
-      animateNet(hoop);
-      setTimeout(() => resetAfterScore(gameState.shotShooter), 900);
+  // Rim torus bounce - only for shots clearly outside the scoring zone
+  if (Math.abs(dy) < 0.15 && horizDist > hoop.rimRadius + 0.08 && horizDist < hoop.rimRadius + 0.20) {
+    const nrm = new THREE.Vector3(dx, 0, dz).normalize();
+    const vDotN = ballState.vel.x * nrm.x + ballState.vel.z * nrm.z;
+    if (vDotN < 0) {
+      ballState.vel.x -= 2 * vDotN * nrm.x * 0.5;
+      ballState.vel.z -= 2 * vDotN * nrm.z * 0.5;
+      ballState.vel.y *= 0.6;
+      gameState.rimTouched = true;
     }
   }
 }
@@ -1252,22 +2009,19 @@ function animateNet(hoop) {
 }
 
 function updateCamera() {
-  // Third-person behind player
-  const eyeOffset = new THREE.Vector3(
-    -Math.sin(playerState.facing) * 4.5,
-    2.4 + playerState.pitch * 2,
-    -Math.cos(playerState.facing) * 4.5
+  // Fixed broadcast camera: high view from player's side looking toward CPU hoop
+  const camPos = new THREE.Vector3(
+    player.position.x * 0.4,
+    8 + playerState.pitch * 4,
+    player.position.z + 9
   );
-  const camPos = player.position.clone().add(eyeOffset);
-  camPos.y += 1.0;
-  camera.position.lerp(camPos, 0.18);
+  camera.position.lerp(camPos, 0.1);
 
-  const lookAt = player.position.clone();
-  lookAt.y += 1.4;
-  // Add a bit of pitch
-  lookAt.x += Math.sin(playerState.facing) * 3;
-  lookAt.z += Math.cos(playerState.facing) * 3;
-  lookAt.y += playerState.pitch * 3;
+  const lookAt = new THREE.Vector3(
+    player.position.x * 0.3,
+    2 + playerState.pitch * 2,
+    player.position.z - 6
+  );
   camera.lookAt(lookAt);
 }
 
@@ -1284,7 +2038,7 @@ function updateHUD() {
   const m = Math.floor(gameState.timeLeft / 60);
   const s = Math.floor(gameState.timeLeft % 60);
   document.getElementById('timer').textContent = `${m}:${s.toString().padStart(2, '0')}`;
-  document.getElementById('quarter').textContent = `VIERTEL ${gameState.quarter}`;
+  document.getElementById('quarter').textContent = `ЧЕТВЕРТЬ ${gameState.quarter}`;
 }
 
 function advanceQuarter() {
@@ -1293,25 +2047,26 @@ function advanceQuarter() {
   } else {
     gameState.quarter++;
     gameState.timeLeft = 120;
-    showMessage(`VIERTEL ${gameState.quarter}`, '#fbbf24', 1800);
+    showMessage(`ЧЕТВЕРТЬ ${gameState.quarter}`, '#fbbf24', 1800);
     resetAfterScore(gameState.quarter % 2 === 0 ? 'player' : 'cpu');
   }
 }
 
 function endGame() {
   gameState.running = false;
-  document.exitPointerLock();
+  document.body.classList.add('menu');
+  if (document.pointerLockElement) document.exitPointerLock();
   const end = document.getElementById('endscreen');
   const title = document.getElementById('end-title');
   const fs = document.getElementById('final-score');
   if (gameState.scoreYou > gameState.scoreCpu) {
-    title.textContent = 'DU GEWINNST!';
+    title.textContent = 'ТЫ ПОБЕДИЛ!';
     title.style.color = '#4ade80';
   } else if (gameState.scoreYou < gameState.scoreCpu) {
-    title.textContent = 'CPU GEWINNT';
+    title.textContent = 'БОТ ПОБЕДИЛ';
     title.style.color = '#f87171';
   } else {
-    title.textContent = 'UNENTSCHIEDEN';
+    title.textContent = 'НИЧЬЯ';
     title.style.color = '#fbbf24';
   }
   fs.textContent = `${gameState.scoreYou} : ${gameState.scoreCpu}`;
@@ -1321,6 +2076,7 @@ function endGame() {
 function startGame() {
   document.getElementById('startscreen').style.display = 'none';
   document.getElementById('endscreen').style.display = 'none';
+  document.body.classList.remove('menu');
   gameState.scoreYou = 0;
   gameState.scoreCpu = 0;
   gameState.quarter = 1;
@@ -1331,7 +2087,6 @@ function startGame() {
   cpu.position.set(0, 0, -5);
   playerState.facing = Math.PI;
   gameState.running = true;
-  if (!isTouch) canvas.requestPointerLock();
 }
 
 document.getElementById('startbtn').addEventListener('click', startGame);
