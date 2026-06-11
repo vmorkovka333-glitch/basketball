@@ -137,12 +137,24 @@
   }
   #btn-sprint {
     left: 155px; bottom: 25px;
-    width: 80px; height: 80px;
+    width: 70px; height: 70px;
     background: linear-gradient(135deg, #facc15, #ca8a04);
     color: #000;
-    font-size: 13px;
+    font-size: 12px;
   }
   #btn-sprint.active { box-shadow: 0 0 30px rgba(250,204,21,1); border-color: #fff; }
+  #btn-block {
+    left: 230px; bottom: 25px;
+    width: 70px; height: 70px;
+    background: linear-gradient(135deg, #38bdf8, #0369a1);
+    font-size: 12px;
+  }
+  #btn-steal {
+    left: 230px; bottom: 100px;
+    width: 70px; height: 70px;
+    background: linear-gradient(135deg, #a78bfa, #7c3aed);
+    font-size: 12px;
+  }
   #cam-area {
     position: fixed; left: 0; top: 0;
     width: 100%; height: 50%;
@@ -254,6 +266,8 @@
   <div class="tbtn" id="btn-shoot">БРОСОК</div>
   <div class="tbtn" id="btn-jump">ПРЫЖОК</div>
   <div class="tbtn" id="btn-sprint">БЕГ</div>
+  <div class="tbtn" id="btn-block">БЛОК</div>
+  <div class="tbtn" id="btn-steal">СТИЛ</div>
 </div>
 
 <div id="startscreen">
@@ -310,8 +324,9 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0a18);
-scene.fog = new THREE.Fog(0x0a0a18, 30, 90);
+// Arena ambience: bright wood-paneled stadium look
+scene.background = new THREE.Color(0x1a3d6b);
+scene.fog = new THREE.Fog(0x2a5d9b, 60, 130);
 
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
 
@@ -390,7 +405,7 @@ courtTop.receiveShadow = true;
 scene.add(courtTop);
 
 // ---------- Arena walls ----------
-const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.9 });
+const wallMat = new THREE.MeshStandardMaterial({ color: 0x3a5070, roughness: 0.85 });
 function addWall(w, h, d, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
   m.position.set(x, y, z); m.receiveShadow = true; scene.add(m);
@@ -727,13 +742,16 @@ function makeJerseyTexture(opts) {
   x.moveTo(400, 0); x.lineTo(624, 0); x.lineTo(560, 80);
   x.lineTo(464, 80); x.closePath();
   x.fill();
-  // Team name
+  // Team name + player last name
   x.fillStyle = opts.textColor || '#fff';
-  x.font = 'bold 110px sans-serif';
+  x.font = 'bold 90px sans-serif';
   x.textAlign = 'center';
-  x.fillText(opts.team || '', 512, 250);
-  x.font = 'bold 60px sans-serif';
-  x.fillText('• EST •', 512, 320);
+  x.fillText(opts.team || '', 512, 200);
+  // Player last name (top arc style)
+  if (opts.lastName) {
+    x.font = 'bold 100px sans-serif';
+    x.fillText(opts.lastName, 512, 320);
+  }
   // Big number
   x.font = 'bold 440px sans-serif';
   x.strokeStyle = darken(opts.textColor || '#fff', 30);
@@ -856,8 +874,24 @@ function createPerson(opts) {
   const earR = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), earMat);
   earR.position.set(0.225, 1.79, 0.02); earR.scale.set(0.6, 1, 1); g.add(earR);
 
-  // Hair / headband
-  if (opts.hair === 'headband') {
+  // Hair styles
+  if (opts.hair === 'short') {
+    // Close-cropped hair cap
+    const hairMat = new THREE.MeshStandardMaterial({ color: opts.hairColor || 0x0a0503, roughness: 1 });
+    const hair = new THREE.Mesh(
+      new THREE.SphereGeometry(0.252, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2.2),
+      hairMat
+    );
+    hair.position.y = 1.82;
+    g.add(hair);
+    // Subtle hairline at temples
+    const sideMat = new THREE.MeshStandardMaterial({ color: opts.hairColor || 0x0a0503 });
+    for (let i = -1; i <= 1; i += 2) {
+      const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), sideMat);
+      tuft.position.set(i * 0.20, 1.76, 0.05);
+      g.add(tuft);
+    }
+  } else if (opts.hair === 'headband') {
     const band = new THREE.Mesh(
       new THREE.TorusGeometry(0.252, 0.05, 16, 36),
       new THREE.MeshStandardMaterial({ color: 0xf8f8f8, roughness: 0.85 })
@@ -907,10 +941,43 @@ function createPerson(opts) {
     const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.28, 8, 14), handMat);
     fore.position.y = -0.52; fore.castShadow = true;
     grp.add(fore);
-    // Hand
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.10, 14, 14), handMat);
-    hand.position.y = -0.70; hand.scale.set(1, 1.2, 0.7); hand.castShadow = true;
-    grp.add(hand);
+    // Hand - palm + fingers
+    const handGroup = new THREE.Group();
+    handGroup.position.y = -0.70;
+    // Palm
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.10, 0.06), handMat);
+    palm.castShadow = true;
+    handGroup.add(palm);
+    // Knuckles ridge
+    const knuckles = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.03, 0.06), handMat);
+    knuckles.position.set(0, 0.06, 0);
+    handGroup.add(knuckles);
+    // 4 fingers (index, middle, ring, pinky)
+    const fingerLengths = [0.085, 0.095, 0.090, 0.075];
+    const fingerXs = [-0.045, -0.015, 0.015, 0.045];
+    for (let i = 0; i < 4; i++) {
+      // 2 segments per finger
+      const f1 = new THREE.Mesh(new THREE.CapsuleGeometry(0.014, 0.035, 4, 6), handMat);
+      f1.position.set(fingerXs[i], 0.085 + fingerLengths[i] * 0.3, 0);
+      f1.castShadow = true;
+      handGroup.add(f1);
+      const f2 = new THREE.Mesh(new THREE.CapsuleGeometry(0.013, 0.030, 4, 6), handMat);
+      f2.position.set(fingerXs[i], 0.085 + fingerLengths[i] * 0.85, 0);
+      f2.castShadow = true;
+      handGroup.add(f2);
+    }
+    // Thumb (to the side)
+    const thumb1 = new THREE.Mesh(new THREE.CapsuleGeometry(0.018, 0.035, 4, 6), handMat);
+    thumb1.position.set(-0.075, 0.02, 0.018);
+    thumb1.rotation.z = 0.7;
+    thumb1.castShadow = true;
+    handGroup.add(thumb1);
+    const thumb2 = new THREE.Mesh(new THREE.CapsuleGeometry(0.016, 0.030, 4, 6), handMat);
+    thumb2.position.set(-0.105, 0.055, 0.018);
+    thumb2.rotation.z = 0.6;
+    thumb2.castShadow = true;
+    handGroup.add(thumb2);
+    grp.add(handGroup);
     // Wristband
     const band = new THREE.Mesh(
       new THREE.TorusGeometry(0.085, 0.028, 10, 20),
@@ -1023,6 +1090,7 @@ function createPerson(opts) {
 
 const player = createPerson({
   name: 'ЛЕБРОН',
+  lastName: 'JAMES',
   number: '23',
   team: 'LAKERS',
   jersey: 0xfdb927,
@@ -1030,7 +1098,8 @@ const player = createPerson({
   stripeColor: 0xffffff,
   textColor: '#552583',
   skin: 0x6b4226,
-  hair: 'headband',
+  hair: 'short',
+  hairColor: 0x0a0503,
   beard: true,
   beardColor: '#0a0503',
   browColor: '#0a0503',
@@ -1039,13 +1108,14 @@ const player = createPerson({
   shoeStripe: 0x552583,
   tattoos: true,
   nameColor: '#fbbf24',
-  scale: { x: 1.10, y: 1.12, z: 1.10 }   // taller, broader
+  scale: { x: 1.10, y: 1.12, z: 1.10 }
 });
 player.position.set(0, 0, 5);
 scene.add(player);
 
 const cpu = createPerson({
   name: 'КАРРИ',
+  lastName: 'CURRY',
   number: '30',
   team: 'WARRIORS',
   jersey: 0x1d428a,
@@ -1076,7 +1146,8 @@ const playerState = {
   facing: 0, // yaw
   pitch: 0,
   dunking: false,
-  dunkTarget: null
+  dunkTarget: null,
+  blocking: false
 };
 
 const cpuState = {
@@ -1169,6 +1240,8 @@ document.addEventListener('mousemove', e => {
   const btnShoot = document.getElementById('btn-shoot');
   const btnJump = document.getElementById('btn-jump');
   const btnSprint = document.getElementById('btn-sprint');
+  const btnBlock = document.getElementById('btn-block');
+  const btnSteal = document.getElementById('btn-steal');
 
   const dpadButtons = [
     { el: document.getElementById('dpad-up'),    dir: 'up' },
@@ -1254,6 +1327,9 @@ document.addEventListener('mousemove', e => {
     btnSprint.classList.toggle('active', touchInput.sprint);
   });
 
+  addHoldHandler(btnBlock, () => tryBlock());
+  addHoldHandler(btnSteal, () => trySteal());
+
   // Prevent double-tap zoom on iOS
   document.addEventListener('gesturestart', e => e.preventDefault());
 }
@@ -1314,6 +1390,47 @@ function resetAfterScore(scorer) {
   mouse.down = false;
   cpuState.cooldown = 1.5;
   cpuState.charging = false;
+}
+
+function tryBlock() {
+  // Jump straight up and try to swat the ball if CPU shot is in flight nearby
+  if (!playerState.onGround) return;
+  playerState.yVel = 9;
+  playerState.onGround = false;
+  playerState.blocking = true;
+  // Raise arms in animation
+  setTimeout(() => { playerState.blocking = false; }, 600);
+
+  // If CPU shot in air and ball near player at jump peak, swat it
+  if (ballState.free && gameState.shotShooter === 'cpu') {
+    const d = Math.sqrt((ball.position.x - player.position.x)**2 + (ball.position.z - player.position.z)**2);
+    if (d < 2.5 && ball.position.y < 4.5 && ball.position.y > 1.5) {
+      // Block: deflect the ball downward
+      ballState.vel.y = -6;
+      ballState.vel.x *= -0.4;
+      ballState.vel.z *= -0.4;
+      gameState.scoredThisShot = true; // shot can no longer count
+      gameState.shotInAir = false;
+      showMessage('БЛОК!', '#38bdf8', 1200);
+    }
+  }
+}
+
+function trySteal() {
+  // Try to steal the ball from CPU if close enough
+  if (ballState.holder !== 'cpu') return;
+  const d = player.position.distanceTo(cpu.position);
+  if (d < 2.2) {
+    // 70% chance to steal when close
+    if (Math.random() < 0.7) {
+      ballState.holder = 'player';
+      cpuState.cooldown = 1.5;
+      cpuState.charging = false;
+      showMessage('ПЕРЕХВАТ!', '#a78bfa', 1200);
+    } else {
+      showMessage('Не вышло...', '#888', 800);
+    }
+  }
 }
 
 function tryJumpOrDunk() {
@@ -1449,10 +1566,10 @@ function cpuShoot() {
   const baseSpeed = denom > 0 ? Math.sqrt(g * dist * dist / denom) : 12;
 
   let accuracy;
-  if (dist < 4)      accuracy = 0.95;
-  else if (dist < 7) accuracy = 0.88;
-  else               accuracy = THREE.MathUtils.clamp(0.80 - (dist - 7) * 0.02, 0.65, 0.85);
-  const err = (1 - accuracy) * 0.55;
+  if (dist < 5)       accuracy = 0.94;
+  else if (dist < 9)  accuracy = 0.85;
+  else                accuracy = THREE.MathUtils.clamp(0.78 - (dist - 9) * 0.012, 0.70, 0.85);
+  const err = (1 - accuracy) * 0.30;
 
   const v = new THREE.Vector3();
   v.x = horizontal.x * Math.cos(angle) * baseSpeed + (Math.random() - 0.5) * err;
@@ -1573,8 +1690,11 @@ function updatePlayer(dt) {
   // Body lean forward when sprinting
   player.userData.body.rotation.x = THREE.MathUtils.lerp(player.userData.body.rotation.x || 0, moving && sprint > 1.2 ? 0.18 : 0, 0.15);
 
-  if (gameState.charging || (playerState.dunking && ballState.holder === 'player')) {
-    // Arms rise smoothly during shot/dunk animation
+  if (playerState.blocking) {
+    // Both arms fully extended up for block
+    player.userData.armL.rotation.x = -2.6;
+    player.userData.armR.rotation.x = -2.6;
+  } else if (gameState.charging || (playerState.dunking && ballState.holder === 'player')) {
     const t = playerState.dunking ? 1 : Math.min(gameState.shotAnimT, 1);
     const armAngle = -1.8 * t;
     player.userData.armL.rotation.x = armAngle;
