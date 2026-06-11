@@ -1355,6 +1355,7 @@ function performDunkRelease() {
   gameState.shotShooter = 'player';
   gameState.shotTargetHoop = playerHoop;
   gameState.scoredThisShot = false;
+  gameState.shotWasAboveRim = false;
   gameState.rimTouched = false;
   gameState.shotPoints = 2;
   gameState.dunkAttempt = true;
@@ -1385,6 +1386,7 @@ function releaseShot() {
     gameState.shotShooter = 'player';
     gameState.shotTargetHoop = playerHoop;
     gameState.scoredThisShot = false;
+  gameState.shotWasAboveRim = false;
     gameState.rimTouched = false;
     gameState.shotPoints = 2;
     gameState.dunkAttempt = true;
@@ -1402,9 +1404,9 @@ function releaseShot() {
   // Accuracy: near-perfect close, very good mid, still good from three
   // < 4m: 98%, 4-7m: 92%, 7m+: 78%
   let accuracy;
-  if (dist < 4)      accuracy = 0.98;
-  else if (dist < 7) accuracy = 0.92;
-  else               accuracy = THREE.MathUtils.clamp(0.85 - (dist - 7) * 0.015, 0.7, 0.88);
+  if (dist < 5)       accuracy = 0.995;
+  else if (dist < 9)  accuracy = 0.97;
+  else                accuracy = THREE.MathUtils.clamp(0.92 - (dist - 9) * 0.01, 0.82, 0.95);
 
   // Compute velocity
   const v = new THREE.Vector3();
@@ -1412,7 +1414,7 @@ function releaseShot() {
   v.z = horizontal.z * Math.cos(angle) * speed;
   v.y = Math.sin(angle) * speed;
 
-  const err = (1 - accuracy) * 0.5;
+  const err = (1 - accuracy) * 0.25;
   v.x += (Math.random() - 0.5) * err;
   v.z += (Math.random() - 0.5) * err;
   v.y += (Math.random() - 0.5) * err * 0.3;
@@ -1425,6 +1427,7 @@ function releaseShot() {
   gameState.shotShooter = 'player';
   gameState.shotTargetHoop = playerHoop;
   gameState.scoredThisShot = false;
+  gameState.shotWasAboveRim = false;
   gameState.rimTouched = false;
   gameState.dunkAttempt = false;
 
@@ -1463,6 +1466,7 @@ function cpuShoot() {
   gameState.shotShooter = 'cpu';
   gameState.shotTargetHoop = cpuHoop;
   gameState.scoredThisShot = false;
+  gameState.shotWasAboveRim = false;
   gameState.rimTouched = false;
   const distFromRimXZ = Math.sqrt((startPos.x - cpuHoop.rimPos.x) ** 2 + (startPos.z - cpuHoop.rimPos.z) ** 2);
   gameState.shotPoints = distFromRimXZ > 6.5 ? 3 : 2;
@@ -1806,48 +1810,68 @@ function updateBall(dt) {
   ballShadow.material.opacity = THREE.MathUtils.clamp(0.45 - h * 0.025, 0.1, 0.45);
 }
 
+function scoreShot(hoop) {
+  gameState.scoredThisShot = true;
+  const pts = gameState.shotPoints || 2;
+  if (gameState.shotShooter === 'player') {
+    gameState.scoreYou += pts;
+    showMessage(pts === 3 ? 'ТРЁХОЧКОВЫЙ!' : 'ЗАБИЛ!', '#4ade80');
+  } else {
+    gameState.scoreCpu += pts;
+    showMessage(pts === 3 ? 'БОТ ЗАБИЛ 3!' : 'БОТ ЗАБИЛ', '#f87171');
+  }
+  animateNet(hoop);
+  setTimeout(() => resetAfterScore(gameState.shotShooter), 900);
+}
+
 function checkHoop(hoop) {
   const rim = hoop.rimPos;
   const dx = ball.position.x - rim.x;
   const dz = ball.position.z - rim.z;
   const horizDist = Math.sqrt(dx*dx + dz*dz);
+  const dy = ball.position.y - rim.y;
 
-  // Swept scoring: did the ball cross the rim plane downward this frame?
-  if (!gameState.scoredThisShot && hoop === gameState.shotTargetHoop && ballState.prevPos) {
-    const prevY = ballState.prevPos.y;
-    const currY = ballState.pos.y;
-    if (prevY > rim.y && currY <= rim.y && ballState.vel.y < 0) {
-      // Interpolate horizontal crossing point
-      const t = (prevY - rim.y) / (prevY - currY || 1e-6);
-      const cx = ballState.prevPos.x + (ballState.pos.x - ballState.prevPos.x) * t;
-      const cz = ballState.prevPos.z + (ballState.pos.z - ballState.prevPos.z) * t;
+  if (!gameState.scoredThisShot && hoop === gameState.shotTargetHoop) {
+    const scoreRadius = hoop.rimRadius + 0.05;  // very generous (0.50m)
+
+    // Track if ball has ever been above rim during this shot
+    if (ball.position.y > rim.y + 0.05 && horizDist < scoreRadius * 1.5) {
+      gameState.shotWasAboveRim = true;
+    }
+
+    // METHOD 1: Swept plane crossing (precise interpolation)
+    if (ballState.prevPos && ballState.prevPos.y > rim.y && ball.position.y <= rim.y && ballState.vel.y < 0) {
+      const denom = (ballState.prevPos.y - ball.position.y) || 1e-6;
+      const t = (ballState.prevPos.y - rim.y) / denom;
+      const cx = ballState.prevPos.x + (ball.position.x - ballState.prevPos.x) * t;
+      const cz = ballState.prevPos.z + (ball.position.z - ballState.prevPos.z) * t;
       const cDist = Math.sqrt((cx - rim.x)**2 + (cz - rim.z)**2);
-      // Generous scoring radius (ball + small margin)
-      if (cDist < hoop.rimRadius - 0.05) {
-        gameState.scoredThisShot = true;
-        const pts = gameState.shotPoints || 2;
-        if (gameState.shotShooter === 'player') {
-          gameState.scoreYou += pts;
-          showMessage(pts === 3 ? 'ТРЁХОЧКОВЫЙ!' : 'ЗАБИЛ!', '#4ade80');
-        } else {
-          gameState.scoreCpu += pts;
-          showMessage(pts === 3 ? 'БОТ ЗАБИЛ 3!' : 'БОТ ЗАБИЛ', '#f87171');
-        }
-        animateNet(hoop);
-        setTimeout(() => resetAfterScore(gameState.shotShooter), 900);
+      if (cDist < scoreRadius) {
+        scoreShot(hoop);
         return;
       }
     }
+
+    // METHOD 2: Ball currently in rim opening cylinder while descending
+    if (horizDist < scoreRadius && ballState.vel.y < 0 && dy > -0.4 && dy < 0.25) {
+      scoreShot(hoop);
+      return;
+    }
+
+    // METHOD 3: Ball was above rim and is now below — counts as a make
+    if (gameState.shotWasAboveRim && ball.position.y < rim.y - 0.05 && ballState.vel.y < 0 && horizDist < scoreRadius * 1.2) {
+      scoreShot(hoop);
+      return;
+    }
   }
 
-  // Rim torus collision (bounce) - only if NOT in the scoring zone
-  const dy = ball.position.y - rim.y;
-  if (Math.abs(dy) < 0.12 && horizDist > hoop.rimRadius - 0.05 && horizDist < hoop.rimRadius + 0.10) {
+  // Rim torus bounce - only for shots clearly outside the scoring zone
+  if (Math.abs(dy) < 0.15 && horizDist > hoop.rimRadius + 0.08 && horizDist < hoop.rimRadius + 0.20) {
     const nrm = new THREE.Vector3(dx, 0, dz).normalize();
     const vDotN = ballState.vel.x * nrm.x + ballState.vel.z * nrm.z;
     if (vDotN < 0) {
-      ballState.vel.x -= 2 * vDotN * nrm.x * 0.6;
-      ballState.vel.z -= 2 * vDotN * nrm.z * 0.6;
+      ballState.vel.x -= 2 * vDotN * nrm.x * 0.5;
+      ballState.vel.z -= 2 * vDotN * nrm.z * 0.5;
       ballState.vel.y *= 0.6;
       gameState.rimTouched = true;
     }
