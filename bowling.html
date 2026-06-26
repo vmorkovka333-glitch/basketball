@@ -397,22 +397,25 @@ function ballPinCollisions(){
     if(!p.active||p.knocked) return;
     const dx=p.x-b.x, dz=p.z-b.z, d=Math.hypot(dx,dz);
     if(d<reach){
-      const nx=dx/(d||1), nz=dz/(d||1), imp=bs*0.65+2.7;
-      p.vx+=nx*imp*0.42+b.vx*0.22; p.vz+=nz*imp*0.36+b.vz*0.5;
-      p.knocked=true; b.vx*=0.99; b.vz*=0.99;
+      const nx=dx/(d||1), nz=dz/(d||1), imp=bs*0.6+2.4;
+      p.vx+=nx*imp*0.40+b.vx*0.20; p.vz+=nz*imp*0.34+b.vz*0.45;
+      p.knocked=true;                                 // ball-struck pins always go down
+      b.vx=b.vx*0.85-nx*0.8; b.vz=b.vz*0.85-nz*0.8;   // ball slows + deflects, can't plow the whole rack
     }
   });
 }
 function pinPinCollisions(){
-  const thr=C.pinR*2+0.1;
+  const thr=C.pinR*2+0.1, KNOCK=1.6;
   const movers=G.pins.filter(p=>p.active&&p.knocked&&Math.hypot(p.vx,p.vz)>0.25);
   movers.forEach(a=>{
     G.pins.forEach(b=>{
       if(b===a||!b.active||b.knocked) return;
       const dx=b.x-a.x, dz=b.z-a.z, d=Math.hypot(dx,dz);
       if(d<thr){
-        const nx=dx/(d||1), nz=dz/(d||1), spd=Math.hypot(a.vx,a.vz), push=spd*0.7+1.7;
-        b.vx+=nx*push; b.vz+=nz*push; b.knocked=true; a.vx*=0.62; a.vz*=0.62;
+        const nx=dx/(d||1), nz=dz/(d||1), spd=Math.hypot(a.vx,a.vz), push=spd*0.5;  // energy dissipates per hop
+        b.vx+=nx*push; b.vz+=nz*push;
+        if(Math.hypot(b.vx,b.vz)>KNOCK) b.knocked=true;  // weak transfers leave the pin standing → splits & corners survive
+        a.vx*=0.55; a.vz*=0.55;
       }
     });
   });
