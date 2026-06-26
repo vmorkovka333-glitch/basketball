@@ -146,7 +146,7 @@ const G = {
   phase:'loading', aimAngle:0, pointerDown:false,
   framesData:Array.from({length:10},()=>({rolls:[]})),
   frameIndex:0, gameOver:false, pinsStanding:10, msg:null,
-  standingBefore:10, settleAt:0, last:0, raf:0,
+  standingBefore:10, settleAt:0, rollStart:0, last:0, raf:0,
   _tx:0,_ty:0.5,_tz:-5.5,
 };
 
@@ -320,7 +320,7 @@ function throwBall(){
   G.standingBefore=G.pins.filter(p=>p.active&&!p.knocked).length;
   G.ball.vx=Math.sin(a)*sp; G.ball.vz=-Math.cos(a)*sp;
   G.ball.rolling=true; G.ball.gutter=false;
-  G.phase='roll';
+  G.phase='roll'; G.rollStart=performance.now();
   document.getElementById('bowlBtn').disabled=true;
   updateHUD();
 }
@@ -371,7 +371,10 @@ function step(dt){
     b.mesh.position.x=b.x; b.mesh.position.z=b.z;
     const spd=Math.hypot(b.vx,b.vz);
     b.mesh.rotation.x-=(spd/C.ballR)*dt;
-    if(b.z<C.endZ && G.phase==='roll'){ G.phase='settle'; G.settleAt=performance.now(); }
+    // ball is "done" when it passes the deck, slows to a crawl, or runs out of time
+    if(G.phase==='roll' && (b.z<C.endZ || spd<0.7 || performance.now()-G.rollStart>3500)){
+      G.phase='settle'; G.settleAt=performance.now();
+    }
   }
 
   integratePins(dt);
@@ -392,30 +395,35 @@ function step(dt){
 }
 
 function ballPinCollisions(){
-  const b=G.ball, reach=C.ballR+C.pinR+0.01, bs=Math.hypot(b.vx,b.vz);
+  const b=G.ball, reach=C.ballR+C.pinR+0.01;
   G.pins.forEach(p=>{
     if(!p.active||p.knocked) return;
     const dx=p.x-b.x, dz=p.z-b.z, d=Math.hypot(dx,dz);
     if(d<reach){
-      const nx=dx/(d||1), nz=dz/(d||1), imp=bs*0.6+2.4;
-      p.vx+=nx*imp*0.40+b.vx*0.20; p.vz+=nz*imp*0.34+b.vz*0.45;
-      p.knocked=true;                                 // ball-struck pins always go down
-      b.vx=b.vx*0.85-nx*0.8; b.vz=b.vz*0.85-nz*0.8;   // ball slows + deflects, can't plow the whole rack
+      const nx=dx/(d||1), nz=dz/(d||1);
+      const vn=Math.max(b.vx*nx+b.vz*nz,0);            // ball's closing speed along the contact normal
+      const imp=vn*0.8+2.0;
+      p.vx+=nx*imp+b.vx*0.10; p.vz+=nz*imp+b.vz*0.10;
+      p.knocked=true;                                  // ball-struck pin always goes down
+      // ball hands its normal component to the pin and glances off (keeps tangential, slows).
+      // a dead-centre hit kills the ball on the head pin -> leaves a split, like real bowling.
+      b.vx=(b.vx-nx*vn*0.78)*0.9;
+      b.vz=(b.vz-nz*vn*0.78)*0.9;
     }
   });
 }
 function pinPinCollisions(){
-  const thr=C.pinR*2+0.1, KNOCK=1.6;
+  const thr=C.pinR*2+0.1, KNOCK=1.75;
   const movers=G.pins.filter(p=>p.active&&p.knocked&&Math.hypot(p.vx,p.vz)>0.25);
   movers.forEach(a=>{
     G.pins.forEach(b=>{
       if(b===a||!b.active||b.knocked) return;
       const dx=b.x-a.x, dz=b.z-a.z, d=Math.hypot(dx,dz);
       if(d<thr){
-        const nx=dx/(d||1), nz=dz/(d||1), spd=Math.hypot(a.vx,a.vz), push=spd*0.5;  // energy dissipates per hop
+        const nx=dx/(d||1), nz=dz/(d||1), spd=Math.hypot(a.vx,a.vz), push=spd*0.46;  // energy dissipates per hop
         b.vx+=nx*push; b.vz+=nz*push;
         if(Math.hypot(b.vx,b.vz)>KNOCK) b.knocked=true;  // weak transfers leave the pin standing → splits & corners survive
-        a.vx*=0.55; a.vz*=0.55;
+        a.vx*=0.5; a.vz*=0.5;
       }
     });
   });
