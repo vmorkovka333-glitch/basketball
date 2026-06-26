@@ -298,7 +298,7 @@ function buildGuide(){
 function setAimFromX(clientX){
   const r=G.mountEl.getBoundingClientRect();
   const nx=((clientX-r.left)/r.width)*2-1;
-  G.aimAngle=Math.max(-0.17,Math.min(0.17,nx*0.19));
+  G.aimAngle=Math.max(-0.20,Math.min(0.20,nx*0.23));
   if(G.guide) G.guide.rotation.y=-G.aimAngle;
 }
 function onPointerMove(e){
@@ -315,7 +315,8 @@ function onPointerUp(){ G.pointerDown=false; }
 
 function throwBall(){
   if(G.phase!=='aim') return;
-  const a=G.aimAngle, sp=C.speed;
+  const drift=(Math.random()-0.5)*0.036;        // imperfect release → harder to repeat strikes
+  const a=G.aimAngle+drift, sp=C.speed;
   G.standingBefore=G.pins.filter(p=>p.active&&!p.knocked).length;
   G.ball.vx=Math.sin(a)*sp; G.ball.vz=-Math.cos(a)*sp;
   G.ball.rolling=true; G.ball.gutter=false;
@@ -391,13 +392,13 @@ function step(dt){
 }
 
 function ballPinCollisions(){
-  const b=G.ball, reach=C.ballR+C.pinR+0.02, bs=Math.hypot(b.vx,b.vz);
+  const b=G.ball, reach=C.ballR+C.pinR+0.01, bs=Math.hypot(b.vx,b.vz);
   G.pins.forEach(p=>{
     if(!p.active||p.knocked) return;
     const dx=p.x-b.x, dz=p.z-b.z, d=Math.hypot(dx,dz);
     if(d<reach){
-      const nx=dx/(d||1), nz=dz/(d||1), imp=bs*0.7+3.2;
-      p.vx+=nx*imp*0.5+b.vx*0.26; p.vz+=nz*imp*0.42+b.vz*0.55;
+      const nx=dx/(d||1), nz=dz/(d||1), imp=bs*0.65+2.7;
+      p.vx+=nx*imp*0.42+b.vx*0.22; p.vz+=nz*imp*0.36+b.vz*0.5;
       p.knocked=true; b.vx*=0.99; b.vz*=0.99;
     }
   });
@@ -410,7 +411,7 @@ function pinPinCollisions(){
       if(b===a||!b.active||b.knocked) return;
       const dx=b.x-a.x, dz=b.z-a.z, d=Math.hypot(dx,dz);
       if(d<thr){
-        const nx=dx/(d||1), nz=dz/(d||1), spd=Math.hypot(a.vx,a.vz), push=spd*0.85+2.3;
+        const nx=dx/(d||1), nz=dz/(d||1), spd=Math.hypot(a.vx,a.vz), push=spd*0.7+1.7;
         b.vx+=nx*push; b.vz+=nz*push; b.knocked=true; a.vx*=0.62; a.vz*=0.62;
       }
     });
