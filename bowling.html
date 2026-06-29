@@ -69,6 +69,21 @@
   #bowlBtn:active{transform:scale(.95);box-shadow:0 4px 16px rgba(255,207,92,0.4);}
   #bowlBtn:disabled{opacity:.35;cursor:default;filter:saturate(.5);}
 
+  #turnBar{padding:8px 18px;border-radius:30px;font-size:13px;font-weight:600;display:flex;gap:12px;align-items:center;}
+  #turnBar .pseg{display:flex;align-items:center;gap:7px;opacity:.4;transition:opacity .2s;}
+  #turnBar .pseg.act{opacity:1;}
+  #turnBar .pdot{width:8px;height:8px;border-radius:50%;}
+  #turnBar .psep{width:1px;height:14px;background:rgba(255,255,255,0.15);}
+  #powerWrap{width:200px;max-width:60vw;height:9px;border-radius:6px;background:rgba(255,255,255,0.08);
+    overflow:hidden;border:1px solid rgba(255,255,255,0.12);opacity:0;transition:opacity .15s;}
+  #powerWrap.on{opacity:1;}
+  #powerFill{height:100%;width:0%;background:linear-gradient(90deg,#38e1ff,#ffe6a8,#ff5c5c);}
+  #modeSel{display:flex;align-items:center;gap:6px;padding:6px 10px 6px 14px;border-radius:30px;font-size:11px;}
+  #modeSel .ml{color:#6c7295;letter-spacing:2px;}
+  #modeSel .mbtn{pointer-events:auto;cursor:pointer;border:none;width:26px;height:26px;border-radius:50%;
+    background:rgba(255,255,255,0.06);color:#c2c7e3;font-weight:700;font-family:inherit;font-size:12px;}
+  #modeSel .mbtn.active{background:linear-gradient(180deg,#ffe6a8,#ffcf5c);color:#0a0c16;}
+
   #msgWrap{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;pointer-events:none;}
   #msgBox{pointer-events:auto;text-align:center;padding:30px 56px;border-radius:24px;
     background:rgba(8,9,18,0.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
@@ -121,8 +136,11 @@
   </div>
 
   <div id="controls">
-    <div id="hint" class="glass"><span><b>Drag</b> / move to aim</span><span class="sep"></span><span>tap <b>BOWL</b> or <b>Space</b></span></div>
-    <button id="bowlBtn">BOWL</button>
+    <div id="turnBar" class="glass" style="display:none;"></div>
+    <div id="powerWrap"><div id="powerFill"></div></div>
+    <button id="bowlBtn">HOLD TO BOWL</button>
+    <div id="hint" class="glass"><span><b>Drag</b> to aim</span><span class="sep"></span><span><b>Hold</b> BOWL = power</span></div>
+    <div id="modeSel" class="glass"><span class="ml">PLAYERS</span><button class="mbtn active" data-n="1">1</button><button class="mbtn" data-n="2">2</button></div>
   </div>
 
   <div id="msgWrap">
@@ -140,6 +158,10 @@ const T = () => window.THREE;
 
 const C = { laneHalf:1.0, ballR:0.16, pinR:0.07, startZ:3.2, pinFrontZ:-10.0, endZ:-12.2, speed:12.0 };
 
+const CHARGE_MS=1100, MINP=7.5, MAXP=16.5;          // hold-to-charge power range
+const PLAYER_THEME=[0x38e1ff, 0xff4db8];            // lane neon colour per player
+const PLAYER_HEX=['#38e1ff','#ff4db8'];
+
 const G = {
   scene:null, camera:null, renderer:null, composer:null, mountEl:null,
   pins:[], ball:null, guide:null, guideDashes:[], guideRing:null,
@@ -148,6 +170,9 @@ const G = {
   frameIndex:0, gameOver:false, pinsStanding:10, msg:null,
   standingBefore:10, settleAt:0, rollStart:0, last:0, raf:0,
   _tx:0,_ty:0.5,_tz:-5.5,
+  numPlayers:1, players:[], cur:0,
+  charging:false, chargeStart:0,
+  theme:[], themeLight:null,
 };
 
 function pinLayout(){
@@ -189,6 +214,7 @@ function initGame(){
   const scam=dir.shadow.camera; scam.left=-4;scam.right=4;scam.top=6;scam.bottom=-16;scam.near=1;scam.far=30;
   scene.add(dir);
   const pCyan=new THREE.PointLight(0x38e1ff,0.7,14,2); pCyan.position.set(0,2.6,-10.5); scene.add(pCyan);
+  G.themeLight=pCyan;
   const pGold=new THREE.PointLight(0xffcf5c,0.55,13,2); pGold.position.set(0,2.2,2.5); scene.add(pGold);
   const pViolet=new THREE.PointLight(0x8b5cff,0.4,16,2); pViolet.position.set(0,3,-5); scene.add(pViolet);
 
@@ -203,9 +229,10 @@ function initGame(){
   });
 
   [-1,1].forEach(s=>{
-    const strip=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.05,18),
-      new THREE.MeshStandardMaterial({color:0x0a2730,emissive:0x38e1ff,emissiveIntensity:2.2}));
+    const stripMat=new THREE.MeshStandardMaterial({color:0x0a2730,emissive:0x38e1ff,emissiveIntensity:2.2});
+    const strip=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.05,18),stripMat);
     strip.position.set(s*(C.laneHalf+0.005),0.02,-5); scene.add(strip);
+    G.theme.push(stripMat);
   });
 
   const foul=new THREE.Mesh(new THREE.BoxGeometry(2*C.laneHalf,0.012,0.05),
@@ -222,9 +249,10 @@ function initGame(){
   const wall=new THREE.Mesh(new THREE.BoxGeometry(5,4,0.3),
     new THREE.MeshStandardMaterial({color:0x0a0c1a,roughness:0.6,metalness:0.2}));
   wall.position.set(0,1.6,C.pinFrontZ-1.5); scene.add(wall);
-  const neonLine=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.05,0.05),
-    new THREE.MeshStandardMaterial({color:0x102a30,emissive:0x38e1ff,emissiveIntensity:2.6}));
+  const neonLineMat=new THREE.MeshStandardMaterial({color:0x102a30,emissive:0x38e1ff,emissiveIntensity:2.6});
+  const neonLine=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.05,0.05),neonLineMat);
   neonLine.position.set(0,0.9,C.pinFrontZ-1.35); scene.add(neonLine);
+  G.theme.push(neonLineMat);
   const deck=new THREE.Mesh(new THREE.BoxGeometry(2*C.laneHalf,0.2,2),
     new THREE.MeshStandardMaterial({color:0x11173a,roughness:0.4,metalness:0.3}));
   deck.position.set(0,-0.1,C.pinFrontZ-0.45); deck.receiveShadow=true; scene.add(deck);
@@ -250,8 +278,10 @@ function initGame(){
   }catch(e){ G.composer=null; }
 
   addEventListener('resize',onResize);
+  initPlayers(G.numPlayers);
+  applyTheme(PLAYER_THEME[0]);
   respawnPins(); resetBall();
-  G.frameIndex=0; G.phase='aim'; updateHUD();
+  G.phase='aim'; updateHUD();
 
   G.last=performance.now();
   G.raf=requestAnimationFrame(loop);
@@ -295,6 +325,91 @@ function buildGuide(){
   G.scene.add(guide); G.guide=guide;
 }
 
+// ===== players / theme =====
+function initPlayers(n){
+  G.numPlayers=n; G.cur=0;
+  G.players=Array.from({length:n},()=>({frames:Array.from({length:10},()=>({rolls:[]}))}));
+  G.framesData=G.players[0].frames;
+  G.gameOver=false; G.msg=null;
+}
+function applyTheme(hex){
+  G.theme.forEach(m=>m.emissive.setHex(hex));
+  if(G.themeLight) G.themeLight.color.setHex(hex);
+  G.guideDashes.forEach(d=>d.material.color.setHex(hex));
+}
+function nextPlayerIndex(){
+  for(let k=1;k<=G.numPlayers;k++){
+    const idx=(G.cur+k)%G.numPlayers;
+    if(!frameComplete(G.players[idx].frames,9)) return idx;
+  }
+  return -1;
+}
+function setPlayers(n){
+  initPlayers(n);
+  applyTheme(PLAYER_THEME[0]);
+  respawnPins(); resetBall(); G.phase='aim'; updateHUD();
+}
+
+// ===== audio (synthesised, no external files) =====
+let _ac=null,_master=null,_noise=null,_knockTime=0;
+function unlockAudio(){
+  if(_ac){ if(_ac.state==='suspended') _ac.resume(); return; }
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    _ac=new AC();
+    _master=_ac.createGain(); _master.gain.value=0.5; _master.connect(_ac.destination);
+    const len=Math.floor(_ac.sampleRate*0.2);
+    _noise=_ac.createBuffer(1,len,_ac.sampleRate);
+    const ch=_noise.getChannelData(0);
+    for(let i=0;i<len;i++) ch[i]=Math.random()*2-1;
+  }catch(e){ _ac=null; }
+}
+function playKnock(){
+  if(!_ac) return;
+  let t=_ac.currentTime; if(t<_knockTime) t=_knockTime; _knockTime=t+0.02; // stagger overlaps → clatter
+  const o=_ac.createOscillator(); o.type='triangle';
+  o.frequency.setValueAtTime(150+Math.random()*120,t);
+  o.frequency.exponentialRampToValueAtTime(60,t+0.13);
+  const g=_ac.createGain();
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(0.3,t+0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+0.16);
+  o.connect(g).connect(_master); o.start(t); o.stop(t+0.18);
+  const src=_ac.createBufferSource(); src.buffer=_noise;
+  const bp=_ac.createBiquadFilter(); bp.type='bandpass';
+  bp.frequency.value=1700+Math.random()*1500; bp.Q.value=0.8;
+  const ng=_ac.createGain();
+  ng.gain.setValueAtTime(0.22,t); ng.gain.exponentialRampToValueAtTime(0.0001,t+0.06);
+  src.connect(bp).connect(ng).connect(_master); src.start(t); src.stop(t+0.08);
+}
+function playChime(strike){
+  if(!_ac) return; const t=_ac.currentTime;
+  const fr=strike?[523,659,784,1047]:[523,659,784];
+  fr.forEach((f,i)=>{
+    const o=_ac.createOscillator(); o.type='sine'; o.frequency.value=f;
+    const g=_ac.createGain(); const st=t+i*0.07;
+    g.gain.setValueAtTime(0.0001,st); g.gain.exponentialRampToValueAtTime(0.22,st+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,st+0.4);
+    o.connect(g).connect(_master); o.start(st); o.stop(st+0.42);
+  });
+}
+
+// ===== charge / throw power =====
+function startCharge(){
+  if(G.phase!=='aim'||G.charging) return;
+  G.charging=true; G.chargeStart=performance.now();
+  document.getElementById('powerWrap').classList.add('on');
+}
+function releaseThrow(){
+  if(!G.charging) return;
+  G.charging=false;
+  const f=Math.max(0,Math.min(1,(performance.now()-G.chargeStart)/CHARGE_MS));
+  document.getElementById('powerWrap').classList.remove('on');
+  document.getElementById('powerFill').style.width='0%';
+  throwBall(MINP+(MAXP-MINP)*f);
+}
+
+// ===== input =====
 function setAimFromX(clientX){
   const r=G.mountEl.getBoundingClientRect();
   const nx=((clientX-r.left)/r.width)*2-1;
@@ -313,10 +428,10 @@ function onPointerDown(e){
 }
 function onPointerUp(){ G.pointerDown=false; }
 
-function throwBall(){
+function throwBall(power){
   if(G.phase!=='aim') return;
   const drift=(Math.random()-0.5)*0.036;        // imperfect release → harder to repeat strikes
-  const a=G.aimAngle+drift, sp=C.speed;
+  const a=G.aimAngle+drift, sp=power||C.speed;
   G.standingBefore=G.pins.filter(p=>p.active&&!p.knocked).length;
   G.ball.vx=Math.sin(a)*sp; G.ball.vz=-Math.cos(a)*sp;
   G.ball.rolling=true; G.ball.gutter=false;
@@ -390,6 +505,10 @@ function step(dt){
     G.guideDashes.forEach((d,i)=>{ d.material.opacity=0.30+0.55*(0.5+0.5*Math.sin(t*4-i*0.6)); });
     if(G.guideRing) G.guideRing.material.opacity=0.55+0.4*(0.5+0.5*Math.sin(t*3));
   }
+  if(G.charging){
+    const f=Math.min(1,(performance.now()-G.chargeStart)/CHARGE_MS);
+    document.getElementById('powerFill').style.width=(f*100)+'%';
+  }
 
   if(G.phase==='settle' && performance.now()-G.settleAt>1150) onSettled();
 }
@@ -404,7 +523,7 @@ function ballPinCollisions(){
       const vn=Math.max(b.vx*nx+b.vz*nz,0);            // ball's closing speed along the contact normal
       const imp=vn*0.8+2.0;
       p.vx+=nx*imp+b.vx*0.10; p.vz+=nz*imp+b.vz*0.10;
-      p.knocked=true;                                  // ball-struck pin always goes down
+      p.knocked=true; playKnock();                     // ball-struck pin always goes down
       // ball hands its normal component to the pin and glances off (keeps tangential, slows).
       // a dead-centre hit kills the ball on the head pin -> leaves a split, like real bowling.
       b.vx=(b.vx-nx*vn*0.78)*0.9;
@@ -422,7 +541,7 @@ function pinPinCollisions(){
       if(d<thr){
         const nx=dx/(d||1), nz=dz/(d||1), spd=Math.hypot(a.vx,a.vz), push=spd*0.46;  // energy dissipates per hop
         b.vx+=nx*push; b.vz+=nz*push;
-        if(Math.hypot(b.vx,b.vz)>KNOCK) b.knocked=true;  // weak transfers leave the pin standing → splits & corners survive
+        if(Math.hypot(b.vx,b.vz)>KNOCK){ b.knocked=true; playKnock(); }  // weak transfers leave the pin standing → splits & corners survive
         a.vx*=0.5; a.vz*=0.5;
       }
     });
@@ -465,50 +584,70 @@ function onSettled(){
   const strike=G.standingBefore===10&&knocked===10;
   const spare=!strike&&G.standingBefore<10&&standingAfter===0&&knocked>0;
 
-  const wasIndex=G.frameIndex;
-  G.framesData[wasIndex].rolls.push(knocked);
+  const fr=G.players[G.cur].frames;
+  const wasIndex=currentFrameIndex(fr);
+  fr[wasIndex].rolls.push(knocked);
 
-  const over=frameComplete(G.framesData,9);
-  let fresh;
-  const newIndex=over?-1:currentFrameIndex();
-  if(over) fresh=false;
-  else if(newIndex!==wasIndex) fresh=true;
-  else{
-    const rr=G.framesData[9].rolls, last=rr[rr.length-1];
-    if(last===10) fresh=true;
-    else if(rr.length===2&&rr[0]+rr[1]===10) fresh=true;
-    else fresh=false;
+  const newIndex=currentFrameIndex(fr);
+  const tenthDone=(wasIndex===9 && frameComplete(fr,9));
+  const turnEnds=(newIndex!==wasIndex)||tenthDone;
+
+  // same-player continuation keeps standing pins, except a 10th-frame bonus rack after strike/spare
+  let fresh=false;
+  if(!turnEnds){
+    const rr=fr[wasIndex].rolls, last=rr[rr.length-1];
+    if(wasIndex===9 && (last===10 || (rr.length===2&&rr[0]+rr[1]===10))) fresh=true;
   }
 
   G.phase='resolve'; updateHUD();
+  if(strike) playChime(true); else if(spare) playChime(false);
 
   const finish=()=>{
-    if(over){ endGame(); }
-    else{ G.frameIndex=currentFrameIndex(); setupNextBall(fresh); }
+    if(turnEnds){
+      const nxt=nextPlayerIndex();
+      if(nxt===-1){ endGame(); return; }
+      G.cur=nxt;
+      G.framesData=G.players[G.cur].frames;
+      applyTheme(PLAYER_THEME[G.cur%PLAYER_THEME.length]);
+      setupNextBall(true);
+    }else{
+      setupNextBall(fresh);
+    }
   };
   if(strike||spare){
-    G.msg=strike?{title:'STRIKE!',sub:'All ten down',color:'#ffcf5c',btn:false}
-                :{title:'SPARE!',sub:'Cleared the rack',color:'#38e1ff',btn:false};
+    G.msg=strike?{title:'STRIKE!',sub:'',color:'#ffcf5c',btn:false}
+                :{title:'SPARE!',sub:'',color:'#38e1ff',btn:false};
     updateHUD();
-    setTimeout(()=>{G.msg=null; finish();},1250);
+    setTimeout(()=>{G.msg=null; finish();},1150);
   }else{
-    setTimeout(finish,600);
+    setTimeout(finish,650);
   }
 }
 function setupNextBall(fresh){
   if(fresh) respawnPins(); else clearFallen();
   resetBall(); G.phase='aim'; updateHUD();
 }
+function playerTotal(i){
+  const s=computeScores(G.players[i].frames); let t=0; s.forEach(x=>{if(x!=null) t=x;}); return t;
+}
 function endGame(){
   G.gameOver=true; G.phase='over';
-  const scores=computeScores(G.framesData);
-  let total=0; scores.forEach(s=>{if(s!=null) total=s;});
-  G.msg={title:total>=270?'PERFECT-ish!':'GAME OVER',sub:'Final score '+total,color:'#f4f6ff',btn:true};
+  if(G.numPlayers===1){
+    const total=playerTotal(0);
+    G.msg={title:total>=270?'PERFECT-ish!':'GAME OVER',sub:'Final score '+total,color:'#f4f6ff',btn:true};
+  }else{
+    const a=playerTotal(0), b=playerTotal(1);
+    if(a===b) G.msg={title:'TIE GAME',sub:a+' — '+b,color:'#f4f6ff',btn:true};
+    else{
+      const w=a>b?0:1;
+      G.msg={title:'PLAYER '+(w+1)+' WINS',sub:a+' — '+b,color:PLAYER_HEX[w],btn:true};
+    }
+  }
   updateHUD();
 }
 function restart(){
-  G.framesData=Array.from({length:10},()=>({rolls:[]}));
-  G.frameIndex=0; G.gameOver=false; G.msg=null;
+  initPlayers(G.numPlayers);
+  applyTheme(PLAYER_THEME[0]);
   respawnPins(); resetBall(); G.phase='aim'; updateHUD();
 }
 
@@ -519,8 +658,9 @@ function frameComplete(frames,i){
   if(r[0]===10||r[0]+r[1]===10) return r.length>=3;
   return r.length>=2;
 }
-function currentFrameIndex(){
-  for(let i=0;i<10;i++) if(!frameComplete(G.framesData,i)) return i;
+function currentFrameIndex(frames){
+  frames=frames||G.framesData;
+  for(let i=0;i<10;i++) if(!frameComplete(frames,i)) return i;
   return 9;
 }
 function computeScores(frames){
@@ -595,6 +735,17 @@ function updateHUD(){
   document.getElementById('pinsLabel').textContent=G.pinsStanding+(G.pinsStanding===1?' pin':' pins');
   document.getElementById('totalStr').textContent=String(total);
 
+  const tb=document.getElementById('turnBar');
+  if(G.numPlayers>1){
+    tb.style.display='flex';
+    tb.innerHTML=G.players.map((p,i)=>{
+      const act=(i===G.cur&&!G.gameOver)?' act':'';
+      return `<span class="pseg${act}"><span class="pdot" style="background:${PLAYER_HEX[i]};box-shadow:0 0 8px ${PLAYER_HEX[i]}"></span>P${i+1} ${playerTotal(i)}</span>`;
+    }).join('<span class="psep"></span>');
+  }else{
+    tb.style.display='none';
+  }
+
   document.getElementById('bowlBtn').disabled=(G.phase!=='aim');
 
   const m=G.msg, wrap=document.getElementById('msgWrap');
@@ -622,12 +773,27 @@ function loop(t){
 
 window.addEventListener('DOMContentLoaded',()=>{
   G.mountEl=document.getElementById('mount');
-  document.getElementById('bowlBtn').addEventListener('click',e=>{e.preventDefault();throwBall();});
-  document.getElementById('msgBtn').addEventListener('click',restart);
+
+  const bb=document.getElementById('bowlBtn');
+  bb.addEventListener('pointerdown',e=>{ e.preventDefault(); try{bb.setPointerCapture(e.pointerId);}catch(_){}; unlockAudio(); startCharge(); });
+  bb.addEventListener('pointerup',e=>{ e.preventDefault(); releaseThrow(); });
+  bb.addEventListener('pointercancel',()=>{ if(G.charging) releaseThrow(); });
+
+  document.getElementById('msgBtn').addEventListener('click',()=>{ unlockAudio(); restart(); });
+
+  document.querySelectorAll('#modeSel .mbtn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      unlockAudio();
+      document.querySelectorAll('#modeSel .mbtn').forEach(x=>x.classList.toggle('active',x===btn));
+      setPlayers(+btn.dataset.n);
+    });
+  });
+
   addEventListener('pointermove',onPointerMove);
-  addEventListener('pointerdown',onPointerDown);
+  addEventListener('pointerdown',e=>{ unlockAudio(); onPointerDown(e); });
   addEventListener('pointerup',onPointerUp);
-  addEventListener('keydown',e=>{ if(e.code==='Space'){e.preventDefault();throwBall();} });
+  addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat){ e.preventDefault(); unlockAudio(); startCharge(); } });
+  addEventListener('keyup',e=>{ if(e.code==='Space'){ e.preventDefault(); releaseThrow(); } });
   G.mountEl.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 
   const wait=()=>{ if(window.THREE && G.mountEl) initGame(); else setTimeout(wait,60); };
