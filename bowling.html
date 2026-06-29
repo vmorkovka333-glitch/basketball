@@ -61,9 +61,9 @@
     display:flex;align-items:center;gap:12px;}
   #hint .sep{width:1px;height:13px;background:rgba(255,255,255,0.15);}
   #hint b{color:#38e1ff;font-weight:600;}
-  #bowlBtn{pointer-events:auto;cursor:pointer;border:none;
-    font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;letter-spacing:3px;color:#0a0c16;
-    padding:16px 54px;border-radius:40px;background:linear-gradient(180deg,#ffe6a8,#ffcf5c);
+  #bowlBtn{pointer-events:auto;cursor:pointer;border:none;white-space:nowrap;
+    font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;letter-spacing:3px;color:#0a0c16;
+    padding:13px 42px;border-radius:40px;background:linear-gradient(180deg,#ffe6a8,#ffcf5c);
     box-shadow:0 10px 34px rgba(255,207,92,0.45), inset 0 1px 0 rgba(255,255,255,0.5);
     transition:transform .08s, box-shadow .2s, opacity .2s;}
   #bowlBtn:active{transform:scale(.95);box-shadow:0 4px 16px rgba(255,207,92,0.4);}
@@ -95,17 +95,28 @@
     cursor:pointer;box-shadow:0 8px 30px rgba(255,207,92,0.4);display:none;}
 
   @media (max-width:560px){
-    #scoreboard{top:12px;left:10px;right:10px;padding:11px 12px 9px;}
-    #sb-head .title{letter-spacing:3px;font-size:12px;}
+    #scoreboard{top:8px;left:8px;right:8px;padding:8px 10px 7px;border-radius:14px;}
+    #sb-head{margin-bottom:7px;}
+    #sb-head .title{letter-spacing:2px;font-size:11px;}
+    #sb-head .lane{display:none;}
     #frames{gap:3px;}
     .fcell .fmark{width:100%;}
-    #info{top:96px;right:10px;padding:11px 14px;}
-    #info .fnum{font-size:24px;}
-    #total{bottom:100px;right:10px;padding:9px 15px;}
-    #total .tv{font-size:26px;}
-    #bowlBtn{padding:17px 64px;font-size:20px;}
-    #msgTitle{font-size:40px;}
-    #msgBox{padding:24px 38px;}
+    #info{top:78px;right:8px;padding:8px 12px;border-radius:14px;}
+    #info .lbl{font-size:9px;letter-spacing:2px;}
+    #info .fnum{font-size:19px;}
+    #info .throw{font-size:11px;}
+    #total{bottom:74px;right:8px;padding:6px 12px;border-radius:12px;}
+    #total .lbl{font-size:8px;}
+    #total .tv{font-size:21px;}
+    #controls{bottom:12px;gap:7px;}
+    #hint{display:none;}
+    #bowlBtn{padding:11px 40px;font-size:15px;letter-spacing:3px;border-radius:30px;}
+    #powerWrap{width:150px;height:7px;}
+    #turnBar{font-size:11px;padding:5px 12px;gap:9px;}
+    #modeSel{font-size:10px;padding:4px 8px 4px 12px;gap:5px;}
+    #modeSel .mbtn{width:22px;height:22px;font-size:11px;}
+    #msgTitle{font-size:36px;}
+    #msgBox{padding:22px 30px;}
   }
 </style>
 </head>
@@ -138,7 +149,7 @@
   <div id="controls">
     <div id="turnBar" class="glass" style="display:none;"></div>
     <div id="powerWrap"><div id="powerFill"></div></div>
-    <button id="bowlBtn">HOLD TO BOWL</button>
+    <button id="bowlBtn">BOWL</button>
     <div id="hint" class="glass"><span><b>Drag</b> to aim</span><span class="sep"></span><span><b>Hold</b> BOWL = power</span></div>
     <div id="modeSel" class="glass"><span class="ml">PLAYERS</span><button class="mbtn active" data-n="1">1</button><button class="mbtn" data-n="2">2</button></div>
   </div>
