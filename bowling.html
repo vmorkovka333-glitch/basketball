@@ -54,15 +54,18 @@
     display:flex;align-items:center;justify-content:center;transition:transform .08s, filter .2s;}
   .rbtn:active{transform:scale(.93);}
   .rbtn:disabled{filter:grayscale(.65) brightness(.7);cursor:default;}
-  #bowlBtn{width:92px;height:92px;font-size:15px;color:#fff;}
-  #bowlBtn .glyph{font-size:34px;line-height:1;}
   #playersBtn{width:56px;height:56px;color:#fff;font-size:13px;
     background:radial-gradient(circle at 35% 28%, #c86bff, #8e2fd4 62%, #5f1a94);}
   .rbtn .cap{position:absolute;bottom:-2px;font-size:11px;color:#fff;text-shadow:1px 1px 0 #7a1d12;}
 
-  /* power ring under the bowl button */
-  #powerWrap{position:absolute;bottom:120px;right:22px;z-index:4;width:80px;height:10px;border-radius:8px;
-    background:rgba(0,0,0,.45);border:2px solid #7a3b12;overflow:hidden;opacity:0;transition:opacity .15s;}
+  #hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:3;
+    padding:6px 16px;border-radius:20px;background:rgba(40,22,12,.7);border:2px solid #7a3b12;
+    font-size:12px;color:#ffe9a8;white-space:nowrap;transition:opacity .3s;}
+
+  /* power bar, centred above the ball */
+  #powerWrap{position:absolute;bottom:58px;left:50%;transform:translateX(-50%);z-index:4;
+    width:190px;height:13px;border-radius:9px;
+    background:rgba(0,0,0,.5);border:3px solid #7a3b12;overflow:hidden;opacity:0;transition:opacity .15s;}
   #powerWrap.on{opacity:1;}
   #powerFill{height:100%;width:0%;background:linear-gradient(90deg,#7ee36a,#ffd15c,#ff4b3e);}
 
@@ -103,10 +106,9 @@
     #total{bottom:14px;left:8px;padding:4px 10px;border-width:2px;border-radius:11px;}
     #total .val{font-size:18px;}
     #controls{bottom:12px;right:10px;gap:10px;}
-    #bowlBtn{width:74px;height:74px;}
-    #bowlBtn .glyph{font-size:28px;}
     #playersBtn{width:44px;height:44px;font-size:11px;}
-    #powerWrap{bottom:96px;right:14px;width:66px;height:9px;}
+    #hint{bottom:14px;font-size:10.5px;padding:5px 11px;}
+    #powerWrap{bottom:46px;width:150px;height:11px;}
     #turnBar{bottom:78px;padding:4px 11px;}
     #turnBar .pseg{font-size:12px;}
     #msgTitle{font-size:36px;}
@@ -139,8 +141,8 @@
 
   <div id="controls">
     <button id="playersBtn" class="rbtn"><span class="fun" id="playersGlyph">1P</span></button>
-    <button id="bowlBtn" class="rbtn"><span class="glyph">🎳</span></button>
   </div>
+  <div id="hint">Наведи · зажми — сила · отпусти — бросок</div>
 
   <div id="msgWrap">
     <div id="msgBox">
@@ -170,6 +172,7 @@ const G = {
   _tx:0,_ty:0.55,_tz:-6,
   numPlayers:1, players:[], cur:0,
   charging:false, chargeStart:0,
+  frame:{fov:30,camY:1.3,camZ:8.0,lookY:0.5,lookZ:-6.5},
 };
 
 function pinLayout(){
@@ -395,6 +398,10 @@ function initGame(){
   buildGuide();
 
   addEventListener('resize',onResize);
+  applyFraming();
+  camera.position.set(0,G.frame.camY,G.frame.camZ);
+  camera.lookAt(0,G.frame.lookY,G.frame.lookZ);
+  G._tx=0; G._ty=G.frame.lookY; G._tz=G.frame.lookZ;
   initPlayers(G.numPlayers);
   respawnPins(); resetBall();
   G.phase='aim'; updateHUD();
@@ -534,9 +541,12 @@ function onPointerMove(e){
 function onPointerDown(e){
   if(e.target && e.target.closest && e.target.closest('button')) return;
   G.pointerDown=true;
-  if(G.phase==='aim') setAimFromX(e.clientX);
+  if(G.phase==='aim'){ setAimFromX(e.clientX); startCharge(); }
 }
-function onPointerUp(){ G.pointerDown=false; }
+function onPointerUp(){
+  G.pointerDown=false;
+  if(G.charging) releaseThrow();
+}
 
 function throwBall(power){
   if(G.phase!=='aim') return;
@@ -546,14 +556,34 @@ function throwBall(power){
   G.ball.vx=Math.sin(a)*sp; G.ball.vz=-Math.cos(a)*sp;
   G.ball.rolling=true; G.ball.gutter=false;
   G.phase='roll'; G.rollTime=0; G.settleTime=0;
-  document.getElementById('bowlBtn').disabled=true;
+  document.getElementById('hint').style.opacity='0';
   updateHUD();
+}
+
+// Portrait screens have a much narrower field of view, which pushes the pins
+// visually far away. Zoom in (lower fov) and pull the camera back as the screen
+// gets taller so the deck is framed the same way in both orientations.
+function applyFraming(){
+  const a=G.camera.aspect;
+  const t=Math.max(0,Math.min(1,(1.6-a)/(1.6-0.46)));   // 0 = wide, 1 = tall
+  const lerp=(x,y)=>x+(y-x)*t;
+  // tuned so both orientations frame the deck at ~52% of the height and the ball at ~85%
+  G.frame={
+    fov:  lerp(30,   46),
+    camY: lerp(1.3,  1.5),
+    camZ: lerp(8.0,  6.6),
+    lookY:lerp(0.5,  0.45),
+    lookZ:lerp(-6.5, -7.2),
+  };
+  G.camera.fov=G.frame.fov;
+  G.camera.updateProjectionMatrix();
 }
 
 function onResize(){
   if(!G.renderer) return;
   const w=innerWidth,h=innerHeight;
-  G.camera.aspect=w/h; G.camera.updateProjectionMatrix();
+  G.camera.aspect=w/h;
+  applyFraming();
   G.renderer.setSize(w,h);
 }
 
@@ -562,12 +592,13 @@ function resetBall(){
   b.x=0;b.z=C.startZ;b.vx=0;b.vz=0;b.rolling=false;b.gutter=false;
   b.mesh.position.set(0,C.ballR,C.startZ); b.mesh.rotation.set(0,0,0);
   G.aimAngle=0; if(G.guide) G.guide.rotation.y=0;
-  document.getElementById('bowlBtn').disabled=false;
+  document.getElementById('hint').style.opacity='1';
 }
 function respawnPins(){
   G.pins.forEach(p=>{
-    p.x=p.bx;p.z=p.bz;p.vx=0;p.vz=0;p.fall=0;p.knocked=false;p.active=true;
-    p.knockThr=1.55+Math.random()*1.5;   // per-pin stability: makes a clean rack a matter of skill + luck
+    p.x=p.bx;p.z=p.bz;p.vx=0;p.vz=0;p.knocked=false;p.active=true;
+    p.y=0;p.vy=0;p.fall=0;p.fallV=0;p.spin=0;p.spinV=0;p.wob=0;p.dirx=0;p.dirz=-1;
+    p.knockThr=1.35+Math.random()*1.25;  // per-pin stability: makes a clean rack a matter of skill + luck
     p.group.visible=true; p.group.position.set(p.bx,0,p.bz);
     p.group.rotation.set(0,0,0); p.group.quaternion.identity();
   });
@@ -625,6 +656,18 @@ function step(dt){
   if(G.phase==='settle' && G.settleTime>1.15) onSettled();
 }
 
+// A pin goes down: remember which way it topples, how fast, and give it a hop + spin.
+function knockDown(p,nx,nz,speed){
+  const m=Math.hypot(nx,nz)||1;
+  p.knocked=true;
+  p.dirx=nx/m; p.dirz=nz/m;
+  p.fall=0; p.fallV=0.35+Math.min(1.3,speed*0.10);
+  p.spin=0; p.spinV=(Math.random()-0.5)*7;
+  p.y=0; p.vy=0.3+Math.random()*0.5;
+  p.wob=0;
+  playKnock();
+}
+
 function ballPinCollisions(){
   const b=G.ball, reach=C.ballR+C.pinR+0.01;
   G.pins.forEach(p=>{
@@ -635,12 +678,13 @@ function ballPinCollisions(){
       const vn=Math.max(b.vx*nx+b.vz*nz,0);
       const imp=vn*0.66+1.6;
       p.vx+=nx*imp+b.vx*0.10; p.vz+=nz*imp+b.vz*0.10;
-      p.knocked=true; playKnock();
+      knockDown(p,nx,nz,vn);                       // ball-struck pin always goes down
       b.vx=(b.vx-nx*vn*0.78)*0.9;
       b.vz=(b.vz-nz*vn*0.78)*0.9;
     }
   });
 }
+
 function pinPinCollisions(){
   const thr=C.pinR*2+0.1;
   const movers=G.pins.filter(p=>p.active&&p.knocked&&Math.hypot(p.vx,p.vz)>0.25);
@@ -649,36 +693,65 @@ function pinPinCollisions(){
       if(b===a||!b.active||b.knocked) return;
       const dx=b.x-a.x, dz=b.z-a.z, d=Math.hypot(dx,dz);
       if(d<thr){
-        const nx=dx/(d||1), nz=dz/(d||1), spd=Math.hypot(a.vx,a.vz), push=spd*0.38;
-        b.vx+=nx*push; b.vz+=nz*push;
-        if(Math.hypot(b.vx,b.vz)>(b.knockThr||1.75)){ b.knocked=true; playKnock(); }
+        const nx=dx/(d||1), nz=dz/(d||1), spd=Math.hypot(a.vx,a.vz), push=spd*0.545;
+        const nvx=b.vx+nx*push, nvz=b.vz+nz*push;
+        if(Math.hypot(nvx,nvz)>(b.knockThr||1.75)){
+          b.vx=nvx; b.vz=nvz;
+          knockDown(b,nx,nz,spd);
+        }else{
+          // glancing contact — the pin rocks on its base; a second nudge can still tip it
+          b.wob=Math.min(0.20,(b.wob||0)+push*0.05);
+          b.wobAx=[nx,nz];
+          b.vx=nvx*0.5; b.vz=nvz*0.5;
+        }
         a.vx*=0.5; a.vz*=0.5;
       }
     });
   });
 }
+
 function integratePins(dt){
-  const THREE=T();
+  const THREE=T(), now=performance.now()/1000, FLAT=Math.PI/2;
   G.pins.forEach(p=>{
-    if(!p.active||!p.knocked) return;
+    if(!p.active) return;
+
+    if(!p.knocked){
+      if(p.wob>0.002){                              // wobble, then settle back upright
+        p.wob*=Math.max(0,1-dt*3.0);
+        const ax=p.wobAx||[0,-1];
+        const axis=new THREE.Vector3(ax[1],0,-ax[0]).normalize();
+        p.group.quaternion.setFromAxisAngle(axis,Math.sin(now*16)*p.wob);
+      }
+      return;
+    }
+
     p.x+=p.vx*dt; p.z+=p.vz*dt;
-    const damp=Math.max(0,1-dt*2.5); p.vx*=damp; p.vz*=damp;
-    const sp=Math.hypot(p.vx,p.vz);
-    p.fall=Math.min(1.45,p.fall+sp*dt*2.4+dt*0.9);
-    let dx=p.vx, dz=p.vz, m=Math.hypot(dx,dz);
-    if(m<0.001){dx=0;dz=-1;m=1;}
-    dx/=m; dz/=m;
-    const axis=new THREE.Vector3(dz,0,-dx).normalize();
-    p.group.position.set(p.x,0,p.z);
-    p.group.quaternion.setFromAxisAngle(axis,p.fall);
+    const damp=Math.max(0,1-dt*2.2); p.vx*=damp; p.vz*=damp;
+
+    p.vy-=9.8*dt*0.55;                              // little hop off the deck
+    p.y+=p.vy*dt;
+    if(p.y<0){ p.y=0; p.vy=Math.abs(p.vy)*0.26; if(p.vy<0.45) p.vy=0; }
+
+    if(p.fall<FLAT){                                // topple accelerates, then lies flat
+      p.fallV+=(1.1+3.6*Math.sin(p.fall))*dt;
+      p.fall=Math.min(FLAT,p.fall+p.fallV*dt);
+    }
+    p.spin+=p.spinV*dt; p.spinV*=Math.max(0,1-dt*1.6);
+
+    const axis=new THREE.Vector3(p.dirz,0,-p.dirx).normalize();
+    const qTilt=new THREE.Quaternion().setFromAxisAngle(axis,p.fall);
+    const qSpin=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),p.spin);
+    p.group.quaternion.copy(qTilt).multiply(qSpin);
+    p.group.position.set(p.x,p.y,p.z);
   });
 }
 function updateCamera(dt){
   const cam=G.camera, b=G.ball;
-  let px=0,py=1.15,pz=5.35,tx=0,ty=0.55,tz=-6;
+  const F=G.frame;
+  let px=0,py=F.camY,pz=F.camZ,tx=0,ty=F.lookY,tz=F.lookZ;
   if(G.phase==='roll'||G.phase==='settle'){
-    pz=Math.max(b.z+2.6,-1.0); py=1.25; px=b.x*0.3;
-    tx=b.x*0.45; ty=0.4; tz=b.z-4.5;
+    pz=Math.max(b.z+(F.camZ-2.75),-1.0); py=F.camY+0.1; px=b.x*0.3;
+    tx=b.x*0.45; ty=F.lookY-0.15; tz=b.z-4.5;
   }
   const k=Math.min(1,dt*2.2);
   cam.position.x+=(px-cam.position.x)*k;
@@ -844,7 +917,7 @@ function updateHUD(){
     }).join('');
   }else tb.style.display='none';
 
-  document.getElementById('bowlBtn').disabled=(G.phase!=='aim');
+  document.getElementById('hint').style.opacity=(G.phase==='aim')?'1':'0';
 
   const m=G.msg, wrap=document.getElementById('msgWrap');
   if(m){
@@ -866,11 +939,6 @@ function loop(t){
 window.addEventListener('DOMContentLoaded',()=>{
   G.mountEl=document.getElementById('mount');
 
-  const bb=document.getElementById('bowlBtn');
-  bb.addEventListener('pointerdown',e=>{ e.preventDefault(); try{bb.setPointerCapture(e.pointerId);}catch(_){}; unlockAudio(); startCharge(); });
-  bb.addEventListener('pointerup',e=>{ e.preventDefault(); releaseThrow(); });
-  bb.addEventListener('pointercancel',()=>{ if(G.charging) releaseThrow(); });
-
   document.getElementById('playersBtn').addEventListener('click',()=>{
     unlockAudio(); setPlayers(G.numPlayers===1?2:1);
   });
@@ -879,6 +947,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   addEventListener('pointermove',onPointerMove);
   addEventListener('pointerdown',e=>{ unlockAudio(); onPointerDown(e); });
   addEventListener('pointerup',onPointerUp);
+  addEventListener('pointercancel',onPointerUp);
   addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat){ e.preventDefault(); unlockAudio(); startCharge(); } });
   addEventListener('keyup',e=>{ if(e.code==='Space'){ e.preventDefault(); releaseThrow(); } });
   G.mountEl.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
