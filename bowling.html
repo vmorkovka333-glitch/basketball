@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" translate="no">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!-- keep the UI in English even when the browser offers to auto-translate the page -->
+<meta name="google" content="notranslate">
 <title>3D Bowling</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -117,7 +119,7 @@
 </style>
 </head>
 <body>
-<div id="app">
+<div id="app" class="notranslate" translate="no">
   <div id="mount"></div>
 
   <div id="board">
@@ -142,7 +144,7 @@
   <div id="controls">
     <button id="playersBtn" class="rbtn"><span class="fun" id="playersGlyph">1P</span></button>
   </div>
-  <div id="hint">Наведи · зажми — сила · отпусти — бросок</div>
+  <div id="hint">Aim &middot; hold for power &middot; release to bowl</div>
 
   <div id="msgWrap">
     <div id="msgBox">
