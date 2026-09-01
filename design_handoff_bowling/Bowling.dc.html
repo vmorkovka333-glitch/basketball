@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <template id="__bundler_thumbnail">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" fill="#0b0f22"/>
+      <circle cx="38" cy="62" r="13" fill="#2a1448" stroke="#8b5cff" stroke-width="1.5"/>
+      <circle cx="33" cy="57" r="2.4" fill="#0b0f22"/>
+      <g fill="#f6f7fb">
+        <rect x="60" y="30" width="5" height="16" rx="2.5"/>
+        <rect x="70" y="30" width="5" height="16" rx="2.5"/>
+        <rect x="65" y="22" width="5" height="16" rx="2.5"/>
+      </g>
+      <g fill="#ff3b5c"><rect x="60" y="35" width="5" height="2"/><rect x="70" y="35" width="5" height="2"/><rect x="65" y="27" width="5" height="2"/></g>
+    </svg>
+  </template>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <style>
+    html,body{margin:0;padding:0;height:100%;background:#06070f;overflow:hidden;}
+    *{box-sizing:border-box;}
+    @keyframes popIn{from{transform:scale(.82);opacity:0}to{transform:scale(1);opacity:1}}
+    @keyframes glowPulse{0%,100%{opacity:.55}50%{opacity:1}}
+  </style>
+</helmet>
+
+<div style="position:fixed;inset:0;font-family:'Space Grotesk',system-ui,sans-serif;color:#eef0fb;user-select:none;-webkit-user-select:none;background:radial-gradient(120% 80% at 50% -10%, #141833 0%, #090b16 55%, #050609 100%);">
+
+  <div ref="{{ mountRef }}" style="position:absolute;inset:0;z-index:0;cursor:crosshair;"></div>
+
+  <!-- top gradient scrim for HUD legibility -->
+  <div style="position:absolute;top:0;left:0;right:0;height:190px;z-index:1;pointer-events:none;background:linear-gradient(180deg, rgba(5,6,12,0.78) 0%, rgba(5,6,12,0) 100%);"></div>
+
+  <!-- Scoreboard -->
+  <div style="position:absolute;top:20px;left:20px;z-index:3;padding:16px 18px 14px;border-radius:18px;background:rgba(11,13,26,0.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);box-shadow:0 18px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div style="width:9px;height:9px;border-radius:50%;background:#38e1ff;box-shadow:0 0 12px #38e1ff;"></div>
+      <div style="font-size:13px;font-weight:700;letter-spacing:5px;background:linear-gradient(90deg,#ffe6a8,#ffcf5c);-webkit-background-clip:text;background-clip:text;color:transparent;">B O W L I N G</div>
+      <div style="font-size:9px;letter-spacing:2px;color:#6c7295;margin-left:2px;border:1px solid rgba(255,255,255,0.1);padding:2px 6px;border-radius:6px;">LANE 01</div>
+    </div>
+    <div style="display:flex;gap:4px;align-items:stretch;">
+      <sc-for list="{{ frameCells }}" as="cell" hint-placeholder-count="10">
+        <div style="display:flex;flex-direction:column;border:1px solid {{ cell.border }};background:{{ cell.bg }};border-radius:8px;overflow:hidden;min-width:{{ cell.w }};transition:all .2s;">
+          <div style="font-size:9px;color:#7a80a4;text-align:center;padding:3px 0 1px;letter-spacing:1px;font-family:'JetBrains Mono',monospace;">{{ cell.label }}</div>
+          <div style="display:flex;gap:2px;justify-content:center;padding:0 3px 2px;">
+            <sc-for list="{{ cell.marks }}" as="m" hint-placeholder-count="2">
+              <div style="width:14px;height:16px;display:flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(255,255,255,0.04);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:{{ m.c }};">{{ m.v }}</div>
+            </sc-for>
+          </div>
+          <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#dfe3f7;padding:1px 0 4px;min-height:18px;">{{ cell.cum }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- Frame / throw info -->
+  <div style="position:absolute;top:20px;right:20px;z-index:3;padding:16px 20px;border-radius:18px;text-align:right;background:rgba(11,13,26,0.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);box-shadow:0 18px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07);">
+    <div style="font-size:10px;letter-spacing:3px;color:#6c7295;">FRAME</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;line-height:1.05;background:linear-gradient(90deg,#ffe6a8,#ffcf5c);-webkit-background-clip:text;background-clip:text;color:transparent;">{{ frameNum }}</div>
+    <div style="font-size:12px;color:#aeb3d0;margin-top:4px;letter-spacing:1px;">{{ throwLabel }}</div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:6px;">
+      <div style="width:7px;height:7px;border-radius:50%;background:#f6f7fb;box-shadow:0 0 8px rgba(246,247,251,0.7);"></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#cdd2ec;">{{ pinsLabel }}</div>
+    </div>
+  </div>
+
+  <!-- Big total -->
+  <div style="position:absolute;bottom:22px;right:22px;z-index:3;padding:12px 22px;border-radius:16px;text-align:center;background:rgba(11,13,26,0.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.09);box-shadow:0 18px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07);">
+    <div style="font-size:9px;letter-spacing:3px;color:#6c7295;">TOTAL</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700;color:#ffcf5c;line-height:1.05;text-shadow:0 0 22px rgba(255,207,92,0.35);">{{ totalStr }}</div>
+  </div>
+
+  <!-- Hint -->
+  <div style="position:absolute;bottom:26px;left:50%;transform:translateX(-50%);z-index:3;padding:10px 22px;border-radius:30px;background:rgba(11,13,26,0.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.08);font-size:13px;letter-spacing:.5px;color:#c2c7e3;display:flex;align-items:center;gap:14px;">
+    <span style="display:flex;align-items:center;gap:7px;"><span style="font-size:15px;">↔</span> Move to aim</span>
+    <span style="width:1px;height:14px;background:rgba(255,255,255,0.15);"></span>
+    <span style="display:flex;align-items:center;gap:7px;"><span style="color:#ffcf5c;">●</span> Click / tap to bowl</span>
+  </div>
+
+  <!-- Center message -->
+  <sc-if value="{{ msgVisible }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+      <div style="pointer-events:auto;text-align:center;padding:34px 64px;border-radius:24px;background:rgba(8,9,18,0.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1.5px solid {{ msgColor }};box-shadow:0 0 80px {{ msgGlow }}, 0 30px 80px rgba(0,0,0,0.6);animation:popIn .25s cubic-bezier(.2,1.3,.4,1);">
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:56px;font-weight:700;letter-spacing:2px;color:{{ msgColor }};text-shadow:0 0 40px {{ msgGlow }};">{{ msgTitle }}</div>
+        <div style="font-size:16px;color:#aeb3d0;margin-top:6px;letter-spacing:1px;">{{ msgSub }}</div>
+        <sc-if value="{{ msgBtn }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ onRestart }}" style="margin-top:22px;padding:13px 38px;font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;color:#0a0c16;background:linear-gradient(180deg,#ffe6a8,#ffcf5c);border:none;border-radius:12px;cursor:pointer;box-shadow:0 8px 30px rgba(255,207,92,0.4);">PLAY AGAIN</button>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  // ---- authoritative game state (not React state) ----
+  framesData = Array.from({ length: 10 }, () => ({ rolls: [] }));
+  frameIndex = 0;
+  gameOver = false;
+  pinsStanding = 10;
+  msg = null;            // {title, sub, color, btn}
+  phase = 'loading';     // loading | aim | roll | settle | resolve | over
+  aimAngle = 0;
+
+  // ---- stable handlers (identity preserved across renders) ----
+  mountRef = (el) => { if (el) this.mountEl = el; };
+  onRestart = () => this.restart();
+  onResize = () => {
+    if (!this.renderer) return;
+    const w = window.innerWidth, h = window.innerHeight;
+    this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
+    this.renderer.setSize(w, h);
+    if (this.composer) this.composer.setSize(w, h);
+  };
+
+  // ===== lifecycle =====
+  componentDidMount() {
+    const wait = () => {
+      if (window.THREE && this.mountEl) this.initGame();
+      else setTimeout(wait, 60);
+    };
+    wait();
+    window.addEventListener('resize', this.onResize);
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this._raf);
+    window.removeEventListener('resize', this.onResize);
+  }
+  refresh() { this.forceUpdate(); }
+
+  // ===== geometry constants =====
+  C = {
+    laneHalf: 1.0, ballR: 0.16, pinR: 0.07,
+    startZ: 3.2, pinFrontZ: -10.0, endZ: -12.2, speed: 12.0,
+  };
+
+  pinLayout() {
+    const z = this.C.pinFrontZ, dz = -0.31;
+    return [
+      [0, z],
+      [-0.17, z + dz], [0.17, z + dz],
+      [-0.34, z + 2 * dz], [0, z + 2 * dz], [0.34, z + 2 * dz],
+      [-0.51, z + 3 * dz], [-0.17, z + 3 * dz], [0.17, z + 3 * dz], [0.51, z + 3 * dz],
+    ];
+  }
+
+  // ===== three.js setup =====
+  initGame() {
+    const T = window.THREE, C = this.C;
+    const w = window.innerWidth, h = window.innerHeight;
+
+    const scene = new T.Scene();
+    scene.background = new T.Color(0x06070f);
+    scene.fog = new T.Fog(0x06070f, 9, 26);
+    this.scene = scene;
+
+    const camera = new T.PerspectiveCamera(52, w / h, 0.1, 100);
+    camera.position.set(0, 2.4, 5.6);
+    camera.lookAt(0, 0.5, -5.5);
+    this.camera = camera;
+
+    const renderer = new T.WebGLRenderer({ antialias: true });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = T.PCFSoftShadowMap;
+    this.renderer = renderer;
+    this.mountEl.appendChild(renderer.domElement);
+
+    // lights
+    scene.add(new T.AmbientLight(0x3a3f66, 0.55));
+    const hemi = new T.HemisphereLight(0x9fb4ff, 0x0a0c18, 0.4); scene.add(hemi);
+    const dir = new T.DirectionalLight(0xffffff, 1.05);
+    dir.position.set(3.5, 9, 5); dir.castShadow = true;
+    dir.shadow.mapSize.set(1024, 1024);
+    const sc = dir.shadow.camera; sc.left = -4; sc.right = 4; sc.top = 6; sc.bottom = -16; sc.near = 1; sc.far = 30;
+    scene.add(dir);
+    const pCyan = new T.PointLight(0x38e1ff, 0.7, 14, 2); pCyan.position.set(0, 2.6, -10.5); scene.add(pCyan);
+    const pGold = new T.PointLight(0xffcf5c, 0.55, 13, 2); pGold.position.set(0, 2.2, 2.5); scene.add(pGold);
+    const pViolet = new T.PointLight(0x8b5cff, 0.4, 16, 2); pViolet.position.set(0, 3, -5); scene.add(pViolet);
+
+    // lane
+    const laneMat = new T.MeshStandardMaterial({ color: 0x0c1124, roughness: 0.34, metalness: 0.32 });
+    const lane = new T.Mesh(new T.BoxGeometry(2 * C.laneHalf, 0.2, 18), laneMat);
+    lane.position.set(0, -0.1, -5); lane.receiveShadow = true; scene.add(lane);
+
+    // gutters
+    const gutMat = new T.MeshStandardMaterial({ color: 0x05070f, roughness: 0.4, metalness: 0.3 });
+    [-1, 1].forEach(s => {
+      const g = new T.Mesh(new T.BoxGeometry(0.34, 0.18, 18), gutMat);
+      g.position.set(s * (C.laneHalf + 0.17), -0.16, -5); g.receiveShadow = true; scene.add(g);
+    });
+
+    // neon edge strips (bloom)
+    [-1, 1].forEach(s => {
+      const strip = new T.Mesh(new T.BoxGeometry(0.05, 0.05, 18),
+        new T.MeshStandardMaterial({ color: 0x0a2730, emissive: 0x38e1ff, emissiveIntensity: 2.2 }));
+      strip.position.set(s * (C.laneHalf + 0.005), 0.02, -5); scene.add(strip);
+    });
+
+    // foul line
+    const foul = new T.Mesh(new T.BoxGeometry(2 * C.laneHalf, 0.012, 0.05),
+      new T.MeshStandardMaterial({ color: 0x331016, emissive: 0xff3b5c, emissiveIntensity: 1.6 }));
+    foul.position.set(0, 0.012, C.startZ + 0.2); scene.add(foul);
+
+    // aiming arrows on lane
+    for (let i = 0; i < 5; i++) {
+      const a = new T.Mesh(new T.ConeGeometry(0.05, 0.16, 4),
+        new T.MeshStandardMaterial({ color: 0x4a3a12, emissive: 0xffcf5c, emissiveIntensity: 0.9 }));
+      a.rotation.x = -Math.PI / 2;
+      a.position.set((i - 2) * 0.28, 0.014, -2 - Math.abs(i - 2) * 0.4);
+      scene.add(a);
+    }
+
+    // back wall + pin deck
+    const wall = new T.Mesh(new T.BoxGeometry(5, 4, 0.3),
+      new T.MeshStandardMaterial({ color: 0x0a0c1a, roughness: 0.6, metalness: 0.2 }));
+    wall.position.set(0, 1.6, C.pinFrontZ - 1.5); scene.add(wall);
+    const neonLine = new T.Mesh(new T.BoxGeometry(2.6, 0.05, 0.05),
+      new T.MeshStandardMaterial({ color: 0x102a30, emissive: 0x38e1ff, emissiveIntensity: 2.6 }));
+    neonLine.position.set(0, 0.9, C.pinFrontZ - 1.35); scene.add(neonLine);
+    const deck = new T.Mesh(new T.BoxGeometry(2 * C.laneHalf, 0.2, 2),
+      new T.MeshStandardMaterial({ color: 0x11173a, roughness: 0.4, metalness: 0.3 }));
+    deck.position.set(0, -0.1, C.pinFrontZ - 0.45); deck.receiveShadow = true; scene.add(deck);
+
+    // pins
+    this.pins = this.pinLayout().map(([bx, bz]) => {
+      const group = this.makePin(T);
+      group.position.set(bx, 0, bz);
+      scene.add(group);
+      return { group, bx, bz, x: bx, z: bz, vx: 0, vz: 0, fall: 0, knocked: false, active: true };
+    });
+
+    // ball
+    const ball = new T.Mesh(new T.SphereGeometry(C.ballR, 32, 24),
+      new T.MeshStandardMaterial({ color: 0x2a1448, roughness: 0.12, metalness: 0.6, emissive: 0x18092e, emissiveIntensity: 0.35 }));
+    ball.castShadow = true; scene.add(ball);
+    this.ball = { mesh: ball, x: 0, z: C.startZ, vx: 0, vz: 0, rolling: false, gutter: false };
+
+    // aim indicator
+    const aimGroup = new T.Group();
+    const aimMat = new T.MeshBasicMaterial({ color: 0xffcf5c, transparent: true, opacity: 0.9 });
+    const line = new T.Mesh(new T.BoxGeometry(0.035, 0.008, 2.2), aimMat); line.position.z = -1.25;
+    const tip = new T.Mesh(new T.ConeGeometry(0.085, 0.2, 14), aimMat); tip.rotation.x = -Math.PI / 2; tip.position.z = -2.45;
+    aimGroup.add(line, tip);
+    aimGroup.position.set(0, 0.03, C.startZ - 0.05);
+    scene.add(aimGroup); this.aimGroup = aimGroup;
+
+    // bloom composer (optional)
+    try {
+      const composer = new T.EffectComposer(renderer);
+      composer.addPass(new T.RenderPass(scene, camera));
+      const bloom = new T.UnrealBloomPass(new T.Vector2(w, h), 0.55, 0.5, 0.8);
+      composer.addPass(bloom);
+      this.composer = composer;
+    } catch (e) { this.composer = null; }
+
+    // input
+    const el = renderer.domElement;
+    el.addEventListener('pointermove', this.onPointerMove);
+    el.addEventListener('pointerdown', this.onPointerDown);
+
+    this.respawnPins(); this.resetBall();
+    this.frameIndex = 0; this.phase = 'aim'; this.refresh();
+
+    this.last = performance.now();
+    const loop = (t) => {
+      this._raf = requestAnimationFrame(loop);
+      let dt = (t - this.last) / 1000; this.last = t;
+      if (dt > 0.05) dt = 0.05;
+      this.step(dt);
+      if (this.composer) this.composer.render(); else this.renderer.render(this.scene, this.camera);
+    };
+    this._raf = requestAnimationFrame(loop);
+  }
+
+  makePin(T) {
+    const g = new T.Group();
+    const white = new T.MeshStandardMaterial({ color: 0xf6f7fb, roughness: 0.32, metalness: 0.05 });
+    const body = new T.Mesh(new T.CylinderGeometry(0.046, 0.072, 0.30, 20), white);
+    body.position.y = 0.15; body.castShadow = true;
+    const head = new T.Mesh(new T.SphereGeometry(0.056, 18, 14), white);
+    head.position.y = 0.33; head.castShadow = true;
+    const neck = new T.Mesh(new T.CylinderGeometry(0.034, 0.046, 0.06, 18), white);
+    neck.position.y = 0.30;
+    const red = new T.MeshStandardMaterial({ color: 0xff3b5c, roughness: 0.4 });
+    const band = new T.Mesh(new T.CylinderGeometry(0.05, 0.056, 0.028, 20), red); band.position.y = 0.255;
+    const gold = new T.MeshStandardMaterial({ color: 0xffcf5c, emissive: 0x3a2a08, emissiveIntensity: 0.5, roughness: 0.3, metalness: 0.4 });
+    const band2 = new T.Mesh(new T.CylinderGeometry(0.058, 0.061, 0.02, 20), gold); band2.position.y = 0.215;
+    g.add(body, neck, head, band, band2);
+    return g;
+  }
+
+  // ===== input =====
+  onPointerMove = (e) => {
+    if (this.phase !== 'aim') return;
+    const r = this.renderer.domElement.getBoundingClientRect();
+    const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
+    this.aimAngle = Math.max(-0.17, Math.min(0.17, nx * 0.19));
+    if (this.aimGroup) this.aimGroup.rotation.y = -this.aimAngle;
+  };
+  onPointerDown = () => { if (this.phase === 'aim') this.throwBall(); };
+
+  throwBall() {
+    const a = this.aimAngle, sp = this.C.speed;
+    this.standingBefore = this.pins.filter(p => p.active && !p.knocked).length;
+    this.ball.vx = Math.sin(a) * sp;
+    this.ball.vz = -Math.cos(a) * sp;
+    this.ball.rolling = true; this.ball.gutter = false;
+    this.phase = 'roll';
+    this.refresh();
+  }
+
+  resetBall() {
+    const b = this.ball, C = this.C;
+    b.x = 0; b.z = C.startZ; b.vx = 0; b.vz = 0; b.rolling = false; b.gutter = false;
+    b.mesh.position.set(0, C.ballR, C.startZ);
+    b.mesh.rotation.set(0, 0, 0);
+    this.aimAngle = 0;
+    if (this.aimGroup) this.aimGroup.rotation.y = 0;
+  }
+
+  respawnPins() {
+    this.pins.forEach(p => {
+      p.x = p.bx; p.z = p.bz; p.vx = 0; p.vz = 0; p.fall = 0;
+      p.knocked = false; p.active = true;
+      p.group.visible = true;
+      p.group.position.set(p.bx, 0, p.bz);
+      p.group.rotation.set(0, 0, 0);
+      p.group.quaternion.identity();
+    });
+    this.pinsStanding = 10;
+  }
+  clearFallen() {
+    this.pins.forEach(p => { if (p.knocked) { p.active = false; p.group.visible = false; } });
+    this.pinsStanding = this.pins.filter(p => p.active && !p.knocked).length;
+  }
+
+  // ===== per-frame step =====
+  step(dt) {
+    const T = window.THREE, b = this.ball, C = this.C;
+    if (this.aimGroup) this.aimGroup.visible = this.phase === 'aim';
+
+    if ((this.phase === 'roll' || this.phase === 'settle') && b.rolling) {
+      b.x += b.vx * dt; b.z += b.vz * dt;
+      b.vx *= (1 - dt * 0.15); b.vz *= (1 - dt * 0.05);
+
+      if (Math.abs(b.x) > C.laneHalf - C.ballR * 0.4 && !b.gutter) b.gutter = true;
+      if (b.gutter) {
+        const g = b.x > 0 ? C.laneHalf + 0.17 : -(C.laneHalf + 0.17);
+        b.x += (g - b.x) * Math.min(1, dt * 4);
+        b.vx *= 0.7; b.mesh.position.y = -0.05;
+      } else {
+        b.mesh.position.y = C.ballR;
+        if (this.phase === 'roll') this.ballPinCollisions();
+      }
+      b.mesh.position.x = b.x; b.mesh.position.z = b.z;
+      // rolling spin
+      const spd = Math.hypot(b.vx, b.vz);
+      b.mesh.rotation.x -= (spd / C.ballR) * dt;
+
+      if (b.z < C.endZ && this.phase === 'roll') { this.phase = 'settle'; this.settleAt = performance.now(); }
+    }
+
+    this.integratePins(dt);
+    if (this.phase === 'roll' || this.phase === 'settle') this.pinPinCollisions();
+
+    // live pin count for HUD
+    const std = this.pins.filter(p => p.active && !p.knocked).length;
+    if (std !== this.pinsStanding && (this.phase === 'roll' || this.phase === 'settle')) {
+      this.pinsStanding = std; this.refresh();
+    }
+
+    this.updateCamera(dt);
+
+    if (this.phase === 'settle' && performance.now() - this.settleAt > 1150) this.onSettled();
+  }
+
+  ballPinCollisions() {
+    const b = this.ball, C = this.C, reach = C.ballR + C.pinR + 0.02;
+    const bs = Math.hypot(b.vx, b.vz);
+    this.pins.forEach(p => {
+      if (!p.active || p.knocked) return;
+      const dx = p.x - b.x, dz = p.z - b.z;
+      const d = Math.hypot(dx, dz);
+      if (d < reach) {
+        const nx = dx / (d || 1), nz = dz / (d || 1);
+        const imp = bs * 0.7 + 3.2;
+        p.vx += nx * imp * 0.5 + b.vx * 0.26;
+        p.vz += nz * imp * 0.42 + b.vz * 0.55;
+        p.knocked = true;
+        b.vx *= 0.99; b.vz *= 0.99;
+      }
+    });
+  }
+
+  pinPinCollisions() {
+    const C = this.C, thr = C.pinR * 2 + 0.1;
+    const movers = this.pins.filter(p => p.active && p.knocked && Math.hypot(p.vx, p.vz) > 0.25);
+    movers.forEach(a => {
+      this.pins.forEach(b => {
+        if (b === a || !b.active || b.knocked) return;
+        const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
+        if (d < thr) {
+          const nx = dx / (d || 1), nz = dz / (d || 1);
+          const spd = Math.hypot(a.vx, a.vz);
+          const push = spd * 0.85 + 2.3;
+          b.vx += nx * push; b.vz += nz * push;
+          b.knocked = true;
+          a.vx *= 0.62; a.vz *= 0.62;
+        }
+      });
+    });
+  }
+
+  integratePins(dt) {
+    const T = window.THREE;
+    this.pins.forEach(p => {
+      if (!p.active) return;
+      if (!p.knocked) return;
+      p.x += p.vx * dt; p.z += p.vz * dt;
+      const damp = Math.max(0, 1 - dt * 2.5);
+      p.vx *= damp; p.vz *= damp;
+      const sp = Math.hypot(p.vx, p.vz);
+      p.fall = Math.min(1.45, p.fall + sp * dt * 2.4 + dt * 0.9);
+      // tilt around base in direction of motion (fallback to forward)
+      let dx = p.vx, dz = p.vz, m = Math.hypot(dx, dz);
+      if (m < 0.001) { dx = 0; dz = -1; m = 1; }
+      dx /= m; dz /= m;
+      const axis = new T.Vector3(dz, 0, -dx).normalize();
+      p.group.position.set(p.x, 0, p.z);
+      p.group.quaternion.setFromAxisAngle(axis, p.fall);
+    });
+  }
+
+  updateCamera(dt) {
+    const cam = this.camera, b = this.ball;
+    let px = 0, py = 2.4, pz = 5.6, tx = 0, ty = 0.5, tz = -5.5;
+    if (this.phase === 'roll' || this.phase === 'settle') {
+      pz = Math.max(b.z + 5.0, -1.5);
+      py = 2.2; px = b.x * 0.25;
+      tx = b.x * 0.4; ty = 0.45; tz = b.z - 3;
+    }
+    const k = Math.min(1, dt * 2.2);
+    cam.position.x += (px - cam.position.x) * k;
+    cam.position.y += (py - cam.position.y) * k;
+    cam.position.z += (pz - cam.position.z) * k;
+    this._tx = (this._tx ?? tx) + (tx - (this._tx ?? tx)) * k;
+    this._ty = (this._ty ?? ty) + (ty - (this._ty ?? ty)) * k;
+    this._tz = (this._tz ?? tz) + (tz - (this._tz ?? tz)) * k;
+    cam.lookAt(this._tx, this._ty, this._tz);
+  }
+
+  // ===== resolve a settled throw =====
+  onSettled() {
+    const standingAfter = this.pins.filter(p => p.active && !p.knocked).length;
+    let knocked = this.standingBefore - standingAfter;
+    if (knocked < 0) knocked = 0;
+    const strike = this.standingBefore === 10 && knocked === 10;
+    const spare = !strike && this.standingBefore < 10 && standingAfter === 0 && knocked > 0;
+
+    const wasIndex = this.frameIndex;
+    this.framesData[wasIndex].rolls.push(knocked);
+
+    const over = this.frameComplete(this.framesData, 9);
+    let fresh;
+    const newIndex = over ? -1 : this.currentFrameIndex();
+    if (over) fresh = false;
+    else if (newIndex !== wasIndex) fresh = true;
+    else {
+      const rr = this.framesData[9].rolls, last = rr[rr.length - 1];
+      if (last === 10) fresh = true;
+      else if (rr.length === 2 && rr[0] + rr[1] === 10) fresh = true;
+      else fresh = false;
+    }
+
+    this.phase = 'resolve';
+    this.refresh();
+
+    const finish = () => {
+      if (over) { this.endGame(); }
+      else {
+        this.frameIndex = this.currentFrameIndex();
+        this.setupNextBall(fresh);
+      }
+    };
+
+    if (strike || spare) {
+      this.msg = strike
+        ? { title: 'STRIKE!', sub: 'All ten down', color: '#ffcf5c', btn: false }
+        : { title: 'SPARE!', sub: 'Cleared the rack', color: '#38e1ff', btn: false };
+      this.refresh();
+      setTimeout(() => { this.msg = null; finish(); }, 1250);
+    } else {
+      setTimeout(finish, 600);
+    }
+  }
+
+  setupNextBall(fresh) {
+    if (fresh) this.respawnPins(); else this.clearFallen();
+    this.resetBall();
+    this.phase = 'aim';
+    this.refresh();
+  }
+
+  endGame() {
+    this.gameOver = true; this.phase = 'over';
+    const scores = this.computeScores(this.framesData);
+    let total = 0; scores.forEach(s => { if (s != null) total = s; });
+    this.msg = { title: total >= 270 ? 'PERFECT-ish!' : 'GAME OVER', sub: 'Final score ' + total, color: '#f4f6ff', btn: true };
+    this.refresh();
+  }
+
+  restart() {
+    this.framesData = Array.from({ length: 10 }, () => ({ rolls: [] }));
+    this.frameIndex = 0; this.gameOver = false; this.msg = null;
+    this.respawnPins(); this.resetBall();
+    this.phase = 'aim'; this.refresh();
+  }
+
+  // ===== scoring =====
+  frameComplete(frames, i) {
+    const r = frames[i].rolls;
+    if (i < 9) return r[0] === 10 || r.length >= 2;
+    if (r.length < 2) return false;
+    if (r[0] === 10 || r[0] + r[1] === 10) return r.length >= 3;
+    return r.length >= 2;
+  }
+  currentFrameIndex() {
+    for (let i = 0; i < 10; i++) if (!this.frameComplete(this.framesData, i)) return i;
+    return 9;
+  }
+  computeScores(frames) {
+    const flat = [], first = [];
+    for (let i = 0; i < 10; i++) { first[i] = flat.length; frames[i].rolls.forEach(r => flat.push(r)); }
+    const out = []; let total = 0;
+    for (let i = 0; i < 10; i++) {
+      if (!this.frameComplete(frames, i)) { out.push(null); for (let j = i + 1; j < 10; j++) out.push(null); break; }
+      const s = first[i]; let fs;
+      if (i < 9) {
+        if (flat[s] === 10) {
+          if (flat.length > s + 2) fs = 10 + flat[s + 1] + flat[s + 2]; else { out.push(null); break; }
+        } else if (flat[s] + flat[s + 1] === 10) {
+          if (flat.length > s + 2) fs = 10 + flat[s + 2]; else { out.push(null); break; }
+        } else fs = flat[s] + flat[s + 1];
+      } else {
+        fs = frames[i].rolls.reduce((a, b) => a + b, 0);
+      }
+      total += fs; out.push(total);
+    }
+    while (out.length < 10) out.push(null);
+    return out;
+  }
+
+  frameMarks(f, i) {
+    const r = f.rolls;
+    const sym = (v, prev) => v === 10 ? 'X' : (v === 0 ? '-' : String(v));
+    if (i < 9) {
+      let m0 = '', m1 = '';
+      if (r.length >= 1) {
+        if (r[0] === 10) { m1 = 'X'; }
+        else m0 = r[0] === 0 ? '-' : String(r[0]);
+      }
+      if (r.length >= 2) m1 = (r[0] + r[1] === 10) ? '/' : (r[1] === 0 ? '-' : String(r[1]));
+      return [m0, m1];
+    }
+    // 10th
+    const m = ['', '', ''];
+    if (r.length >= 1) m[0] = sym(r[0]);
+    if (r.length >= 2) {
+      if (r[0] === 10) m[1] = sym(r[1]);
+      else if (r[0] + r[1] === 10) m[1] = '/';
+      else m[1] = r[1] === 0 ? '-' : String(r[1]);
+    }
+    if (r.length >= 3) {
+      const a = r[1], b = r[2];
+      if (r[0] === 10) {
+        if (a === 10) m[2] = sym(b);
+        else if (a + b === 10) m[2] = '/';
+        else m[2] = b === 0 ? '-' : String(b);
+      } else { m[2] = sym(b); }
+    }
+    return m;
+  }
+
+  // ===== HUD =====
+  renderVals() {
+    const curIdx = this.gameOver ? -1 : this.currentFrameIndex();
+    const scores = this.computeScores(this.framesData);
+    const markColor = (v) => v === 'X' ? '#ffcf5c' : (v === '/' ? '#38e1ff' : (v === '-' ? '#6c7295' : '#dfe3f7'));
+
+    const frameCells = this.framesData.map((f, i) => {
+      const marks = this.frameMarks(f, i).map(v => ({ v, c: markColor(v) }));
+      const isCur = i === curIdx;
+      return {
+        label: String(i + 1),
+        marks,
+        cum: scores[i] == null ? '' : String(scores[i]),
+        border: isCur ? '#ffcf5c' : 'rgba(255,255,255,0.08)',
+        bg: isCur ? 'rgba(255,207,92,0.10)' : 'rgba(255,255,255,0.02)',
+        w: i === 9 ? '50px' : '34px',
+      };
+    });
+
+    let total = 0; scores.forEach(s => { if (s != null) total = s; });
+
+    const f = this.framesData[curIdx === -1 ? 9 : curIdx];
+    const throwN = (f ? f.rolls.length : 0) + 1;
+    const throwLabel = this.gameOver ? 'Finished' : 'Throw ' + throwN;
+    const frameNum = this.gameOver ? '10 / 10' : (curIdx + 1) + ' / 10';
+
+    const m = this.msg;
+    return {
+      mountRef: this.mountRef,
+      onRestart: this.onRestart,
+      frameCells,
+      frameNum,
+      throwLabel,
+      pinsLabel: this.pinsStanding + (this.pinsStanding === 1 ? ' pin' : ' pins'),
+      totalStr: String(total),
+      msgVisible: !!m,
+      msgTitle: m ? m.title : '',
+      msgSub: m ? m.sub : '',
+      msgColor: m ? m.color : '#fff',
+      msgGlow: m ? (m.color + '66') : 'transparent',
+      msgBtn: m ? !!m.btn : false,
+    };
+  }
+}
+</script>
+</body>
+</html>
