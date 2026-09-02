@@ -145,13 +145,6 @@
   #msgBtn:hover{box-shadow:0 0 34px rgba(127,212,255,.6);}
   #msgBtn:active{transform:scale(.95);}
 
-  /* Narrow viewports: the centred hint and the power meter would otherwise run
-     under the SCORE plate and the round buttons, so lift them above that row. */
-  @media (max-width:660px){
-    #hint{bottom:104px;}
-    #powerWrap{bottom:144px;}
-  }
-
   @media (max-width:560px){
     #board{padding:5px 7px 6px;border-radius:0 0 11px 11px;}
     #boardHead{padding-bottom:4px;margin-bottom:4px;}
@@ -161,8 +154,8 @@
     .fcell .flabel{font-size:8px;line-height:11px;}
     .fcell .fmark{height:15px;font-size:9.5px;}
     .fcell .fcum{font-size:11px;line-height:16px;}
-    #info{top:88px;right:9px;padding:6px 11px 7px;min-width:82px;}
-    #pindeck{top:160px;right:9px;padding:7px 10px 8px;min-width:82px;}
+    #info{top:66px;right:9px;padding:6px 11px 7px;min-width:82px;}
+    #pindeck{top:138px;right:9px;padding:7px 10px 8px;min-width:82px;}
     .ppin{width:7px;height:10px;}
     .pdrow{gap:3px;}
     #info .val{font-size:18px;}
@@ -174,10 +167,10 @@
     #playersBtn{width:48px;height:48px;font-size:12px;}
     #soundBtn{font-size:16px;}
     #musicBtn{font-size:10px;}
-    #hint{bottom:84px;font-size:9.5px;letter-spacing:.12em;padding:5px 12px;}
-    #powerWrap{bottom:120px;width:168px;height:8px;}
+    #hint{bottom:16px;font-size:9.5px;letter-spacing:.12em;padding:5px 12px;}
+    #powerWrap{bottom:52px;width:168px;height:8px;}
     #powerWrap::after{background:repeating-linear-gradient(90deg,transparent 0 20px,rgba(11,15,20,.55) 20px 21px);}
-    #turnBar{top:88px;padding:6px 13px;gap:13px;}
+    #turnBar{top:70px;padding:6px 13px;gap:13px;}
     #turnBar .pseg{font-size:11px;}
     #msgTitle{font-size:34px;}
     #msgSub{font-size:11px;}
