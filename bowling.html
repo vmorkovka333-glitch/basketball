@@ -8,119 +8,180 @@
 <title>3D Bowling</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Luckiest+Guy&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Oswald:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
 <style>
-  html,body{margin:0;padding:0;height:100%;background:#2b1c14;overflow:hidden;}
+  html,body{margin:0;padding:0;height:100%;background:#0b0f14;overflow:hidden;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  #app{position:fixed;inset:0;font-family:'Baloo 2',system-ui,sans-serif;color:#fff;
-    user-select:none;-webkit-user-select:none;background:#2b1c14;}
+  #app{position:fixed;inset:0;font-family:'Oswald',system-ui,sans-serif;color:#eaf2f8;
+    user-select:none;-webkit-user-select:none;background:#0b0f14;}
   #mount{position:absolute;inset:0;z-index:0;touch-action:none;cursor:crosshair;}
-  .fun{font-family:'Luckiest Guy',cursive;letter-spacing:1px;}
+  .fun{font-family:'Bungee',system-ui,sans-serif;letter-spacing:.02em;font-weight:400;}
+  a,a:visited{color:#7fd4ff;text-decoration:none;}
+  a:hover{color:#b9e8ff;}
 
-  /* ---- wall scoreboard (cream table like a real alley monitor) ---- */
-  #board{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:3;
-    background:linear-gradient(180deg,#fff6c9,#f6e08a);
-    border:3px solid #7a3b12;border-radius:10px;padding:4px;
-    box-shadow:0 8px 26px rgba(0,0,0,.5), inset 0 0 0 2px #d9a03c;}
-  #boardHead{display:flex;align-items:center;justify-content:center;gap:8px;
-    background:#c0392b;border-radius:6px;margin-bottom:3px;padding:2px 12px;
-    border:2px solid #7a3b12;}
-  #boardHead .t{font-size:13px;color:#ffe9a8;text-shadow:1px 1px 0 #7a1d12;}
-  #boardHead .who{font-size:12px;color:#fff;}
-  #frames{display:flex;gap:2px;}
-  .fcell{width:34px;border:2px solid #b8862f;border-radius:5px;overflow:hidden;background:#fffdf0;}
-  .fcell.cur{border-color:#c0392b;background:#fff;box-shadow:0 0 0 2px #ffca4a inset;}
-  .fcell.w10{width:48px;}
-  .fcell .flabel{font-size:9px;color:#8a6a22;text-align:center;background:#f3dc93;line-height:12px;}
-  .fcell .fmarks{display:flex;gap:1px;justify-content:center;padding:1px 2px 0;}
-  .fcell .fmark{flex:1;height:15px;display:flex;align-items:center;justify-content:center;
-    background:#fff;border:1px solid #e2c877;border-radius:2px;font-size:11px;font-weight:800;color:#3c2a10;}
-  .fcell .fcum{text-align:center;font-size:12px;font-weight:800;color:#7a3b12;line-height:15px;}
+  /* cinematic framing over the 3D scene */
+  #vignette{position:absolute;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(120% 85% at 50% 42%, rgba(0,0,0,0) 45%, rgba(0,0,0,.45) 100%);}
 
-  /* ---- side info plates ---- */
-  .plate{position:absolute;z-index:3;background:linear-gradient(180deg,#ffd15c,#f0a52c);
-    border:3px solid #7a3b12;border-radius:14px;padding:6px 14px;text-align:center;
-    box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.5);}
-  .plate .lbl{font-size:10px;color:#7a3b12;letter-spacing:1px;}
-  .plate .val{font-size:22px;color:#fff;text-shadow:2px 2px 0 #c0392b,0 0 8px rgba(0,0,0,.3);line-height:1.05;}
-  #info{top:96px;right:14px;}
-  #total{bottom:20px;left:14px;}
-  #info .sub{font-size:11px;color:#7a3b12;}
+  /* ---- overhead monitor: frame-by-frame scoresheet ---- */
+  #board{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:3;
+    background:rgba(12,16,22,.80);-webkit-backdrop-filter:blur(16px) saturate(1.25);
+    backdrop-filter:blur(16px) saturate(1.25);
+    border:1px solid rgba(255,255,255,.13);border-top:none;
+    border-radius:0 0 14px 14px;padding:7px 10px 8px;
+    box-shadow:0 14px 40px rgba(0,0,0,.55), inset 0 -1px 0 rgba(127,212,255,.10);}
+  #boardHead{display:flex;align-items:baseline;justify-content:center;gap:10px;
+    padding:0 2px 6px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,.09);}
+  #boardHead .t{font-size:11px;color:#7fd4ff;letter-spacing:.22em;}
+  #boardHead .who{font-size:10px;font-weight:500;letter-spacing:.16em;
+    color:rgba(234,242,248,.5);text-transform:uppercase;}
+  #frames{display:flex;}
+  .fcell{width:38px;padding:0 1px;border-left:1px solid rgba(255,255,255,.09);
+    border-radius:4px;transition:background .25s, box-shadow .25s;}
+  .fcell:first-child{border-left:none;}
+  .fcell.cur{background:rgba(127,212,255,.11);box-shadow:inset 0 -2px 0 #7fd4ff;}
+  .fcell.w10{width:52px;}
+  .fcell .flabel{font-size:9px;font-weight:400;letter-spacing:.1em;
+    color:rgba(234,242,248,.42);text-align:center;line-height:12px;}
+  .fcell .fmarks{display:flex;gap:2px;justify-content:center;padding:2px 2px 0;}
+  .fcell .fmark{flex:1;height:17px;display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.055);border-radius:3px;
+    font-family:'Bungee',sans-serif;font-size:11px;color:#f4f9fd;}
+  .fcell.cur .fmark{background:rgba(255,255,255,.09);}
+  .fcell .fcum{text-align:center;font-family:'Bungee',sans-serif;font-size:12px;
+    color:#7fd4ff;line-height:18px;}
 
-  /* ---- arcade round buttons ---- */
-  #controls{position:absolute;bottom:18px;right:16px;z-index:4;display:flex;align-items:flex-end;gap:14px;}
-  .rbtn{pointer-events:auto;cursor:pointer;border:none;position:relative;border-radius:50%;
-    background:radial-gradient(circle at 35% 28%, #ff7a63, #d9291c 62%, #a3160c);
-    box-shadow:0 0 0 5px #ffca4a, 0 0 0 8px #7a3b12, 0 8px 20px rgba(0,0,0,.55);
-    display:flex;align-items:center;justify-content:center;transition:transform .08s, filter .2s;}
-  .rbtn:active{transform:scale(.93);}
-  .rbtn:disabled{filter:grayscale(.65) brightness(.7);cursor:default;}
-  #playersBtn{width:56px;height:56px;color:#fff;font-size:13px;
-    background:radial-gradient(circle at 35% 28%, #c86bff, #8e2fd4 62%, #5f1a94);}
-  .rbtn .cap{position:absolute;bottom:-2px;font-size:11px;color:#fff;text-shadow:1px 1px 0 #7a1d12;}
+  /* ---- readout plates ---- */
+  .plate{position:absolute;z-index:3;background:rgba(12,16,22,.78);
+    -webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);
+    border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:8px 15px 9px;text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);}
+  .plate .lbl{font-size:9px;font-weight:500;letter-spacing:.2em;
+    color:rgba(234,242,248,.45);text-transform:uppercase;line-height:1.2;}
+  .plate .val{font-size:24px;color:#f4f9fd;line-height:1.15;margin-top:2px;}
+  #info{top:88px;right:14px;min-width:96px;}
+  #info .sub{font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;
+    color:rgba(127,212,255,.8);margin-top:1px;}
+  #total{bottom:22px;left:16px;min-width:104px;}
+  #total .val{font-size:34px;color:#7fd4ff;text-shadow:0 0 18px rgba(127,212,255,.45);}
 
-  #hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:3;
-    padding:6px 16px;border-radius:20px;background:rgba(40,22,12,.7);border:2px solid #7a3b12;
-    font-size:12px;color:#ffe9a8;white-space:nowrap;transition:opacity .3s;}
+  /* ---- pindeck monitor: which pins are still up ---- */
+  #pindeck{top:178px;right:14px;padding:9px 13px 10px;min-width:96px;}
+  #pinrows{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:5px;}
+  .pdrow{display:flex;gap:4px;justify-content:center;}
+  .ppin{width:9px;height:12px;border-radius:46% 46% 38% 38%;
+    background:#f4f9fd;box-shadow:0 0 8px rgba(244,249,253,.45);transition:background .2s, box-shadow .2s, opacity .2s;}
+  .ppin.down{background:rgba(255,255,255,.10);box-shadow:none;opacity:.7;}
 
-  /* power bar, centred above the ball */
-  #powerWrap{position:absolute;bottom:58px;left:50%;transform:translateX(-50%);z-index:4;
-    width:190px;height:13px;border-radius:9px;
-    background:rgba(0,0,0,.5);border:3px solid #7a3b12;overflow:hidden;opacity:0;transition:opacity .15s;}
+  /* ---- controls ---- */
+  #controls{position:absolute;bottom:20px;right:16px;z-index:4;display:flex;align-items:center;gap:10px;}
+  .rbtn{pointer-events:auto;cursor:pointer;position:relative;border-radius:50%;
+    width:46px;height:46px;display:flex;align-items:center;justify-content:center;
+    background:rgba(12,16,22,.78);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.16);color:#eaf2f8;
+    box-shadow:0 8px 22px rgba(0,0,0,.45);
+    transition:transform .12s, border-color .2s, color .2s, box-shadow .2s;}
+  .rbtn:hover{border-color:rgba(127,212,255,.6);color:#b9e8ff;}
+  .rbtn:active{transform:scale(.92);}
+  .rbtn:disabled{opacity:.35;cursor:default;}
+  #playersBtn{width:54px;height:54px;font-size:14px;
+    border-color:rgba(255,182,61,.45);color:#ffb63d;}
+  #playersBtn:hover{border-color:#ffb63d;color:#ffd08a;}
+  #soundBtn{font-size:18px;}
+  #musicBtn{font-size:11px;}
+  #soundBtn.off,#musicBtn.off{color:rgba(234,242,248,.28);border-color:rgba(255,255,255,.07);
+    box-shadow:none;}
+
+  #hint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);z-index:3;
+    padding:6px 16px;border-radius:99px;background:rgba(12,16,22,.74);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.11);box-shadow:0 8px 22px rgba(0,0,0,.4);
+    font-size:10.5px;font-weight:400;letter-spacing:.18em;text-transform:uppercase;
+    color:rgba(234,242,248,.85);white-space:nowrap;transition:opacity .35s;}
+  #hint b{font-weight:500;color:#7fd4ff;}
+
+  /* power meter, centred above the ball */
+  #powerWrap{position:absolute;bottom:64px;left:50%;transform:translateX(-50%);z-index:4;
+    width:216px;height:9px;border-radius:99px;overflow:hidden;
+    background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.12));
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), 0 6px 18px rgba(0,0,0,.5);
+    opacity:0;transition:opacity .18s;}
   #powerWrap.on{opacity:1;}
-  #powerFill{height:100%;width:0%;background:linear-gradient(90deg,#7ee36a,#ffd15c,#ff4b3e);}
+  #powerWrap::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(90deg,transparent 0 23px,rgba(11,15,20,.55) 23px 24px);}
+  #powerFill{height:100%;width:0%;border-radius:99px;
+    background:linear-gradient(90deg,#7fd4ff,#ffb63d 62%,#ff5240);
+    box-shadow:0 0 14px rgba(255,140,60,.55);}
 
   /* turn indicator */
-  #turnBar{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:3;display:none;
-    gap:10px;align-items:center;background:rgba(40,22,12,.75);border:3px solid #7a3b12;border-radius:30px;
-    padding:5px 14px;}
-  #turnBar .pseg{display:flex;align-items:center;gap:6px;font-size:13px;opacity:.45;color:#ffe9a8;}
-  #turnBar .pseg.act{opacity:1;}
-  #turnBar .pdot{width:10px;height:10px;border-radius:50%;border:2px solid #7a3b12;}
+  #turnBar{position:absolute;top:92px;left:50%;transform:translateX(-50%);z-index:3;display:none;
+    gap:16px;align-items:center;background:rgba(12,16,22,.78);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,.13);border-radius:99px;padding:7px 16px;
+    box-shadow:0 10px 28px rgba(0,0,0,.5);}
+  #turnBar .pseg{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:400;
+    letter-spacing:.1em;color:rgba(234,242,248,.42);transition:color .25s;}
+  #turnBar .pseg.act{color:#f4f9fd;font-weight:500;}
+  #turnBar .pdot{width:8px;height:8px;border-radius:50%;opacity:.45;transition:opacity .25s,box-shadow .25s;}
+  #turnBar .pseg.act .pdot{opacity:1;box-shadow:0 0 10px currentColor;}
 
   /* centre message */
-  #msgWrap{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;pointer-events:none;}
-  #msgBox{pointer-events:auto;text-align:center;padding:22px 46px;border-radius:22px;
-    background:linear-gradient(180deg,#ffd15c,#ef9f24);border:5px solid #7a3b12;
-    box-shadow:0 18px 50px rgba(0,0,0,.6), inset 0 3px 0 rgba(255,255,255,.55);
-    animation:pop .28s cubic-bezier(.2,1.5,.4,1);}
-  @keyframes pop{from{transform:scale(.7) rotate(-4deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
-  #msgTitle{font-size:52px;color:#fff;text-shadow:3px 3px 0 #c0392b, 0 0 18px rgba(0,0,0,.35);}
-  #msgSub{font-size:16px;color:#7a3b12;margin-top:2px;}
-  #msgBtn{margin-top:14px;padding:10px 30px;font-family:'Luckiest Guy',cursive;font-size:18px;color:#fff;
-    background:radial-gradient(circle at 40% 30%,#ff7a63,#d9291c);border:3px solid #7a3b12;border-radius:30px;
-    cursor:pointer;display:none;box-shadow:0 6px 0 #7a1d12;}
-  #msgBtn:active{transform:translateY(3px);box-shadow:0 3px 0 #7a1d12;}
+  #msgWrap{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;
+    pointer-events:none;background:radial-gradient(60% 45% at 50% 50%,rgba(4,7,11,.55),rgba(4,7,11,0));}
+  #msgBox{pointer-events:auto;text-align:center;padding:26px 48px 28px;border-radius:20px;
+    background:rgba(12,16,22,.86);-webkit-backdrop-filter:blur(20px) saturate(1.2);
+    backdrop-filter:blur(20px) saturate(1.2);border:1px solid rgba(255,255,255,.15);
+    box-shadow:0 26px 70px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.08);
+    animation:pop .3s cubic-bezier(.2,1.4,.4,1);}
+  @keyframes pop{from{transform:scale(.88) translateY(10px);opacity:0}to{transform:none;opacity:1}}
+  #msgTitle{font-size:50px;color:#7fd4ff;text-shadow:0 0 30px rgba(127,212,255,.5);line-height:1.05;}
+  #msgSub{font-size:13px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;
+    color:rgba(234,242,248,.55);margin-top:8px;}
+  #msgBtn{margin-top:18px;padding:11px 30px;font-family:'Bungee',sans-serif;font-size:14px;
+    letter-spacing:.08em;color:#08131c;background:#7fd4ff;border:none;border-radius:99px;
+    cursor:pointer;display:none;box-shadow:0 0 26px rgba(127,212,255,.35);
+    transition:transform .12s, box-shadow .2s;}
+  #msgBtn:hover{box-shadow:0 0 34px rgba(127,212,255,.6);}
+  #msgBtn:active{transform:scale(.95);}
 
   @media (max-width:560px){
-    #board{top:8px;padding:3px;border-width:2px;}
-    #boardHead{padding:1px 8px;margin-bottom:2px;}
-    #boardHead .t{font-size:11px;}
-    .fcell{width:26px;border-width:1px;}
-    .fcell.w10{width:36px;}
+    #board{padding:5px 7px 6px;border-radius:0 0 11px 11px;}
+    #boardHead{padding-bottom:4px;margin-bottom:4px;}
+    #boardHead .t{font-size:9.5px;letter-spacing:.18em;}
+    .fcell{width:28px;}
+    .fcell.w10{width:39px;}
     .fcell .flabel{font-size:8px;line-height:11px;}
-    .fcell .fmark{height:13px;font-size:10px;}
-    .fcell .fcum{font-size:11px;line-height:14px;}
-    #info{top:72px;right:8px;padding:4px 10px;border-width:2px;border-radius:11px;}
-    #info .val{font-size:17px;}
-    #info .sub{font-size:10px;}
-    #total{bottom:14px;left:8px;padding:4px 10px;border-width:2px;border-radius:11px;}
-    #total .val{font-size:18px;}
-    #controls{bottom:12px;right:10px;gap:10px;}
-    #playersBtn{width:44px;height:44px;font-size:11px;}
-    #hint{bottom:14px;font-size:10.5px;padding:5px 11px;}
-    #powerWrap{bottom:46px;width:150px;height:11px;}
-    #turnBar{bottom:78px;padding:4px 11px;}
-    #turnBar .pseg{font-size:12px;}
-    #msgTitle{font-size:36px;}
-    #msgBox{padding:18px 30px;border-width:4px;}
+    .fcell .fmark{height:15px;font-size:9.5px;}
+    .fcell .fcum{font-size:11px;line-height:16px;}
+    #info{top:66px;right:9px;padding:6px 11px 7px;min-width:82px;}
+    #pindeck{top:138px;right:9px;padding:7px 10px 8px;min-width:82px;}
+    .ppin{width:7px;height:10px;}
+    .pdrow{gap:3px;}
+    #info .val{font-size:18px;}
+    #info .sub{font-size:9.5px;}
+    #total{bottom:16px;left:9px;padding:6px 12px 7px;min-width:88px;}
+    #total .val{font-size:26px;}
+    #controls{bottom:14px;right:11px;gap:9px;}
+    .rbtn{width:44px;height:44px;}
+    #playersBtn{width:48px;height:48px;font-size:12px;}
+    #soundBtn{font-size:16px;}
+    #musicBtn{font-size:10px;}
+    #hint{bottom:16px;font-size:9.5px;letter-spacing:.12em;padding:5px 12px;}
+    #powerWrap{bottom:52px;width:168px;height:8px;}
+    #powerWrap::after{background:repeating-linear-gradient(90deg,transparent 0 20px,rgba(11,15,20,.55) 20px 21px);}
+    #turnBar{top:70px;padding:6px 13px;gap:13px;}
+    #turnBar .pseg{font-size:11px;}
+    #msgTitle{font-size:34px;}
+    #msgSub{font-size:11px;}
+    #msgBox{padding:20px 30px 22px;}
   }
 </style>
 </head>
 <body>
 <div id="app" class="notranslate" translate="no">
   <div id="mount"></div>
+  <div id="vignette"></div>
 
   <div id="board">
     <div id="boardHead"><span class="t fun">BOWLING</span><span class="who" id="boardWho"></span></div>
@@ -133,6 +194,11 @@
     <div class="sub" id="throwLabel">Throw 1</div>
   </div>
 
+  <div id="pindeck" class="plate">
+    <div class="lbl">Pindeck</div>
+    <div id="pinrows"></div>
+  </div>
+
   <div id="total" class="plate">
     <div class="lbl">SCORE</div>
     <div class="val fun" id="totalStr">0</div>
@@ -142,9 +208,11 @@
   <div id="powerWrap"><div id="powerFill"></div></div>
 
   <div id="controls">
+    <button id="musicBtn" class="rbtn"><span class="fun">MUS</span></button>
+    <button id="soundBtn" class="rbtn"><span class="fun">&#9834;</span></button>
     <button id="playersBtn" class="rbtn"><span class="fun" id="playersGlyph">1P</span></button>
   </div>
-  <div id="hint">Aim &middot; hold for power &middot; release to bowl</div>
+  <div id="hint">Aim &middot; hold to charge &middot; release to bowl</div>
 
   <div id="msgWrap">
     <div id="msgBox">
@@ -159,10 +227,21 @@
 'use strict';
 const T = () => window.THREE;
 
-const C = { laneHalf:1.0, ballR:0.16, pinR:0.07, startZ:3.2, pinFrontZ:-10.0, endZ:-12.2, speed:12.0 };
+// One inch, in world units, derived from the ball: a real ball is 8.5" across, a pin 15" tall.
+// Every pin dimension below is the USBC spec measurement, so the rack is correctly proportioned.
+const IN = 0.03721;
+const C = { laneHalf:1.0, ballR:0.16, startZ:3.2, pinFrontZ:-10.0, endZ:-12.2, speed:12.0,
+  pinH:15*IN, comH:6.0*IN, bellyR:2.383*IN, baseR:1.015*IN,
+  pinR:2.383*IN,
+  gutTop:-0.07,          // top surface of the teal gutter trough
+  gutterY:-0.07+0.16,    // ball centre when it is riding the trough
+  pitFront:-10.0-1.45,   // back edge of the pin deck: where the pit opens up
+  pitBack:-10.0-2.30,    // front face of the brick wall = back of the pit
+  balanceTilt:Math.atan((1.015*IN)/(6.0*IN)),   // ~9.6deg: past this a pin cannot recover
+  grav:11.0, topple:30, restore:22, pitZ:-11.35 };
 
 const CHARGE_MS=1100, MINP=7.5, MAXP=16.5;
-const PLAYER_HEX=['#ffd15c','#5ac8fa'];
+const PLAYER_HEX=['#ffb63d','#7fd4ff'];
 
 const G = {
   scene:null, camera:null, renderer:null, mountEl:null,
@@ -177,13 +256,14 @@ const G = {
   frame:{fov:30,camY:1.3,camZ:8.0,lookY:0.5,lookZ:-6.5},
 };
 
+// Regulation rack: pin centres 12" apart on an equilateral triangle.
 function pinLayout(){
-  const z=C.pinFrontZ, dz=-0.31;
+  const z=C.pinFrontZ, s=0.40, dz=-s*Math.sin(Math.PI/3);
   return [
     [0,z],
-    [-0.17,z+dz],[0.17,z+dz],
-    [-0.34,z+2*dz],[0,z+2*dz],[0.34,z+2*dz],
-    [-0.51,z+3*dz],[-0.17,z+3*dz],[0.17,z+3*dz],[0.51,z+3*dz],
+    [-s/2,z+dz],[s/2,z+dz],
+    [-s,z+2*dz],[0,z+2*dz],[s,z+2*dz],
+    [-1.5*s,z+3*dz],[-s/2,z+3*dz],[s/2,z+3*dz],[1.5*s,z+3*dz],
   ];
 }
 
@@ -260,9 +340,12 @@ function initGame(){
   [[0,3.4,-2],[0,3.4,-8],[0,3.4,2.5]].forEach(p=>{
     const l=new THREE.PointLight(0xffd9a0,0.22,16,2); l.position.set(p[0],p[1],p[2]); scene.add(l);
   });
-  const deckLight=new THREE.SpotLight(0xfff4e0,0.75,26,0.55,0.7);
-  deckLight.position.set(0,5.5,-8.5); deckLight.target.position.set(0,0,C.pinFrontZ-1);
-  scene.add(deckLight,deckLight.target);
+  // every deck gets the same spot from above, so the neighbour lanes are lit like this one
+  [-3,0,3].forEach(off=>{
+    const deckLight=new THREE.SpotLight(0xfff4e0,0.75,26,0.55,0.7);
+    deckLight.position.set(off,5.5,-8.5); deckLight.target.position.set(off,0,C.pinFrontZ-1);
+    scene.add(deckLight,deckLight.target);
+  });
 
   const woodTex=woodTexture();
   woodTex.wrapS=woodTex.wrapT=THREE.RepeatWrapping; woodTex.repeat.set(1,3);
@@ -280,11 +363,13 @@ function initGame(){
     new THREE.MeshStandardMaterial({map:woodTex,color:0xf0e2cc,roughness:0.22,metalness:0.06}));
   lane.position.set(0,-0.1,-5); lane.receiveShadow=true; scene.add(lane);
 
-  // teal gutters
+  // teal gutters — they stop at the mouth of the pit, like the lane itself, so a ball
+  // riding the trough drops into the pit instead of carrying on under the back wall
   const gutMat=new THREE.MeshStandardMaterial({color:0x1f8f80,roughness:0.35,metalness:0.15});
+  const gutLen=4-C.pitFront, gutZ=(4+C.pitFront)/2;
   [-1,1].forEach(s=>{
-    const g=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.2,18),gutMat);
-    g.position.set(s*(C.laneHalf+0.17),-0.17,-5); g.receiveShadow=true; scene.add(g);
+    const g=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.2,gutLen),gutMat);
+    g.position.set(s*(C.laneHalf+0.17),-0.17,gutZ); g.receiveShadow=true; scene.add(g);
   });
   // red side rails with cream cap
   [-1,1].forEach(s=>{
@@ -302,17 +387,25 @@ function initGame(){
     const nt=woodTexture(); nt.wrapS=nt.wrapT=THREE.RepeatWrapping; nt.repeat.set(1,3);
     const nl=new THREE.Mesh(new THREE.BoxGeometry(2*C.laneHalf,0.2,18),
       new THREE.MeshStandardMaterial({map:nt,color:0xbfae94,roughness:0.32}));
-    nl.position.set(off,-0.1,-5); scene.add(nl);
+    nl.position.set(off,-0.1,-5); nl.receiveShadow=true; scene.add(nl);
     [-1,1].forEach(k=>{
-      const g=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.2,18),gutMat.clone());
-      g.position.set(off+k*(C.laneHalf+0.17),-0.17,-5); scene.add(g);
+      const g=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.2,gutLen),gutMat.clone());
+      g.position.set(off+k*(C.laneHalf+0.17),-0.17,gutZ); scene.add(g);
       const rail=new THREE.Mesh(new THREE.BoxGeometry(0.36,0.5,18),
         new THREE.MeshStandardMaterial({color:0xa8302a,roughness:0.5}));
       rail.position.set(off+k*(C.laneHalf+0.52),0.02,-5); scene.add(rail);
+      // cream cap on top, so every rail on every lane is finished the same way
+      const ncap=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.09,18),
+        new THREE.MeshStandardMaterial({color:0xf6e3bd,roughness:0.5}));
+      ncap.position.set(off+k*(C.laneHalf+0.52),0.29,-5); scene.add(ncap);
     });
+    // pale pin deck, matching the centre lane
+    const nd=new THREE.Mesh(new THREE.BoxGeometry(2*C.laneHalf,0.2,2),
+      new THREE.MeshStandardMaterial({color:0xf0dcb4,roughness:0.4}));
+    nd.position.set(off,-0.095,C.pinFrontZ-0.45); nd.receiveShadow=true; scene.add(nd);
     // pins on the neighbour decks (decor)
     pinLayout().forEach(([bx,bz])=>{
-      const p=makePin(); p.position.set(off+bx,0,bz); p.scale.set(1,1,1); scene.add(p);
+      const p=makePin(true); p.position.set(off+bx,C.comH,bz); scene.add(p);
     });
   });
 
@@ -332,12 +425,64 @@ function initGame(){
   // ---- pin deck & back wall ----
   const deck=new THREE.Mesh(new THREE.BoxGeometry(2*C.laneHalf,0.2,2),
     new THREE.MeshStandardMaterial({color:0xf0dcb4,roughness:0.4}));
-  deck.position.set(0,-0.1,C.pinFrontZ-0.45); deck.receiveShadow=true; scene.add(deck);
+  // sits the same 5mm proud of the lane as the neighbour decks: level with it, the two
+  // surfaces are coplanar where they overlap and the deck flickers against the boards
+  deck.position.set(0,-0.095,C.pinFrontZ-0.45); deck.receiveShadow=true; scene.add(deck);
+
+  // kickback walls flanking the deck — struck pins ricochet off these like a real alley
+  [-1,1].forEach(s=>{
+    const kb=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.62,1.9),
+      new THREE.MeshStandardMaterial({color:0x160d09,roughness:0.9}));
+    kb.position.set(s*(C.laneHalf+0.03),0.31,C.pinFrontZ-0.5); scene.add(kb);
+  });
 
   const bt=brickTex.clone(); bt.needsUpdate=true; bt.repeat.set(6,2.2);
   const wall=new THREE.Mesh(new THREE.BoxGeometry(26,7,0.4),
     new THREE.MeshStandardMaterial({map:bt,color:0x8a7266,roughness:0.95}));
-  wall.position.set(0,2.6,C.pinFrontZ-1.7); scene.add(wall);
+  wall.position.set(0,2.6,C.pinFrontZ-2.5); scene.add(wall);
+
+  // the pit: an open recess between the back edge of the deck and the wall. The ball and
+  // the deadwood drop into this, so nothing ever has to pass through the brickwork.
+  const pitMat=new THREE.MeshStandardMaterial({color:0x120b08,roughness:0.95});
+  const pitBack=C.pitBack, pitDepth=C.pitFront-pitBack, pitMidZ=(C.pitFront+pitBack)/2;
+  // wide enough to take the gutters as well as the lane, so a channel ball falls inside it
+  [-3,0,3].forEach(off=>{
+    const floorPit=new THREE.Mesh(new THREE.BoxGeometry(2.74,0.06,pitDepth),pitMat);
+    floorPit.position.set(off,-2.62,pitMidZ); scene.add(floorPit);
+    [-1,1].forEach(k=>{
+      const sw=new THREE.Mesh(new THREE.BoxGeometry(0.06,2.9,pitDepth),pitMat);
+      sw.position.set(off+k*1.37,-1.20,pitMidZ); scene.add(sw);
+    });
+  });
+
+  // the sweeper rake: drops in front of the deck and pushes deadwood into the pit
+  const rake=new THREE.Group();
+  const rbar=new THREE.Mesh(new THREE.BoxGeometry(C.laneHalf*2-0.03,0.40,0.07),
+    new THREE.MeshStandardMaterial({color:0x1c1c20,roughness:0.7,metalness:0.25}));
+  rbar.position.y=0.20; rake.add(rbar);
+  const rtrim=new THREE.Mesh(new THREE.BoxGeometry(C.laneHalf*2-0.03,0.055,0.09),
+    new THREE.MeshStandardMaterial({color:0xc9382c,roughness:0.5}));
+  rtrim.position.y=0.385; rake.add(rtrim);
+  [-1,1].forEach(s=>{
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(0.06,0.36,0.06),
+      new THREE.MeshStandardMaterial({color:0x2a2a2e,roughness:0.6,metalness:0.3}));
+    arm.position.set(s*(C.laneHalf-0.08),0.36,0); rake.add(arm);
+  });
+  rake.visible=false; rake.position.set(0,0.70,C.pitZ-0.75);
+  scene.add(rake); G.rake=rake;
+
+  // the setter: a plate that carries a fresh rack down onto the spots and lifts away
+  const setter=new THREE.Group();
+  const plate=new THREE.Mesh(new THREE.BoxGeometry(1.35,0.05,1.75),
+    new THREE.MeshStandardMaterial({color:0x232327,roughness:0.55,metalness:0.35}));
+  setter.add(plate);
+  [[-0.6,-0.8],[0.6,-0.8],[-0.6,0.8],[0.6,0.8]].forEach(([ax,az])=>{
+    const rod=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.34,8),
+      new THREE.MeshStandardMaterial({color:0x33333a,roughness:0.5,metalness:0.4}));
+    rod.position.set(ax,0.19,az); setter.add(rod);
+  });
+  setter.visible=false; setter.position.set(0,0.90,C.pitZ-0.75);
+  scene.add(setter); G.setterMesh=setter;
 
   // dark pin-pit mouths + BOWLING signs above each lane
   [-3,0,3].forEach(off=>{
@@ -359,9 +504,10 @@ function initGame(){
       new THREE.MeshBasicMaterial({map:signTex}));
     face.position.set(off,1.75,C.pinFrontZ-1.37); scene.add(face);
 
-    // colourful arch panel above the pit (like the arcade art)
+    // colourful arch panel above the pit (like the arcade art). Unlit, so all three
+    // lanes read as exactly the same green instead of picking up the side lighting.
     const arch=new THREE.Mesh(new THREE.BoxGeometry(1.5,0.7,0.1),
-      new THREE.MeshStandardMaterial({color:0x2fa88a,roughness:0.6}));
+      new THREE.MeshBasicMaterial({color:0x2fa88a}));
     arch.position.set(off,2.55,C.pinFrontZ-1.45); scene.add(arch);
   });
 
@@ -378,8 +524,11 @@ function initGame(){
   // ---- pins ----
   G.pins=pinLayout().map(([bx,bz])=>{
     const group=makePin();
-    group.position.set(bx,0,bz); scene.add(group);
-    return {group,bx,bz,x:bx,z:bz,vx:0,vz:0,fall:0,knocked:false,active:true};
+    group.position.set(bx,C.comH,bz); scene.add(group);
+    return {group,bx,bz,x:bx,z:bz,y:C.comH,
+      vx:0,vy:0,vz:0, ox:0,oy:0,oz:0,          // velocity + angular velocity
+      quat:new THREE.Quaternion(),
+      knocked:false, active:true, moving:false, sound:0};
   });
 
   // ---- glossy blue ball ----
@@ -412,20 +561,61 @@ function initGame(){
   G.raf=requestAnimationFrame(loop);
 }
 
-function makePin(){
+// The real bowling-pin silhouette, measured in inches up from the base:
+// flared foot, full belly at 4.5", pinched neck at 10.8", bulbous head, domed crown.
+const PIN_PTS=[[0,0],[0,1.015],[0.35,1.09],[0.9,1.33],[1.6,1.70],[2.4,2.02],[3.3,2.24],
+  [4.5,2.383],[5.5,2.35],[6.5,2.21],[7.5,1.96],[8.5,1.64],[9.4,1.31],[10.2,1.03],
+  [10.8,0.92],[11.3,0.95],[11.9,1.14],[12.5,1.27],[13.0,1.30],[13.5,1.22],
+  [14.1,1.00],[14.55,0.66],[14.85,0.34],[15,0]];
+
+// How far the pin's lowest surface point sits below its centre of mass at a given tilt.
+// Exact for the lathed profile, so a pin standing, leaning, lying or nose-down always
+// rests ON the deck instead of sinking through it.
+function pinLowOffset(ay,sinT){
+  let m=0;
+  for(let i=0;i<PIN_PTS.length;i++){
+    const d=(PIN_PTS[i][0]*IN-C.comH)*ay-PIN_PTS[i][1]*IN*1.015*sinT;
+    if(d<m) m=d;
+  }
+  return -m;
+}
+
+function pinRadiusAt(y){
+  for(let i=1;i<PIN_PTS.length;i++){
+    const a=PIN_PTS[i-1], b=PIN_PTS[i];
+    if(y<=b[0]){ const t=(b[0]===a[0])?0:(y-a[0])/(b[0]-a[0]); return a[1]+(b[1]-a[1])*t; }
+  }
+  return 0;
+}
+// A stripe that hugs the turned surface exactly, so it wraps the neck instead of floating.
+function stripeProfile(y0,y1){
+  const THREE=T(), out=[];
+  for(let i=0;i<=8;i++){
+    const y=y0+(y1-y0)*i/8;
+    out.push(new THREE.Vector2(pinRadiusAt(y)*IN*1.015,y*IN));
+  }
+  return out;
+}
+
+function makePin(decor){
   const THREE=T();
   const g=new THREE.Group();
-  const white=new THREE.MeshStandardMaterial({color:0xfbfbf6,roughness:0.3,metalness:0.03});
-  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.046,0.072,0.30,20),white);
-  body.position.y=0.15; body.castShadow=true;
-  const head=new THREE.Mesh(new THREE.SphereGeometry(0.056,18,14),white);
-  head.position.y=0.33; head.castShadow=true;
-  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.034,0.046,0.06,18),white);
-  neck.position.y=0.30;
-  const red=new THREE.MeshStandardMaterial({color:0xe03a2f,roughness:0.4});
-  const band=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.056,0.028,20),red); band.position.y=0.255;
-  const band2=new THREE.Mesh(new THREE.CylinderGeometry(0.056,0.06,0.024,20),red); band2.position.y=0.215;
-  g.add(body,neck,head,band,band2);
+  // lathe the profile into a solid of revolution, then shift it so the group's
+  // origin sits at the centre of mass — rotations then pivot where physics expects
+  const seg=decor?14:30;
+  const prof=PIN_PTS.map(p=>new THREE.Vector2(Math.max(p[1]*IN,0.0002),p[0]*IN));
+  const body=new THREE.Mesh(new THREE.LatheGeometry(prof,seg),
+    new THREE.MeshStandardMaterial({color:0xfbfbf6,roughness:0.22,metalness:0.04}));
+  body.geometry.translate(0,-C.comH,0);
+  body.castShadow=true; body.receiveShadow=!decor;
+  g.add(body);
+  const red=new THREE.MeshStandardMaterial({color:0xe03a2f,roughness:0.35});
+  [[9.55,10.15],[10.95,11.55]].forEach(r=>{
+    const m=new THREE.Mesh(new THREE.LatheGeometry(stripeProfile(r[0],r[1]),seg),red);
+    m.geometry.translate(0,-C.comH,0);
+    m.castShadow=true;
+    g.add(m);
+  });
   return g;
 }
 
@@ -452,6 +642,9 @@ function buildGuide(){
 // ===== players =====
 function initPlayers(n){
   G.numPlayers=n; G.cur=0;
+  // bumping the generation invalidates any pending end-of-ball callback, so starting a
+  // new game mid-resolve cannot have the old ball finish itself into the fresh one
+  G.gen=(G.gen||0)+1;
   G.players=Array.from({length:n},()=>({frames:Array.from({length:10},()=>({rolls:[]}))}));
   G.framesData=G.players[0].frames;
   G.gameOver=false; G.msg=null;
@@ -470,7 +663,15 @@ function setPlayers(n){
 }
 
 // ===== audio =====
-let _ac=null,_master=null,_noise=null,_knockTime=0;
+let _ac=null,_master=null,_noise=null,_room=null,_knockTime=0,_thudTime=0;
+let _pinBuf=null,_crashUntil=0,_crash=null,_crashArmed=false;
+const CRASH_LEN=1.93;   // the take's usable length once its silent lead-in is skipped
+// recorded crash of a rack going over — used whole rather than synthesised per tap,
+// since the take already contains the tumbling that follows the first contact
+const PIN_MP3='data:audio/mpeg;base64,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b1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuOTdVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tSxOsDS7DXBCwYa0FuGt9A8wzoVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy45N1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+1LE7IPMPaLiDBhlwAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjk3VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UsT/g8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuOTdVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tSxP+DwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy45N1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+1LE/4PAAAGkAAAAIAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjk3VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UsT/g8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuOTdVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tSxP+DwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy45N1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+1LE/4PAAAGkAAAAIAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjk3VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UsT/g8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuOTdVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tSxP+DwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy45N1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+1LE/4PAAAGkAAAAIAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuOTdVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UsT/g8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy45N1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tQxP+DwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjk3VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UsT/g8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuOTdVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tSxP+DwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy45N1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+1LE/4PAAAGkAAAAIAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjk3VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UsT/g8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuOTdVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tSxP+DwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy45N1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+1LE/4PAAAGkAAAAIAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjk3VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UsT/g8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuOTdVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//tSxP+DwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy45N1VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+1LE/4PAAAGkAAAAIAAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7UsT/g8AAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+// impacts go dry to the master and also into a synthetic room tail: a bowling alley is a
+// hard, echoing hall, and that tail is most of what makes a real crack sound real
+function sendOut(n){ n.connect(_master); if(_room) n.connect(_room); }
 function unlockAudio(){
   if(_ac){ if(_ac.state==='suspended') _ac.resume(); return; }
   try{
@@ -481,25 +682,415 @@ function unlockAudio(){
     _noise=_ac.createBuffer(1,len,_ac.sampleRate);
     const ch=_noise.getChannelData(0);
     for(let i=0;i<len;i++) ch[i]=Math.random()*2-1;
+
+    _room=_ac.createConvolver();
+    const rl=Math.floor(_ac.sampleRate*1.25);
+    const ir=_ac.createBuffer(2,rl,_ac.sampleRate);
+    for(let c=0;c<2;c++){
+      const d=ir.getChannelData(c);
+      for(let i=0;i<rl;i++){
+        const env=Math.pow(1-i/rl,2.7)*(i<120?i/120:1);
+        d[i]=(Math.random()*2-1)*env;
+      }
+    }
+    _room.buffer=ir;
+    const wet=_ac.createGain(); wet.gain.value=0.42;
+    const damp=_ac.createBiquadFilter(); damp.type='lowpass'; damp.frequency.value=4200;
+    _room.connect(damp).connect(wet).connect(_master);
+
+    fetch(PIN_MP3).then(r=>r.arrayBuffer()).then(b=>_ac.decodeAudioData(b))
+      .then(b=>{ _pinBuf=b; }).catch(()=>{});
+    startMusic();
+    if(_muted) _master.gain.value=0.0001;
   }catch(e){ _ac=null; }
 }
-function playKnock(){
-  if(!_ac) return;
-  let t=_ac.currentTime; if(t<_knockTime) t=_knockTime; _knockTime=t+0.02;
-  const o=_ac.createOscillator(); o.type='triangle';
-  o.frequency.setValueAtTime(150+Math.random()*120,t);
-  o.frequency.exponentialRampToValueAtTime(60,t+0.13);
+// A pin is a hard maple core in a plastic shell around a hollow cavity: the shell gives
+// the sharp crack, the body rings for a few dozen milliseconds in a handful of modes,
+// and the ball adds a low thud you feel as much as hear. Synthesised that way — click +
+// decaying modes + thud — it reads as a real impact instead of a filtered blip.
+function playCrash(L){
+  const t=_ac.currentTime;
+  const src=_ac.createBufferSource(); src.buffer=_pinBuf;
+  const rate=0.94+Math.random()*0.13; src.playbackRate.value=rate;
+  const lvl=0.30+0.55*L;
+  const g=_ac.createGain(); g.gain.value=lvl;
+  // the take was recorded in a real hall, so it gets none of the synthetic room the
+  // oscillator hits use — doubling the two is what turned it to mush
+  const lp=_ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=20000;
+  src.connect(lp).connect(g); g.connect(_master);
+  const full=CRASH_LEN/rate;
+  src.start(t,0.065); src.stop(t+full+0.05);        // skip the take's silent lead-in
+  _crashUntil=t+full;
+  _crash={g,src,lp,t0:t,full,lvl,k:-1,fadeAt:t+full};
+  duckMusic(full*0.75);
+}
+// How long the take runs is how many pins went over: ten fills it, five gets half of it,
+// one is a single crack. The count is only known as the rack falls, so the tail is
+// rescheduled while it plays — always later than the fade has already started, never
+// after, so the level never jumps back up.
+function shapeCrash(knocked,moving){
+  if(!_crash) return;
+  const n=Math.min(10,knocked|0);
+  if(n<1) return;                     // nothing has tipped past the point of no return yet
+  const now=_ac.currentTime;
+  // The count climbs while the rack goes over, so the first number in is never the answer.
+  // The take holds its full length until the rack has actually finished — the count steady
+  // and nothing left moving — and only then is the tail committed, on the final figure.
+  // A deadline scaled to that figure stops a slow roll holding a one-pin tap open.
+  if(n!==_crash.k){ _crash.k=n; _crash.kAt=now; }
+  const late=now-_crash.t0>=Math.min(1.2,0.25+n*0.12);
+  if(n<10 && !late && (moving>0 || now-_crash.kAt<0.12)) return;
+
+  let end=_crash.t0+_crash.full*n/10;
+  // a crash that ends does not stop, it recedes: the level eases off over a good third of
+  // the segment while the top end rolls away with it, so the cut is never heard as a cut
+  let fade=Math.min(0.40,Math.max(0.18,(end-_crash.t0)*0.40));
+  let fadeAt=end-fade;
+  if(fadeAt<now+0.03){
+    // the decision came in after the fade should have started: begin it now, but hold the
+    // target end so a five-pin tail stays longer than a three-pin one
+    fadeAt=now+0.03;
+    if(end<fadeAt+0.05) end=fadeAt+0.05;
+    fade=end-fadeAt;
+  }
+  if(end>_crash.t0+_crash.full){ end=_crash.t0+_crash.full; fadeAt=Math.min(fadeAt,end-fade); }
+
+  const gain=_crash.g.gain;
+  gain.cancelScheduledValues(now);
+  gain.setValueAtTime(_crash.lvl,now);
+  gain.setValueAtTime(_crash.lvl,fadeAt);
+  gain.exponentialRampToValueAtTime(0.0001,end);
+  const f=_crash.lp.frequency;
+  f.cancelScheduledValues(now);
+  f.setValueAtTime(20000,fadeAt);
+  f.exponentialRampToValueAtTime(700,end);
+  _crashUntil=end;
+  _crash=null;
+}function pinImpact(level,ball){
+  if(!_ac||!_noise) return;
+  let t=_ac.currentTime; if(t<_knockTime) t=_knockTime; _knockTime=t+0.012;
+  const L=Math.max(0.22,Math.min(1,level||0.5));
+  if(_pinBuf){
+    // the recording is the whole pin sound for this ball: it fires once, on first contact,
+    // and everything after it is cut from the same take rather than synthesised
+    if(_crashArmed){ _crashArmed=false; playCrash(L); return; }
+    tumbleGrain(L*0.75);
+    return;
+  }
+  const det=0.90+Math.random()*0.22;              // no two pins ring at the same pitch
+
+  const src=_ac.createBufferSource(); src.buffer=_noise;
+  src.playbackRate.value=0.85+Math.random()*0.5;
+  const hp=_ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=ball?1600:2500;
+  const pk=_ac.createBiquadFilter(); pk.type='peaking';
+  pk.frequency.value=(ball?2600:3600)*(0.9+Math.random()*0.2); pk.Q.value=1.1; pk.gain.value=7;
+  const ng=_ac.createGain();
+  ng.gain.setValueAtTime((ball?0.32:0.19)*L,t);
+  ng.gain.exponentialRampToValueAtTime(0.0001,t+(ball?0.038:0.024));
+  src.connect(hp).connect(pk).connect(ng); sendOut(ng);
+  src.start(t); src.stop(t+0.08);
+
+  const modes=ball?[[240,1.0,0.20],[520,0.70,0.13],[880,0.48,0.085],[1420,0.26,0.055]]
+                  :[[560,0.85,0.10],[980,0.50,0.068],[1560,0.28,0.044]];
+  modes.forEach((m,i)=>{
+    const o=_ac.createOscillator(); o.type=i===0?'triangle':'sine';
+    o.frequency.setValueAtTime(m[0]*det,t);
+    o.frequency.exponentialRampToValueAtTime(m[0]*det*0.955,t+m[2]);
+    const g=_ac.createGain(), amp=m[1]*L*(ball?0.15:0.09);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(amp,t+0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+m[2]);
+    o.connect(g); sendOut(g); o.start(t); o.stop(t+m[2]+0.02);
+  });
+
+  if(ball){
+    const o=_ac.createOscillator(); o.type='sine';
+    o.frequency.setValueAtTime(120,t); o.frequency.exponentialRampToValueAtTime(52,t+0.16);
+    const g=_ac.createGain();
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.26*L,t+0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.19);
+    o.connect(g); sendOut(g); o.start(t); o.stop(t+0.21);
+  }
+}
+
+// A pin landing on the maple deck: dull, low, no ring — the sound that fills the pause
+// after the crack while the rack finishes falling.
+// Once the crash has receded the rack is still coming down, and silence there is what
+// gives the cut away. These bounces are slices of the same take's tail — same wood, same
+// room — so they read as the tumble continuing, not as a second sound effect.
+function tumbleGrain(level){
+  if(!_ac||!_pinBuf) return;
+  const t=_ac.currentTime;
+  if(t<_thudTime) return; _thudTime=t+0.035;
+  // nearly every bounce happens while the take is still playing, so ducking them under it
+  // rather than blocking them is what makes the rack audibly keep coming down
+  const under=t<_crashUntil?0.3:1;
+  const L=Math.max(0.12,Math.min(1,level||0.4));
+  const dur=0.16+Math.random()*0.15;
+  const src=_ac.createBufferSource(); src.buffer=_pinBuf;
+  src.playbackRate.value=0.88+Math.random()*0.26;
   const g=_ac.createGain();
   g.gain.setValueAtTime(0.0001,t);
-  g.gain.exponentialRampToValueAtTime(0.3,t+0.005);
-  g.gain.exponentialRampToValueAtTime(0.0001,t+0.16);
-  o.connect(g).connect(_master); o.start(t); o.stop(t+0.18);
+  g.gain.exponentialRampToValueAtTime(0.8*L*under,t+0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(g).connect(_master);
+  src.start(t,1.05+Math.random()*0.6,dur+0.02);
+}
+function deckThud(level){
+  if(_pinBuf){ tumbleGrain(level); return; }
+  if(!_ac||!_noise) return;
+  let t=_ac.currentTime; if(t<_thudTime) return; _thudTime=t+0.035;
+  const L=Math.max(0.12,Math.min(1,level||0.4));
   const src=_ac.createBufferSource(); src.buffer=_noise;
-  const bp=_ac.createBiquadFilter(); bp.type='bandpass';
-  bp.frequency.value=1700+Math.random()*1500; bp.Q.value=0.8;
-  const ng=_ac.createGain();
-  ng.gain.setValueAtTime(0.22,t); ng.gain.exponentialRampToValueAtTime(0.0001,t+0.06);
-  src.connect(bp).connect(ng).connect(_master); src.start(t); src.stop(t+0.08);
+  src.playbackRate.value=0.55+Math.random()*0.3;
+  const lp=_ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=800+Math.random()*500;
+  const g=_ac.createGain();
+  g.gain.setValueAtTime(0.14*L,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.085);
+  src.connect(lp).connect(g); sendOut(g); src.start(t); src.stop(t+0.11);
+  const o=_ac.createOscillator(); o.type='sine';
+  o.frequency.setValueAtTime(158,t); o.frequency.exponentialRampToValueAtTime(72,t+0.12);
+  const og=_ac.createGain();
+  og.gain.setValueAtTime(0.0001,t);
+  og.gain.exponentialRampToValueAtTime(0.16*L,t+0.006);
+  og.gain.exponentialRampToValueAtTime(0.0001,t+0.14);
+  o.connect(og); sendOut(og); o.start(t); o.stop(t+0.16);
+}
+let _muted=false;
+function setMuted(m){
+  _muted=m;
+  try{ localStorage.setItem('bowl.muted',m?'1':'0'); }catch(e){}
+  const b=document.getElementById('soundBtn');
+  if(b) b.classList.toggle('off',m);
+  if(_master) _master.gain.setTargetAtTime(m?0.0001:0.5,_ac.currentTime,0.05);
+}
+// ===== house music =====
+// Five original loops, synthesised in the page and cycled as you play. Each one is its
+// own tempo, progression, kit and voicing, so the rotation reads as a change of record
+// rather than the same track transposed. Scheduled a fifth of a second ahead of the
+// audio clock, so timing never depends on frame rate.
+const TRACKS=[
+  { style:'drive', bpm:132, gain:1.00, bars:[            // A minor arcade rock
+      {root:110.00, ch:[220.00,261.63,329.63]},
+      {root: 87.31, ch:[174.61,220.00,261.63]},
+      {root:130.81, ch:[196.00,261.63,329.63]},
+      {root: 98.00, ch:[196.00,246.94,293.66]}]},
+  { style:'boogie', bpm:112, gain:0.95, bars:[           // swung E minor boogie
+      {root: 82.41, ch:[164.81,196.00,246.94]},
+      {root:110.00, ch:[220.00,261.63,329.63]},
+      {root: 82.41, ch:[164.81,196.00,246.94]},
+      {root:123.47, ch:[185.00,246.94,293.66]}]},
+  { style:'synth', bpm:100, gain:1.00, bars:[            // D minor synthwave
+      {root: 73.42, ch:[146.83,174.61,220.00]},
+      {root:116.54, ch:[174.61,233.08,293.66]},
+      {root: 87.31, ch:[174.61,220.00,261.63]},
+      {root:130.81, ch:[196.00,261.63,329.63]}]},
+  { style:'surf', bpm:138, gain:0.92, bars:[             // driving surf, harmonic minor
+      {root:110.00, ch:[220.00,261.63,329.63]},
+      {root: 87.31, ch:[174.61,220.00,261.63]},
+      {root: 98.00, ch:[196.00,246.94,293.66]},
+      {root: 82.41, ch:[164.81,207.65,246.94]}]},
+  { style:'lounge', bpm: 88, gain:0.85, bars:[           // late-night lounge sevenths
+      {root: 87.31, ch:[220.00,261.63,329.63]},
+      {root: 73.42, ch:[174.61,220.00,261.63]},
+      {root: 98.00, ch:[174.61,233.08,293.66]},
+      {root: 65.41, ch:[196.00,233.08,261.63]}]}
+];
+let _mus=null,_musOn=true,_musTimer=0,_musStep=0,_musNext=0,_musLvl=0.22;
+let _tk=0,_tkGain=1,_tkStart=0,_sd=(60/132)/4;
+const TRACK_SECS=180;
+
+function mKick(t,hard){
+  const o=_ac.createOscillator(); o.type='sine';
+  o.frequency.setValueAtTime(hard?128:112,t);
+  o.frequency.exponentialRampToValueAtTime(hard?44:40,t+(hard?0.09:0.13));
+  const g=_ac.createGain();
+  g.gain.setValueAtTime(0.9*_tkGain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.24);
+  o.connect(g).connect(_mus); o.start(t); o.stop(t+0.26);
+}
+function mSnare(t,lvl){
+  const L=(lvl||1)*_tkGain;
+  const s=_ac.createBufferSource(); s.buffer=_noise; s.playbackRate.value=1.3;
+  const bp=_ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1900; bp.Q.value=0.7;
+  const g=_ac.createGain();
+  g.gain.setValueAtTime(0.5*L,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.15);
+  s.connect(bp).connect(g).connect(_mus); s.start(t); s.stop(t+0.17);
+  const o=_ac.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(190,t);
+  const og=_ac.createGain();
+  og.gain.setValueAtTime(0.28*L,t); og.gain.exponentialRampToValueAtTime(0.0001,t+0.1);
+  o.connect(og).connect(_mus); o.start(t); o.stop(t+0.12);
+}
+function mBrush(t,lvl){
+  const s=_ac.createBufferSource(); s.buffer=_noise; s.playbackRate.value=0.8;
+  const bp=_ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2600; bp.Q.value=0.5;
+  const g=_ac.createGain();
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(0.2*(lvl||1)*_tkGain,t+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+0.2);
+  s.connect(bp).connect(g).connect(_mus); s.start(t); s.stop(t+0.22);
+}
+function mRim(t){
+  const o=_ac.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(1750,t);
+  const g=_ac.createGain();
+  g.gain.setValueAtTime(0.3*_tkGain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.05);
+  o.connect(g).connect(_mus); o.start(t); o.stop(t+0.06);
+}
+function mHat(t,acc,lvl){
+  const s=_ac.createBufferSource(); s.buffer=_noise; s.playbackRate.value=2.4;
+  const hp=_ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7200;
+  const g=_ac.createGain();
+  g.gain.setValueAtTime((acc?0.22:0.11)*(lvl||1)*_tkGain,t);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+(acc?0.06:0.035));
+  s.connect(hp).connect(g).connect(_mus); s.start(t); s.stop(t+0.08);
+}
+function mBass(t,f,dur){
+  const o=_ac.createOscillator(); o.type='sawtooth'; o.frequency.value=f;
+  const lp=_ac.createBiquadFilter(); lp.type='lowpass'; lp.Q.value=6;
+  lp.frequency.setValueAtTime(1500,t); lp.frequency.exponentialRampToValueAtTime(320,t+dur);
+  const g=_ac.createGain();
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.42*_tkGain,t+0.012);
+  g.gain.setValueAtTime(0.42*_tkGain,t+dur*0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(lp).connect(g).connect(_mus); o.start(t); o.stop(t+dur+0.02);
+}
+function mSub(t,f,dur){
+  const o=_ac.createOscillator(); o.type='sine'; o.frequency.value=f;
+  const o2=_ac.createOscillator(); o2.type='triangle'; o2.frequency.value=f*2;
+  const g2=_ac.createGain(); g2.gain.value=0.18;
+  const g=_ac.createGain();
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.5*_tkGain,t+0.03);
+  g.gain.setValueAtTime(0.5*_tkGain,t+dur*0.75);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g).connect(_mus); o2.connect(g2).connect(g);
+  o.start(t); o.stop(t+dur+0.02); o2.start(t); o2.stop(t+dur+0.02);
+}
+function mPluck(t,f,dur){
+  const o=_ac.createOscillator(); o.type='square'; o.frequency.value=f;
+  const lp=_ac.createBiquadFilter(); lp.type='lowpass';
+  lp.frequency.setValueAtTime(3800,t); lp.frequency.exponentialRampToValueAtTime(900,t+dur);
+  const g=_ac.createGain();
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.09*_tkGain,t+0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(lp).connect(g).connect(_mus); o.start(t); o.stop(t+dur+0.02);
+}
+function mStab(t,notes,dur){
+  notes.forEach(f=>{
+    [-6,6].forEach(cents=>{
+      const o=_ac.createOscillator(); o.type='sawtooth';
+      o.frequency.value=f*Math.pow(2,cents/1200);
+      const lp=_ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2600;
+      const g=_ac.createGain();
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.075*_tkGain,t+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(lp).connect(g).connect(_mus); o.start(t); o.stop(t+dur+0.02);
+    });
+  });
+}
+function mEP(t,notes,dur){
+  notes.forEach((f,i)=>{
+    const o=_ac.createOscillator(); o.type='triangle'; o.frequency.value=f;
+    const o2=_ac.createOscillator(); o2.type='sine'; o2.frequency.value=f*2.01;
+    const g2=_ac.createGain(); g2.gain.value=0.3;
+    const g=_ac.createGain(); const st=t+i*0.012;
+    g.gain.setValueAtTime(0.0001,st);
+    g.gain.exponentialRampToValueAtTime(0.085*_tkGain,st+0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001,st+dur);
+    o.connect(g).connect(_mus); o2.connect(g2).connect(g);
+    o.start(st); o.stop(st+dur+0.02); o2.start(st); o2.stop(st+dur+0.02);
+  });
+}
+
+function musicStep(i,t){
+  const tk=TRACKS[_tk], bar=tk.bars[(i>>4)&3], s=i&15, sd=_sd, odd=(i>>4)&1;
+  const swing=(s%4===2)?sd*0.30:0;                  // late offbeats give the boogie its lilt
+  switch(tk.style){
+    case 'drive':
+      if(s%4===0) mKick(t,true);
+      if(s===14&&odd) mKick(t,true);
+      if(s===4||s===12) mSnare(t);
+      if(s%2===0) mHat(t,s%4===0);
+      if(s%2===0) mBass(t,(s===6||s===14)?bar.root*2:bar.root,sd*1.8);
+      if(s===0||s===6) mStab(t,bar.ch,s===0?sd*3:sd*1.6);
+      break;
+    case 'boogie':
+      if(s===0||s===8||s===11) mKick(t,false);
+      if(s===4||s===12) mSnare(t,0.9);
+      if(s%2===0) mHat(t+swing,s%4===0,0.85);
+      if(s%4===0){                                   // walking quarters through the chord
+        const w=[bar.root,bar.ch[1]/2,bar.root*2,bar.ch[2]/2][s>>2];
+        mBass(t,w,sd*3.4);
+      }
+      if(s===4||s===12) mStab(t+swing,bar.ch,sd*1.1);
+      break;
+    case 'synth':
+      if(s%4===0) mKick(t,true);
+      if(s===4||s===12) mRim(t);
+      if(s%2===1) mHat(t,false,0.7);
+      if(s===0||s===8) mSub(t,bar.root,sd*7.5);
+      mPluck(t,bar.ch[[0,1,2,1][s&3]]*(s>=8?2:1),sd*1.3);
+      break;
+    case 'surf':
+      if(s===0||s===8||s===6) mKick(t,true);
+      if(s===4||s===12) mSnare(t);
+      if(s===6||s===14) mSnare(t,0.28);
+      mHat(t,s%4===0,0.8);
+      if(s%2===0) mBass(t,(s%4===0)?bar.root:bar.ch[1]/2,sd*1.7);
+      if(s===0||s===8) mStab(t,bar.ch,sd*2.2);
+      break;
+    case 'lounge':
+      if(s===0||s===10) mKick(t,false);
+      if(s===8) mBrush(t,1);
+      if(s===4||s===12) mBrush(t,0.45);
+      if(s%2===0) mHat(t,false,0.35);
+      if(s===0||s===8) mSub(t,bar.root,sd*7.2);
+      if(s===0||s===6) mEP(t,bar.ch,sd*(s===0?5:3));
+      break;
+  }
+}
+function pickTrack(){
+  if(TRACKS.length<2) return;
+  let n=_tk; while(n===_tk) n=Math.floor(Math.random()*TRACKS.length);
+  _tk=n; _tkGain=TRACKS[n].gain; _sd=(60/TRACKS[n].bpm)/4; _tkStart=_ac.currentTime;
+}
+function musicTick(){
+  if(!_ac||!_mus||!_musOn) return;
+  const ahead=_ac.currentTime+0.25;
+  if(_musNext<_ac.currentTime) _musNext=_ac.currentTime+0.05;
+  while(_musNext<ahead){
+    musicStep(_musStep,_musNext);
+    _musNext+=_sd;
+    _musStep=(_musStep+1)&63;
+    // a new record every three minutes, changed on the turn of the loop so it never cuts
+    // in mid-bar
+    if(_musStep===0 && _musNext-_tkStart>=TRACK_SECS) pickTrack();
+  }
+}
+function startMusic(){
+  if(!_ac||_mus) return;
+  _tk=Math.floor(Math.random()*TRACKS.length);
+  _tkGain=TRACKS[_tk].gain; _sd=(60/TRACKS[_tk].bpm)/4; _musStep=0;
+  _mus=_ac.createGain(); _mus.gain.value=_musOn?_musLvl:0.0001; _mus.connect(_master);
+  _musNext=_ac.currentTime+0.1; _tkStart=_musNext;
+  clearInterval(_musTimer); _musTimer=setInterval(musicTick,40);
+}
+// the loop steps out of the way of the rack and comes back once the wood has stopped
+function duckMusic(hold){
+  if(!_mus||!_musOn) return;
+  const t=_ac.currentTime;
+  _mus.gain.cancelScheduledValues(t);
+  _mus.gain.setTargetAtTime(_musLvl*0.3,t,0.04);
+  _mus.gain.setTargetAtTime(_musLvl,t+hold,0.45);
+}
+function setMusic(on){
+  _musOn=on;
+  try{ localStorage.setItem('bowl.music',on?'1':'0'); }catch(e){}
+  const b=document.getElementById('musicBtn');
+  if(b) b.classList.toggle('off',!on);
+  if(_mus){
+    _mus.gain.cancelScheduledValues(_ac.currentTime);
+    _mus.gain.setTargetAtTime(on?_musLvl:0.0001,_ac.currentTime,0.15);
+  }
+  if(on&&_ac&&!_mus) startMusic();
 }
 function playChime(strike){
   if(!_ac) return; const t=_ac.currentTime;
@@ -529,6 +1120,11 @@ function releaseThrow(){
 }
 
 // ===== input =====
+function nudgeAim(d){
+  if(G.phase!=='aim') return;
+  G.aimAngle=Math.max(-0.20,Math.min(0.20,G.aimAngle+d));
+  if(G.guide) G.guide.rotation.y=-G.aimAngle;
+}
 function setAimFromX(clientX){
   const r=G.mountEl.getBoundingClientRect();
   const nx=((clientX-r.left)/r.width)*2-1;
@@ -555,6 +1151,7 @@ function throwBall(power){
   const drift=(Math.random()-0.5)*0.036;
   const a=G.aimAngle+drift, sp=power||C.speed;
   G.standingBefore=G.pins.filter(p=>p.active&&!p.knocked).length;
+  _crashArmed=true; _crash=null;
   G.ball.vx=Math.sin(a)*sp; G.ball.vz=-Math.cos(a)*sp;
   G.ball.rolling=true; G.ball.gutter=false;
   G.phase='roll'; G.rollTime=0; G.settleTime=0;
@@ -591,23 +1188,167 @@ function onResize(){
 
 function resetBall(){
   const b=G.ball;
-  b.x=0;b.z=C.startZ;b.vx=0;b.vz=0;b.rolling=false;b.gutter=false;
+  b.x=0;b.z=C.startZ;b.vx=0;b.vz=0;b.rolling=false;b.gutter=false;b.inPit=false;b.py=C.ballR;b.pvy=0;
+  b.mesh.visible=true;
   b.mesh.position.set(0,C.ballR,C.startZ); b.mesh.rotation.set(0,0,0);
   G.aimAngle=0; if(G.guide) G.guide.rotation.y=0;
   document.getElementById('hint').style.opacity='1';
 }
 function respawnPins(){
   G.pins.forEach(p=>{
-    p.x=p.bx;p.z=p.bz;p.vx=0;p.vz=0;p.knocked=false;p.active=true;
-    p.y=0;p.vy=0;p.fall=0;p.fallV=0;p.spin=0;p.spinV=0;p.wob=0;p.dirx=0;p.dirz=-1;
-    p.knockThr=1.35+Math.random()*1.25;  // per-pin stability: makes a clean rack a matter of skill + luck
-    p.group.visible=true; p.group.position.set(p.bx,0,p.bz);
+    p.x=p.bx; p.z=p.bz; p.y=C.comH;
+    p.vx=0; p.vy=0; p.vz=0; p.ox=0; p.oy=0; p.oz=0; p.ay=1;
+    p.knocked=false; p.active=true; p.moving=false; p.sound=0;
+    p.pit=false; p.sweep=false; p.hold=false; p.side=0;
+    p.quat.identity();
+    p.group.visible=true; p.group.position.set(p.bx,C.comH,p.bz);
     p.group.rotation.set(0,0,0); p.group.quaternion.identity();
   });
   G.pinsStanding=10;
+  G.sweep=null; G.clearing=null; G.setter=null;
+  if(G.rake) G.rake.visible=false;
+  if(G.setterMesh) G.setterMesh.visible=false;
 }
+// End of a frame: the machinery rolls out of the dark behind the deck, passes over the
+// pins, drops in front of them and sweeps everything left into the pit on the way home.
+function sweepDeadwood(){
+  if(!G.pins.some(p=>p.active)) return 0;
+  G.sweep={t:0};
+  if(G.rake){ G.rake.visible=true; G.rake.position.set(0,0.70,C.pitZ-0.75); }
+  return 1;
+}
+
+function updateSweep(dt){
+  const s=G.sweep, rk=G.rake;
+  if(!s||!rk){ G.sweep=null; return; }
+  s.t+=dt;
+  const home=C.pitZ-0.75, front=C.pinFrontZ+1.4, back=C.pitZ-0.45, hi=0.70, lo=0.02;
+  if(s.t<0.55){                                  // comes out of the dark, clearing the pins
+    rk.position.y=hi; rk.position.z=home+(front-home)*(s.t/0.55);
+  }else if(s.t<0.85){                            // drops to the deck in front of the rack
+    rk.position.y=hi+(lo-hi)*((s.t-0.55)/0.30); rk.position.z=front;
+  }else if(s.t<1.75){                            // sweeps back: all of it goes in the pit
+    rk.position.y=lo; rk.position.z=front+(back-front)*((s.t-0.85)/0.90);
+  }else if(s.t<2.05){                            // backs into the dark again
+    rk.position.y=lo; rk.position.z=back+(home-back)*((s.t-1.75)/0.30);
+  }else{
+    rk.position.set(0,hi,home); rk.visible=false;
+    const done=s.done; G.sweep=null;
+    if(done) done();
+    return;
+  }
+
+  if(rk.position.y>0.5) return;                  // still overhead, touches nothing
+  const rz=rk.position.z;
+  G.pins.forEach(p=>{
+    if(!p.active||p.pit||p.z<=rz-0.11) return;
+    if(!p.knocked){ p.knocked=true; p.ox-=7.5; }  // still on its feet: the bar tips it over
+    p.z=rz-0.11;
+    p.vz=Math.min(p.vz,-3.4);
+    p.moving=true; p.sweep=true; p.sound=performance.now();
+  });
+}
+
+// Between the two balls of a frame the deadwood leaves on its own: the deck drains
+// toward the pit, so fallen pins roll back and drop in while the survivors stay put.
+function rollDeadwoodOff(done){
+  const list=G.pins.filter(p=>p.active&&p.knocked&&!p.pit);
+  if(!list.length){ done(); return; }
+  list.forEach(p=>{ p.sweep=true; p.moving=true; });
+  G.clearing={t:0,done:done,list:list};
+}
+
+function updateClearing(dt){
+  const s=G.clearing;
+  if(!s) return;
+  s.t+=dt;
+  const thr=C.bellyR*2+0.01, outer=0.86, backEdge=C.pitZ+0.35;
+  let left=0;
+  s.list.forEach(p=>{
+    if(!p.active||!p.knocked||p.pit) return;
+    left++;
+    p.moving=true;
+    if(!p.side) p.side=(p.x>=0?1:-1);
+    // the rack itself blocks the way back, so deadwood works out to the edge of the
+    // lane first — clear of every spot — and only then heads down into the pit
+    const past=p.z<backEdge;
+    if(past){ p.vx*=(1-Math.min(1,dt*1.6)); }
+    else{
+      p.vx+=(p.side*outer-p.x)*5.0*dt;
+      if(p.vx>1.8) p.vx=1.8; else if(p.vx<-1.8) p.vx=-1.8;
+    }
+    const aligned=past||Math.abs(p.x)>outer-0.10;
+    p.vz-=(aligned?3.2:0.6)*dt;
+    if(p.vz<-2.5) p.vz=-2.5;
+    if(Math.abs(p.ay)<0.4) p.ox+=(-1.8-p.ox)*Math.min(1,dt*2.2);   // lying pins roll as they go
+
+    // deadwood must go round the standing pins, never through them
+    G.pins.forEach(q=>{
+      if(q===p||!q.active||q.pit) return;
+      const dx=p.x-q.x, dz=p.z-q.z, d=Math.hypot(dx,dz);
+      if(d>thr||d<1e-6) return;
+      const nx=dx/d, nz=dz/d, ov=thr-d;
+      if(q.knocked){                             // two bits of deadwood share the push
+        p.x+=nx*ov*0.5; p.z+=nz*ov*0.5;
+        q.x-=nx*ov*0.5; q.z-=nz*ov*0.5;
+        q.group.position.set(q.x,q.y,q.z);
+      }else{                                     // a standing pin holds its ground
+        p.x+=nx*ov; p.z+=nz*ov;
+        const vn=p.vx*nx+p.vz*nz;
+        if(vn<0){ p.vx-=nx*vn; p.vz-=nz*vn; }    // slide around it instead of stopping dead
+        p.vx+=nx*1.4*dt; p.oy+=nx*1.2*dt;
+      }
+    });
+  });
+  const hand=()=>{ if(!s.handed){ s.handed=true; if(s.done) s.done(); } };
+  if(!left){ hand(); G.clearing=null; return; }
+  if(s.t>0.9) hand();                            // the next ball need not wait for the pit
+  if(s.t>8){
+    // give up on the stragglers: they stay as ordinary deadwood for the rake to clear,
+    // and get their normal deck friction back so the next ball treats them like wood
+    G.pins.forEach(p=>{ if(p.active&&p.knocked&&!p.pit) p.sweep=false; });
+    G.clearing=null;
+  }
+}
+
+// A fresh rack rides in low through the same dark opening — the deck is empty behind the
+// rake — is lowered onto the spots, then the plate clears the new pins and backs out.
+function startSetter(){
+  const m=G.setterMesh;
+  if(!m){ if(G.phase==='resolve'){ G.phase='aim'; updateHUD(); } return; }
+  G.setter={t:0};
+  const home=C.pitZ-0.75, rackZ=C.pinFrontZ-0.55;
+  m.visible=true; m.position.set(0,C.comH+0.30+0.38,home);
+  G.pins.forEach(p=>{ if(p.active) p.group.position.set(p.x,p.y+0.30,p.z+(home-rackZ)); });
+}
+
+function updateSetter(dt){
+  const s=G.setter, m=G.setterMesh;
+  if(!s||!m){ G.setter=null; return; }
+  s.t+=dt;
+  const home=C.pitZ-0.75, rackZ=C.pinFrontZ-0.55, rest=C.comH+0.38, over=C.comH+0.44;
+  const place=(drop,dz)=>{
+    G.pins.forEach(p=>{ if(p.active&&!p.moving) p.group.position.set(p.x,p.y+drop,p.z+dz); });
+  };
+  if(s.t<0.60){                                  // rides in, pins hanging just off the deck
+    const k=s.t/0.60, z=home+(rackZ-home)*k;
+    m.position.set(0,rest+0.30,z); place(0.30,z-rackZ);
+  }else if(s.t<1.00){                            // lowers the rack onto the spots
+    const k=(s.t-0.60)/0.40, drop=0.30*(1-k)*(1-k*0.4);
+    m.position.set(0,rest+drop,rackZ); place(drop,0);
+  }else if(s.t<1.16){                            // rises just clear of the new pins
+    m.position.set(0,rest+(over-rest)*((s.t-1.00)/0.16),rackZ); place(0,0);
+  }else if(s.t<1.60){                            // backs out into the dark
+    m.position.set(0,over,rackZ+(home-rackZ)*((s.t-1.16)/0.44)); place(0,0);
+  }else{
+    m.position.set(0,rest+0.30,home); m.visible=false; G.setter=null; place(0,0);
+    if(G.phase==='resolve'){ G.phase='aim'; updateHUD(); }
+  }
+}
+// Deadwood that reached the pit is gone; anything still on the deck stays there as
+// deadwood — it is never deleted in place, the rake disposes of it at the end of the frame.
 function clearFallen(){
-  G.pins.forEach(p=>{ if(p.knocked){p.active=false;p.group.visible=false;} });
+  G.pins.forEach(p=>{ if(p.knocked&&(p.pit||p.y<-0.4)){p.active=false;p.sweep=false;p.pit=false;p.group.visible=false;} });
   G.pinsStanding=G.pins.filter(p=>p.active&&!p.knocked).length;
 }
 
@@ -619,29 +1360,60 @@ function step(dt){
   if(G.phase==='settle') G.settleTime+=dt;
 
   if((G.phase==='roll'||G.phase==='settle')&&b.rolling){
-    b.x+=b.vx*dt; b.z+=b.vz*dt;
-    b.vx*=(1-dt*0.15); b.vz*=(1-dt*0.05);
-    if(Math.abs(b.x)>C.laneHalf-C.ballR*0.4 && !b.gutter) b.gutter=true;
-    if(b.gutter){
-      const g=b.x>0?C.laneHalf+0.17:-(C.laneHalf+0.17);
-      b.x+=(g-b.x)*Math.min(1,dt*4); b.vx*=0.7; b.mesh.position.y=-0.05;
-    }else{
-      b.mesh.position.y=C.ballR;
-      if(G.phase==='roll') ballPinCollisions();
+    // The ball covers more ground per frame than a pin is wide, so advancing it in one
+    // jump lets it teleport straight through the rack — worse the lower the frame rate.
+    // Move it in short slices and test for contact after each one.
+    const dist=Math.hypot(b.vx,b.vz)*dt;
+    const sub=Math.max(1,Math.min(12,Math.ceil(dist/0.05)));
+    const sdt=dt/sub;
+    for(let i=0;i<sub;i++){
+      b.x+=b.vx*sdt; b.z+=b.vz*sdt;
+      // the lip is the back edge of the deck/channel: past that there is nothing under it
+      if(b.z<C.pitFront) b.inPit=true;
+      if(b.z<C.pitBack+C.ballR){ b.z=C.pitBack+C.ballR; b.vz=0; }   // rests against the wall
+      if(!b.gutter && Math.abs(b.x)>C.laneHalf-C.ballR*0.4) b.gutter=true;
+      if(!b.gutter && G.phase==='roll') ballPinCollisions();
     }
+    b.vx*=(1-dt*0.15); b.vz*=(1-dt*0.05);
+    if(b.inPit){
+      // over the mouth of the pit: nothing underneath any more, so it arcs in, still
+      // carrying the forward speed it went over the lip with
+      b.vx*=0.80; b.vz*=(1-Math.min(1,dt*1.2)); b.pvy-=C.grav*dt; b.py+=b.pvy*dt;
+      if(b.py<-1.1) b.mesh.visible=false;
+    }else if(b.gutter){
+      // A gutter ball rides in the trough: it settles onto the channel floor, which is
+      // 7cm below the boards, so only the very bottom of the ball sits below lane level.
+      const g=b.x>0?C.laneHalf+0.17:-(C.laneHalf+0.17);
+      b.x+=(g-b.x)*Math.min(1,dt*4); b.vx*=0.7;
+      b.py+=(C.gutterY-b.py)*Math.min(1,dt*7);
+    }else{
+      b.py=C.ballR;
+    }
+    b.mesh.position.y=b.py;
+    b.x=Math.max(-(C.laneHalf+0.17),Math.min(C.laneHalf+0.17,b.x));
     b.mesh.position.x=b.x; b.mesh.position.z=b.z;
     const spd=Math.hypot(b.vx,b.vz);
     b.mesh.rotation.x-=(spd/C.ballR)*dt;
-    if(G.phase==='roll' && (b.z<C.endZ || spd<0.7 || G.rollTime>6)){
+    if(G.phase==='roll' && (b.inPit || b.z<C.endZ || spd<0.7 || G.rollTime>6)){
       G.phase='settle'; G.settleTime=0;
     }
   }
 
+  updateSweep(dt);
+  updateClearing(dt);
+  updateSetter(dt);
   integratePins(dt);
   if(G.phase==='roll'||G.phase==='settle') pinPinCollisions();
 
   const std=G.pins.filter(p=>p.active&&!p.knocked).length;
   if(std!==G.pinsStanding && (G.phase==='roll'||G.phase==='settle')){ G.pinsStanding=std; updateHUD(); }
+  if(_crash){
+    let mv=0;
+    for(const p of G.pins){
+      if(p.active&&!p.pit&&(Math.abs(p.vx)+Math.abs(p.vz)>0.5||Math.abs(p.ox)+Math.abs(p.oz)>1.2)) mv++;
+    }
+    shapeCrash(G.standingBefore-std,mv);
+  }
 
   updateCamera(dt);
 
@@ -655,97 +1427,193 @@ function step(dt){
     document.getElementById('powerFill').style.width=(f*100)+'%';
   }
 
-  if(G.phase==='settle' && G.settleTime>1.15) onSettled();
+  // wait for the rack to actually stop moving, so a long tumble is never cut short
+  if(G.phase==='settle' && (G.settleTime>3.0 || (G.settleTime>0.9 && pinsAtRest()))) onSettled();
 }
 
-// A pin goes down: remember which way it topples, how fast, and give it a hop + spin.
-function knockDown(p,nx,nz,speed){
-  const m=Math.hypot(nx,nz)||1;
-  p.knocked=true;
-  p.dirx=nx/m; p.dirz=nz/m;
-  p.fall=0; p.fallV=0.35+Math.min(1.3,speed*0.10);
-  p.spin=0; p.spinV=(Math.random()-0.5)*7;
-  p.y=0; p.vy=0.3+Math.random()*0.5;
-  p.wob=0;
-  playKnock();
+// Hitting a pin below its centre of mass, with the foot gripping the deck, makes it
+// pivot about its base: that is why struck pins kick forward and tumble end over end.
+function strikePin(p,nx,nz,speed,gain,lift,ball){
+  p.vx+=nx*speed; p.vz+=nz*speed;
+  p.vy+=lift;
+  p.ox+=nz*gain; p.oz+=-nx*gain;            // torque about the base contact
+  // Only a real blow spins a pin about its own axis. Scaling this by contact speed
+  // stops pins that have already fallen from grinding against each other and
+  // re-spinning themselves forever.
+  const bite=Math.max(0,Math.min(1,(speed-0.6)/1.4));
+  p.oy+=(Math.random()-0.5)*gain*1.8*bite;
+  p.moving=true;
+  // a pin may sound again once it has had time to separate, so a tumbling rack keeps
+  // cracking instead of going silent after its first contact
+  const now=performance.now();
+  if(!p.sound||now-p.sound>150){
+    p.sound=now;
+    pinImpact(ball?Math.min(1,0.42+speed*0.10):Math.min(1,0.26+speed*0.16),!!ball);
+  }
 }
 
 function ballPinCollisions(){
-  const b=G.ball, reach=C.ballR+C.pinR+0.01;
+  const b=G.ball, reach=C.ballR+C.bellyR;
   G.pins.forEach(p=>{
-    if(!p.active||p.knocked) return;
+    if(!p.active) return;
+    if(p.y>C.comH+0.45) return;                    // airborne pin, ball passes under
     const dx=p.x-b.x, dz=p.z-b.z, d=Math.hypot(dx,dz);
-    if(d<reach){
-      const nx=dx/(d||1), nz=dz/(d||1);
+    if(d<reach&&d>1e-6){
+      const nx=dx/d, nz=dz/d;
+      if((p.vx-b.vx)*nx+(p.vz-b.vz)*nz>0) return;  // already separating
       const vn=Math.max(b.vx*nx+b.vz*nz,0);
-      const imp=vn*0.66+1.6;
-      p.vx+=nx*imp+b.vx*0.10; p.vz+=nz*imp+b.vz*0.10;
-      knockDown(p,nx,nz,vn);                       // ball-struck pin always goes down
-      b.vx=(b.vx-nx*vn*0.78)*0.9;
-      b.vz=(b.vz-nz*vn*0.78)*0.9;
+      strikePin(p,nx,nz,vn*0.46+1.05,3.6+Math.min(2.8,vn*0.32),0.07+Math.min(0.18,vn*0.020),true);
+      p.vx+=b.vx*0.11; p.vz+=b.vz*0.11;
+      p.x+=nx*(reach-d)*0.55; p.z+=nz*(reach-d)*0.55;
+      // The ball keeps driving through the rack, but a solid hit still turns it — that
+      // deflection is what leaves splits instead of a strike on every centre ball.
+      b.vx=(b.vx-nx*vn*0.40)*0.978;
+      b.vz=(b.vz-nz*vn*0.40)*0.978;
     }
   });
 }
 
 function pinPinCollisions(){
-  const thr=C.pinR*2+0.1;
-  const movers=G.pins.filter(p=>p.active&&p.knocked&&Math.hypot(p.vx,p.vz)>0.25);
+  const thr=C.bellyR*2+0.015;
+  const movers=G.pins.filter(p=>p.active&&p.moving&&Math.hypot(p.vx,p.vz)>0.32);
   movers.forEach(a=>{
     G.pins.forEach(b=>{
-      if(b===a||!b.active||b.knocked) return;
+      if(b===a||!b.active) return;
+      if(Math.abs(a.y-b.y)>0.34) return;            // one is flying over the other
       const dx=b.x-a.x, dz=b.z-a.z, d=Math.hypot(dx,dz);
-      if(d<thr){
-        const nx=dx/(d||1), nz=dz/(d||1), spd=Math.hypot(a.vx,a.vz), push=spd*0.545;
-        const nvx=b.vx+nx*push, nvz=b.vz+nz*push;
-        if(Math.hypot(nvx,nvz)>(b.knockThr||1.75)){
-          b.vx=nvx; b.vz=nvz;
-          knockDown(b,nx,nz,spd);
-        }else{
-          // glancing contact — the pin rocks on its base; a second nudge can still tip it
-          b.wob=Math.min(0.20,(b.wob||0)+push*0.05);
-          b.wobAx=[nx,nz];
-          b.vx=nvx*0.5; b.vz=nvz*0.5;
-        }
-        a.vx*=0.5; a.vz*=0.5;
+      if(d<thr&&d>1e-6){
+        const nx=dx/d, nz=dz/d;
+        if((b.vx-a.vx)*nx+(b.vz-a.vz)*nz>0) return;
+        const ov=(thr-d)*0.5;
+        // A pin already lying on the deck cannot be knocked over again — two flat pins
+        // side by side sit permanently inside this radius, and striking them each frame
+        // was feeding energy back into a rack that should be coming to rest.
+        if(b.ay<0.5){ b.x+=nx*ov; b.z+=nz*ov; a.x-=nx*ov; a.z-=nz*ov; return; }
+        const spd=Math.hypot(a.vx,a.vz);
+        strikePin(b,nx,nz,spd*0.21+0.10,0.9+Math.min(1.15,spd*0.21),Math.min(0.09,spd*0.018),false);
+        a.vx-=nx*spd*0.64; a.vz-=nz*spd*0.64;
+        b.x+=nx*ov; b.z+=nz*ov; a.x-=nx*ov; a.z-=nz*ov;
       }
     });
   });
 }
 
+// Full rigid-body step: gravity, free rotation about any axis, deck contact with
+// bounce + friction, and the gravity torque that keeps a leaning pin going over.
 function integratePins(dt){
-  const THREE=T(), now=performance.now()/1000, FLAT=Math.PI/2;
+  const THREE=T();
+  const axis=new THREE.Vector3(), nAx=new THREE.Vector3(), dq=new THREE.Quaternion();
   G.pins.forEach(p=>{
-    if(!p.active) return;
+    if(!p.active||!p.moving) return;
 
-    if(!p.knocked){
-      if(p.wob>0.002){                              // wobble, then settle back upright
-        p.wob*=Math.max(0,1-dt*3.0);
-        const ax=p.wobAx||[0,-1];
-        const axis=new THREE.Vector3(ax[1],0,-ax[0]).normalize();
-        p.group.quaternion.setFromAxisAngle(axis,Math.sin(now*16)*p.wob);
+    // Deadwood that has gone over the back edge is in the pit: no deck under it any
+    // more, so it just falls away, tumbling, exactly like the ball does.
+    if(p.pit){
+      p.vy-=C.grav*dt;
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt;
+      const pl=Math.hypot(p.ox,p.oy,p.oz);
+      if(pl>1e-5){
+        nAx.set(p.ox/pl,p.oy/pl,p.oz/pl);
+        p.quat.premultiply(dq.setFromAxisAngle(nAx,pl*dt)).normalize();
       }
+      p.group.quaternion.copy(p.quat);
+      p.group.position.set(p.x,p.y,p.z);
+      if(p.y<-1.9){ p.active=false; p.knocked=true; p.moving=false; p.group.visible=false; }
       return;
     }
 
-    p.x+=p.vx*dt; p.z+=p.vz*dt;
-    const damp=Math.max(0,1-dt*2.2); p.vx*=damp; p.vz*=damp;
+    p.vy-=C.grav*dt;
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt;
 
-    p.vy-=9.8*dt*0.55;                              // little hop off the deck
-    p.y+=p.vy*dt;
-    if(p.y<0){ p.y=0; p.vy=Math.abs(p.vy)*0.26; if(p.vy<0.45) p.vy=0; }
-
-    if(p.fall<FLAT){                                // topple accelerates, then lies flat
-      p.fallV+=(1.1+3.6*Math.sin(p.fall))*dt;
-      p.fall=Math.min(FLAT,p.fall+p.fallV*dt);
+    const ol=Math.hypot(p.ox,p.oy,p.oz);
+    if(ol>1e-5){
+      nAx.set(p.ox/ol,p.oy/ol,p.oz/ol);
+      p.quat.premultiply(dq.setFromAxisAngle(nAx,ol*dt)).normalize();
     }
-    p.spin+=p.spinV*dt; p.spinV*=Math.max(0,1-dt*1.6);
 
-    const axis=new THREE.Vector3(p.dirz,0,-p.dirx).normalize();
-    const qTilt=new THREE.Quaternion().setFromAxisAngle(axis,p.fall);
-    const qSpin=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),p.spin);
-    p.group.quaternion.copy(qTilt).multiply(qSpin);
+    axis.set(0,1,0).applyQuaternion(p.quat);
+    const ay=Math.max(-1,Math.min(1,axis.y));
+    p.ay=ay;
+    const sinT=Math.sqrt(Math.max(0,1-ay*ay));
+    const tilt=Math.acos(ay);                 // 0 = upright, PI/2 = lying flat, PI = on its head
+    const low=pinLowOffset(ay,sinT);
+
+    if(p.y<low){
+      p.y=low;
+      if(p.vy<0){
+        if(p.vy<-0.55) deckThud(Math.min(1,-p.vy/3.2));   // pin landing on the maple deck
+        p.vy=-p.vy*0.28; if(Math.abs(p.vy)<0.5) p.vy=0;
+      }
+      const gf=Math.min(1,dt*(p.sweep?1.6:5.0));   p.vx*=(1-gf); p.vz*=(1-gf);
+      const ad=Math.min(1,dt*2.6);   p.ox*=(1-ad); p.oz*=(1-ad); p.oy*=(1-Math.min(1,dt*3.2));
+
+      const hl=Math.hypot(axis.x,axis.z);
+      if(hl>1e-4){
+        // rotating about this axis tips the pin further along the way it already leans
+        const tx=axis.z/hl, tz=-axis.x/hl;
+        if(tilt<C.balanceTilt){
+          const g=C.restore*Math.sin(tilt)*dt;      // still within the foot: rocks upright
+          p.ox-=tx*g; p.oz-=tz*g;
+          const r=Math.min(1,dt*2.2); p.ox*=(1-r); p.oz*=(1-r);
+        }else if(tilt<Math.PI/2){
+          const g=C.topple*Math.sin(Math.max(tilt,0.28))*dt;   // past balance: gravity takes it over
+          p.ox+=tx*g; p.oz+=tz*g;
+        }else{
+          // rolled past horizontal — gravity pulls it back down onto its side,
+          // so a pin can never wind up balanced on its head
+          const g=C.topple*Math.sin(tilt-Math.PI/2)*dt*2.4;
+          p.ox-=tx*g; p.oz-=tz*g;
+          const r=Math.min(1,dt*4.0); p.ox*=(1-r); p.oz*=(1-r);
+        }
+      }
+      if(Math.abs(ay)<0.18){                        // flat on the deck, bleed off the roll
+        const s=Math.min(1,dt*4.5);
+        p.ox*=(1-s); p.oz*=(1-s); p.oy*=(1-s);
+        if(Math.hypot(p.vx,p.vz)<0.3){ p.vx*=(1-s); p.vz*=(1-s); }
+      }
+    }
+
+    // Hard bounds on the deck. These hold at every height and every distance, so a pin
+    // can never be flung through a kickback wall, through the back of the pit, or off
+    // the lane entirely — it stays as deadwood until the rack is cleared.
+    const lim=C.laneHalf-C.bellyR*0.6;
+    if(p.x>lim){ p.x=lim; if(p.vx>0) p.vx=-p.vx*0.30; p.oy+=0.8; }
+    if(p.x<-lim){ p.x=-lim; if(p.vx<0) p.vx=-p.vx*0.30; p.oy-=0.8; }
+    if(p.z<C.pitZ){
+      // A fallen pin driven past the back of the deck drops into the pit instead of
+      // rebounding off thin air; one still on its feet is held by the pit cushion.
+      if(p.knocked||p.sweep){ p.pit=true; p.vz=Math.min(p.vz,-0.7); p.vy=Math.min(p.vy,-0.2); }
+      else { p.z=C.pitZ; if(p.vz<0) p.vz=-p.vz*0.28; }
+    }
+    if(p.z>C.pinFrontZ+1.6){ p.z=C.pinFrontZ+1.6; if(p.vz>0) p.vz=-p.vz*0.30; }
+
+    if(p.y<-0.6){ p.active=false; p.knocked=true; p.group.visible=false; return; }
+
+    // A pin only counts as down when it actually falls over. A pin that is nudged off
+    // its spot but stays on its feet is still standing, exactly as in real bowling.
+    if(!p.knocked && ay<0.82) p.knocked=true;
+
+    p.group.quaternion.copy(p.quat);
     p.group.position.set(p.x,p.y,p.z);
+
+    // A pin may only go to sleep in a pose it could actually hold: standing on its
+    // foot, or lying on its side. Anywhere in between gravity is still turning it,
+    // so staying awake is what stops it freezing half-fallen or propped nose-down.
+    const posed=(tilt<C.balanceTilt)||(Math.abs(tilt-Math.PI/2)<0.14);
+    if(posed && p.y<=low+1e-4 && Math.hypot(p.vx,p.vy,p.vz)<0.16 && Math.hypot(p.ox,p.oy,p.oz)<0.35){
+      p.moving=false;
+      if(tilt<C.balanceTilt*1.2&&ay>0&&!p.knocked){ // survived: stand it back up cleanly
+        p.quat.identity(); p.y=C.comH; p.vx=p.vy=p.vz=0; p.ox=p.oy=p.oz=0;
+        p.group.quaternion.identity(); p.group.position.set(p.x,C.comH,p.z);
+      }
+    }
   });
+}
+
+function pinsAtRest(){
+  // deadwood on its way to the pit is not part of the rack: waiting for it would hold
+  // the score up for seconds after the pins that matter have stopped
+  return !G.pins.some(p=>p.active&&p.moving&&!p.sweep&&!p.pit);
 }
 function updateCamera(dt){
   const cam=G.camera, b=G.ball;
@@ -786,29 +1654,43 @@ function onSettled(){
   G.phase='resolve'; updateHUD();
   if(strike) playChime(true); else if(spare) playChime(false);
 
+  const gen=G.gen;
   const finish=()=>{
-    if(turnEnds){
-      const nxt=nextPlayerIndex();
-      if(nxt===-1){ endGame(); return; }
-      G.cur=nxt;
-      G.framesData=G.players[G.cur].frames;
-      setupNextBall(true);
+    if(gen!==G.gen) return;                      // the game was restarted meanwhile
+    const after=()=>{
+      if(gen!==G.gen) return;
+      if(turnEnds){
+        const nxt=nextPlayerIndex();
+        if(nxt===-1){ endGame(); return; }
+        G.cur=nxt;
+        G.framesData=G.players[G.cur].frames;
+        setupNextBall(true);
+      }else{
+        setupNextBall(fresh);
+      }
+    };
+    // between balls the deadwood drains off on its own; at the end of a frame the rake
+    // wipes the deck and the setter brings a new rack down
+    if(turnEnds||fresh){
+      if(sweepDeadwood()&&G.sweep) G.sweep.done=after; else after();
     }else{
-      setupNextBall(fresh);
+      rollDeadwoodOff(after);
     }
   };
   if(strike||spare){
-    G.msg=strike?{title:'STRIKE!',sub:'',color:'#ffd15c',btn:false}
-                :{title:'SPARE!',sub:'',color:'#5ac8fa',btn:false};
+    G.msg=strike?{title:'STRIKE!',sub:'',color:'#ffb63d',btn:false}
+                :{title:'SPARE!',sub:'',color:'#7fd4ff',btn:false};
     updateHUD();
-    setTimeout(()=>{G.msg=null; finish();},1150);
+    setTimeout(()=>{if(gen!==G.gen) return; G.msg=null; finish();},1150);
   }else{
     setTimeout(finish,650);
   }
 }
 function setupNextBall(fresh){
   if(fresh) respawnPins(); else clearFallen();
-  resetBall(); G.phase='aim'; updateHUD();
+  resetBall(); updateHUD();
+  if(fresh){ G.phase='resolve'; startSetter(); }
+  else G.phase='aim';
 }
 function playerTotal(i){
   const s=computeScores(G.players[i].frames); let t=0; s.forEach(x=>{if(x!=null) t=x;}); return t;
@@ -887,6 +1769,21 @@ function frameMarks(f,i){
 }
 
 // ===== HUD =====
+// Overhead pindeck display: the four-row rack as the house monitor shows it.
+const PINDECK_ROWS=[[7,8,9,10],[4,5,6],[2,3],[1]];
+function renderPindeck(){
+  const host=document.getElementById('pinrows');
+  if(!host) return;
+  const ready=G.pins.length===10;
+  host.innerHTML=PINDECK_ROWS.map(row=>
+    '<div class="pdrow">'+row.map(n=>{
+      const p=G.pins[n-1];
+      const up=!ready||(p&&p.active&&!p.knocked);
+      return '<span class="ppin'+(up?'':' down')+'"></span>';
+    }).join('')+'</div>'
+  ).join('');
+}
+
 function updateHUD(){
   const curIdx=G.gameOver?-1:currentFrameIndex();
   const scores=computeScores(G.framesData);
@@ -906,7 +1803,8 @@ function updateHUD(){
   const f=G.framesData[curIdx===-1?9:curIdx];
   const throwN=(f?f.rolls.length:0)+1;
   document.getElementById('frameNum').textContent=(G.gameOver?10:(curIdx+1))+'/10';
-  document.getElementById('throwLabel').textContent=G.gameOver?'Finished':('Throw '+throwN+' · '+G.pinsStanding+' pins');
+  document.getElementById('throwLabel').textContent=G.gameOver?'Finished':('Throw '+throwN);
+  renderPindeck();
   document.getElementById('totalStr').textContent=String(total);
   document.getElementById('boardWho').textContent=G.numPlayers>1?('PLAYER '+(G.cur+1)):'';
 
@@ -915,7 +1813,7 @@ function updateHUD(){
     tb.style.display='flex';
     tb.innerHTML=G.players.map((p,i)=>{
       const act=(i===G.cur&&!G.gameOver)?' act':'';
-      return `<span class="pseg${act}"><span class="pdot" style="background:${PLAYER_HEX[i]}"></span>P${i+1} ${playerTotal(i)}</span>`;
+      return `<span class="pseg${act}"><span class="pdot" style="background:${PLAYER_HEX[i]};color:${PLAYER_HEX[i]}"></span>P${i+1} ${playerTotal(i)}</span>`;
     }).join('');
   }else tb.style.display='none';
 
@@ -924,7 +1822,11 @@ function updateHUD(){
   const m=G.msg, wrap=document.getElementById('msgWrap');
   if(m){
     wrap.style.display='flex';
-    document.getElementById('msgTitle').textContent=m.title;
+    const ttl=document.getElementById('msgTitle');
+    ttl.textContent=m.title;
+    const col=m.color||'#7fd4ff';
+    ttl.style.color=col;
+    ttl.style.textShadow='0 0 30px '+col+'80';
     document.getElementById('msgSub').textContent=m.sub;
     document.getElementById('msgBtn').style.display=m.btn?'inline-block':'none';
   }else wrap.style.display='none';
@@ -946,11 +1848,22 @@ window.addEventListener('DOMContentLoaded',()=>{
   });
   document.getElementById('msgBtn').addEventListener('click',()=>{ unlockAudio(); restart(); });
 
+  try{ _muted=localStorage.getItem('bowl.muted')==='1'; }catch(e){}
+  document.getElementById('soundBtn').classList.toggle('off',_muted);
+  document.getElementById('soundBtn').addEventListener('click',()=>{ unlockAudio(); setMuted(!_muted); });
+  try{ _musOn=localStorage.getItem('bowl.music')!=='0'; }catch(e){}
+  document.getElementById('musicBtn').classList.toggle('off',!_musOn);
+  document.getElementById('musicBtn').addEventListener('click',()=>{ unlockAudio(); setMusic(!_musOn); });
+
   addEventListener('pointermove',onPointerMove);
   addEventListener('pointerdown',e=>{ unlockAudio(); onPointerDown(e); });
   addEventListener('pointerup',onPointerUp);
   addEventListener('pointercancel',onPointerUp);
-  addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat){ e.preventDefault(); unlockAudio(); startCharge(); } });
+  addEventListener('keydown',e=>{
+    if(e.code==='Space'&&!e.repeat){ e.preventDefault(); unlockAudio(); startCharge(); return; }
+    if(e.code==='ArrowLeft'){ e.preventDefault(); nudgeAim(-0.012); }
+    else if(e.code==='ArrowRight'){ e.preventDefault(); nudgeAim(0.012); }
+  });
   addEventListener('keyup',e=>{ if(e.code==='Space'){ e.preventDefault(); releaseThrow(); } });
   G.mountEl.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 
