@@ -514,6 +514,22 @@ function brickTexture(){
   });
 }
 
+// A portal that lays a game out at a fixed size (GameDistribution asks for one) often
+// scales the iframe up to fill the page. devicePixelRatio does not see that scaling, so
+// the canvas would be rendered small and then stretched, which reads as a soft, blurry
+// picture. When we are embedded and our logical viewport is clearly smaller than the
+// screen, render extra pixels so the upscale still lands on real detail. Bounded, and it
+// stays at 1 on phones, where a portal hands the game the whole viewport anyway.
+function renderScale(){
+  let s = Math.min(devicePixelRatio || 1, 2);
+  try{
+    if(window.self !== window.top && screen && screen.width > innerWidth){
+      s *= Math.min(1.6, screen.width / innerWidth);
+    }
+  }catch(e){}
+  return Math.min(2.5, Math.max(1, s));
+}
+
 // An iframe can still report a 0x0 viewport at DOMContentLoaded. Falling back to the
 // mount element keeps the camera aspect finite; a NaN aspect poisons the framing for good.
 function viewportSize(){
@@ -538,7 +554,7 @@ function initGame(){
 
   const renderer=new THREE.WebGLRenderer({antialias:true});
   renderer.setSize(w,h);
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setPixelRatio(renderScale());
   renderer.shadowMap.enabled=true;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   G.renderer=renderer;
@@ -1412,6 +1428,7 @@ function onResize(){
   G._vw=w; G._vh=h;
   G.camera.aspect=w/h;
   applyFraming();
+  G.renderer.setPixelRatio(renderScale());
   G.renderer.setSize(w,h);
 }
 
