@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Oswald:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script defer src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b0f14;overflow:hidden;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -200,6 +200,37 @@
     transition:color .2s,border-color .2s,transform .12s;}
   #menuBtn:hover{color:#eaf2f8;border-color:rgba(255,255,255,.4);}
   #menuBtn:active{transform:scale(.95);}
+  /* ---- loading screen ---- */
+  #loadWrap{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(70% 55% at 50% 44%,#151d28,#0b0f14 72%);
+    transition:opacity .5s ease;}
+  #loadWrap.done{opacity:0;pointer-events:none;}
+  #loadWrap.gone{display:none;}
+  #loadCard{width:min(340px,84%);text-align:center;}
+  #loadTitle{font-size:34px;color:#7fd4ff;text-shadow:0 0 32px rgba(127,212,255,.45);line-height:1.02;}
+  #loadSub{margin-top:8px;font-size:9.5px;font-weight:500;letter-spacing:.3em;text-transform:uppercase;
+    color:rgba(234,242,248,.38);}
+  #loadLane{position:relative;height:44px;margin-top:24px;}
+  #loadTrack{position:absolute;left:0;right:0;bottom:0;height:8px;border-radius:99px;
+    background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);overflow:hidden;}
+  #loadFill{height:100%;width:0%;border-radius:99px;
+    background:linear-gradient(90deg,#7fd4ff,#ffb63d);box-shadow:0 0 16px rgba(255,182,61,.4);}
+  #loadBall{position:absolute;bottom:0;left:0;width:18px;height:18px;border-radius:50%;
+    background:radial-gradient(circle at 33% 27%,#7fa8ff,#1e3390 60%,#0c1442);
+    box-shadow:0 5px 14px rgba(0,0,0,.6), 0 0 18px rgba(127,212,255,.22);
+    transform:translateX(-50%);}
+  /* a miniature rack in the house-monitor arrangement, standing at the end of the lane */
+  #loadPins{position:absolute;right:5px;bottom:7px;display:flex;flex-direction:column;
+    align-items:center;gap:1.5px;}
+  #loadPins .prow{display:flex;gap:2px;}
+  #loadPins i{display:block;width:4px;height:6px;border-radius:46% 46% 38% 38%;background:#f4f9fd;
+    box-shadow:0 0 5px rgba(244,249,253,.45);transform-origin:50% 100%;
+    transition:transform .55s cubic-bezier(.2,1.3,.4,1), opacity .55s;}
+  #loadWrap.strike #loadPins i{opacity:.18;}
+  #loadWrap.strike #loadPins .prow:nth-child(odd) i{transform:rotate(72deg) translate(3px,2px);}
+  #loadWrap.strike #loadPins .prow:nth-child(even) i{transform:rotate(-62deg) translate(-3px,2px);}
+  #loadPct{margin-top:15px;font-size:13px;color:#7fd4ff;letter-spacing:.06em;}
+
   #startCols{display:block;}
 
   /* Short viewports (a phone held sideways): the single column pushed PLAY below the
@@ -274,6 +305,7 @@
   }
 
   @media (max-width:560px){
+    #loadTitle{font-size:27px;}
     #startCard{padding:20px 20px 22px;border-radius:17px;}
     #startTitle{font-size:31px;}
     #startSub{font-size:9.5px;}
@@ -318,6 +350,24 @@
     <button id="playersBtn" class="rbtn"><span class="fun" id="playersGlyph">1P</span></button>
   </div>
   <div id="hint">Aim &middot; hold to charge &middot; release to bowl</div>
+
+  <div id="loadWrap">
+    <div id="loadCard">
+      <div id="loadTitle" class="fun">3D Bowling</div>
+      <div id="loadSub">Loading</div>
+      <div id="loadLane">
+        <div id="loadTrack"><div id="loadFill"></div></div>
+        <div id="loadPins">
+          <div class="prow"><i></i><i></i><i></i><i></i></div>
+          <div class="prow"><i></i><i></i><i></i></div>
+          <div class="prow"><i></i><i></i></div>
+          <div class="prow"><i></i></div>
+        </div>
+        <div id="loadBall"></div>
+      </div>
+      <div id="loadPct" class="fun">0%</div>
+    </div>
+  </div>
 
   <div id="startWrap">
     <div id="startCard">
@@ -2020,6 +2070,51 @@ function loop(t){
   if(dt>0.05) dt=0.05;
   step(dt);
   G.renderer.render(G.scene,G.camera);
+  if(!G.firstFrame){ G.firstFrame=true; setLoad(1); }
+}
+
+// ===== loading screen =====
+// Real progress, not a timer: fonts, the Three.js bundle, the built scene and the
+// first rendered frame each move the ball a little further down the lane.
+const LOAD={cur:0,target:0,t0:0,last:0,done:false};
+function setLoad(p){ LOAD.target=Math.max(LOAD.target,Math.min(1,p)); }
+function loadTick(){
+  if(LOAD.done) return;
+  // Ease on elapsed time, not per frame: a backgrounded tab throttles rAF, and a
+  // frame-based decay would crawl toward the end and never actually arrive.
+  const now=performance.now();
+  const dt=Math.min(0.15,(now-(LOAD.last||now))/1000); LOAD.last=now;
+  LOAD.cur+=(LOAD.target-LOAD.cur)*Math.min(1,dt*7);
+  if(LOAD.target>=1 && LOAD.cur>0.985) LOAD.cur=1;
+  const pct=Math.min(100,Math.round(LOAD.cur*1000)/10);
+  const fill=document.getElementById('loadFill');
+  const ball=document.getElementById('loadBall');
+  if(fill) fill.style.width=pct+'%';
+  if(ball){
+    ball.style.left=pct+'%';
+    ball.style.transform='translateX(-50%) rotate('+(LOAD.cur*760).toFixed(1)+'deg)';
+  }
+  const lab=document.getElementById('loadPct');
+  if(lab) lab.textContent=Math.round(pct)+'%';
+  // hold the screen briefly even on a fast connection, so it reads as a beat,
+  // but never trap the player behind it if something stalls
+  const waited=now-LOAD.t0;
+  if((LOAD.cur>=1 && waited>900) || waited>12000){ finishLoad(); return; }
+  // rAF is suspended entirely while the page is hidden, so keep a timer going there
+  if(document.hidden) setTimeout(loadTick,200); else requestAnimationFrame(loadTick);
+}
+function finishLoad(){
+  LOAD.done=true;
+  const el=document.getElementById('loadWrap');
+  document.getElementById('loadFill').style.width='100%';
+  document.getElementById('loadBall').style.left='100%';
+  document.getElementById('loadPct').textContent='100%';
+  el.classList.add('strike');                       // the ball takes the rack out
+  setTimeout(()=>el.classList.add('done'),560);
+  setTimeout(()=>{
+    el.classList.add('gone');
+    if(typeof window.onGameLoaded==='function') window.onGameLoaded();
+  },1080);
 }
 
 // ===== start screen =====
@@ -2035,6 +2130,7 @@ function syncMenu(){
 }
 function openMenu(){
   G.started=false;
+  if(typeof window.onGameplayStop==='function') window.onGameplayStop();
   G.needsReset=true;            // PLAY then starts a fresh game
   G.msg=null; updateHUD();
   document.getElementById('app').classList.add('menu');
@@ -2043,6 +2139,7 @@ function openMenu(){
 }
 function startFromMenu(){
   unlockAudio();
+  if(typeof window.onGameplayStart==='function') window.onGameplayStart();
   setVolume(_vol);
   if(G.needsReset){ G.needsReset=false; restart(); }
   document.getElementById('startWrap').classList.add('hide');
@@ -2096,12 +2193,19 @@ window.addEventListener('DOMContentLoaded',()=>{
 
   syncMenu();
 
+  LOAD.t0=performance.now();
+  setLoad(0.10);
+  loadTick();
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>setLoad(0.40));
+  else setLoad(0.40);
+
   const t0=performance.now();
   const wait=()=>{
     const sized=innerWidth>0 || G.mountEl.clientWidth>0;
     // Wait for a real viewport, but never stall forever: after 2.5s start anyway and
     // let the loop's size check correct things once the container is finally shown.
-    if(window.THREE && G.mountEl && (sized || performance.now()-t0>2500)) initGame();
+    if(window.THREE) setLoad(0.65);
+    if(window.THREE && G.mountEl && (sized || performance.now()-t0>2500)){ initGame(); setLoad(0.90); }
     else setTimeout(wait,60);
   };
   wait();

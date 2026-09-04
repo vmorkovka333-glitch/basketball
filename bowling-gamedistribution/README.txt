@@ -44,6 +44,17 @@ STORAGE
   localStorage keys "bowl.muted" and "bowl.music" remember the audio toggles.
   Nothing else is stored; no cookies, no analytics, no tracking.
 
+LOADING
+  Three.js and the portal SDK are both deferred, so the first paint is never blocked:
+  a loading screen appears immediately and fills a lane-shaped progress bar from real
+  milestones (fonts, the bundle, the built scene, the first rendered frame). When it
+  finishes it calls window.onGameLoaded, then hands over to the start menu.
+
+START MENU
+  The game opens on a menu with the instructions, a 1P/2P choice, a master volume
+  slider and a music toggle. It ignores all input until PLAY is pressed. A MENU
+  button beside PLAY AGAIN reopens it after a game.
+
 EMBEDDING
   Safe in an iframe of any size, including one that starts at 0x0 and is sized
   or revealed later: the game waits for a real viewport, and the render loop
