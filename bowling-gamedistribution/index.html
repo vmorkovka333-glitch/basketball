@@ -1435,6 +1435,16 @@ function applyFraming(){
     lookY:lerp(0.5,  0.45),
     lookZ:lerp(-6.5, -7.2),
   };
+  // Three.js fov is vertical, so past the widest tuned aspect the horizontal view keeps
+  // opening up without limit — at 2.34 it reached 64 degrees and the camera looked well
+  // past the alley into bare floor, leaving dark wedges in the bottom corners. Hold the
+  // horizontal field at its 1.6 value instead and let the vertical shrink, which keeps
+  // the composition the one the scene was built for at any width.
+  const A_WIDE=1.6;
+  if(a>A_WIDE){
+    const hHalf=Math.atan(Math.tan(G.frame.fov*Math.PI/360)*A_WIDE);
+    G.frame.fov=2*Math.atan(Math.tan(hHalf)/a)*180/Math.PI;
+  }
   G.camera.fov=G.frame.fov;
   G.camera.updateProjectionMatrix();
 }
