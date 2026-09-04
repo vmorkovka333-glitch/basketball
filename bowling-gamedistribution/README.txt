@@ -2,14 +2,9 @@
 =====================================
 
 HTML5 game (Three.js r128). Three.js and both fonts are bundled locally; the
-only external request is the GameDistribution SDK.
+only external request is the GameDistribution SDK. Ready to upload as is.
 
-BEFORE PUBLISHING - ONE EDIT REQUIRED
-  Open index.html and replace the placeholder on the GD_OPTIONS line:
-
-      gameId: "YOUR-GAMEDISTRIBUTION-GAME-ID"
-
-  with the id from your GameDistribution dashboard. Nothing else needs changing.
+  gameId: dc8df03639974dc6925f17ff2d8d85bf   (already set in index.html)
 
 FILES
   index.html     the game, with the GD SDK loader and event wiring
