@@ -1431,10 +1431,14 @@ function applyFraming(){
   // past the alley into bare floor, leaving dark wedges in the bottom corners. Hold the
   // horizontal field at its 1.6 value instead and let the vertical shrink, which keeps
   // the composition the one the scene was built for at any width.
-  const A_WIDE=1.6;
-  if(a>A_WIDE){
-    const hHalf=Math.atan(Math.tan(G.frame.fov*Math.PI/360)*A_WIDE);
-    G.frame.fov=2*Math.atan(Math.tan(hHalf)/a)*180/Math.PI;
+  // Freezing the horizontal field at its 1.6 value squeezed the vertical view badly on a
+  // wide screen — the ball ended up cut off at the bottom edge. Now that the alley is five
+  // lanes wide with an approach in front, a wide frame lands on scenery again, so let the
+  // view open normally and only hold it back past the point where even that runs out.
+  const HFOV_MAX=65*Math.PI/180;
+  const hHalf=Math.atan(Math.tan(G.frame.fov*Math.PI/360)*a);
+  if(hHalf>HFOV_MAX/2){
+    G.frame.fov=2*Math.atan(Math.tan(HFOV_MAX/2)/a)*180/Math.PI;
   }
   G.camera.fov=G.frame.fov;
   G.camera.updateProjectionMatrix();
