@@ -317,9 +317,18 @@ function brickTexture(){
   });
 }
 
+// An iframe can still report a 0x0 viewport at DOMContentLoaded. Falling back to the
+// mount element keeps the camera aspect finite; a NaN aspect poisons the framing for good.
+function viewportSize(){
+  const el=G.mountEl;
+  const w=innerWidth || (el?el.clientWidth:0) || 1;
+  const h=innerHeight || (el?el.clientHeight:0) || 1;
+  return [Math.max(1,w), Math.max(1,h)];
+}
+
 function initGame(){
   const THREE=T();
-  const w=innerWidth, h=innerHeight;
+  const [w,h]=viewportSize();
 
   const scene=new THREE.Scene();
   scene.background=new THREE.Color(0x2b1c14);
@@ -336,6 +345,7 @@ function initGame(){
   renderer.shadowMap.enabled=true;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   G.renderer=renderer;
+  G._vw=w; G._vh=h;
   G.mountEl.appendChild(renderer.domElement);
 
   // ---- warm alley lighting ----
@@ -1172,7 +1182,7 @@ function throwBall(power){
 // visually far away. Zoom in (lower fov) and pull the camera back as the screen
 // gets taller so the deck is framed the same way in both orientations.
 function applyFraming(){
-  const a=G.camera.aspect;
+  const a=(isFinite(G.camera.aspect) && G.camera.aspect>0) ? G.camera.aspect : 1;
   const t=Math.max(0,Math.min(1,(1.6-a)/(1.6-0.46)));   // 0 = wide, 1 = tall
   const lerp=(x,y)=>x+(y-x)*t;
   // tuned so both orientations frame the deck at ~52% of the height and the ball at ~85%
@@ -1189,7 +1199,8 @@ function applyFraming(){
 
 function onResize(){
   if(!G.renderer) return;
-  const w=innerWidth,h=innerHeight;
+  const [w,h]=viewportSize();
+  G._vw=w; G._vh=h;
   G.camera.aspect=w/h;
   applyFraming();
   G.renderer.setSize(w,h);
@@ -1627,6 +1638,9 @@ function pinsAtRest(){
 function updateCamera(dt){
   const cam=G.camera, b=G.ball;
   const F=G.frame;
+  const ok=v=>typeof v==='number' && isFinite(v);
+  if(!ok(cam.position.x)||!ok(cam.position.y)||!ok(cam.position.z)) cam.position.set(0,F.camY,F.camZ);
+  if(!ok(G._tx)||!ok(G._ty)||!ok(G._tz)){ G._tx=0; G._ty=F.lookY; G._tz=F.lookZ; }
   let px=0,py=F.camY,pz=F.camZ,tx=0,ty=F.lookY,tz=F.lookZ;
   if(G.phase==='roll'||G.phase==='settle'){
     pz=Math.max(b.z+(F.camZ-2.75),-1.0); py=F.camY+0.1; px=b.x*0.3;
@@ -1843,6 +1857,8 @@ function updateHUD(){
 
 function loop(t){
   G.raf=requestAnimationFrame(loop);
+  const vp=viewportSize();
+  if(vp[0]!==G._vw||vp[1]!==G._vh) onResize();
   let dt=(t-G.last)/1000; G.last=t;
   if(dt>0.05) dt=0.05;
   step(dt);
@@ -1876,7 +1892,14 @@ window.addEventListener('DOMContentLoaded',()=>{
   addEventListener('keyup',e=>{ if(e.code==='Space'){ e.preventDefault(); releaseThrow(); } });
   G.mountEl.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 
-  const wait=()=>{ if(window.THREE && G.mountEl) initGame(); else setTimeout(wait,60); };
+  const t0=performance.now();
+  const wait=()=>{
+    const sized=innerWidth>0 || G.mountEl.clientWidth>0;
+    // Wait for a real viewport, but never stall forever: after 2.5s start anyway and
+    // let the loop's size check correct things once the container is finally shown.
+    if(window.THREE && G.mountEl && (sized || performance.now()-t0>2500)) initGame();
+    else setTimeout(wait,60);
+  };
   wait();
 });
 
