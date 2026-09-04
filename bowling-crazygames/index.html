@@ -613,8 +613,17 @@ function initGame(){
     cap.position.set(s*(C.laneHalf+0.52),0.29,-5); scene.add(cap);
   });
 
-  // neighbouring lanes for depth
-  [-1,1].forEach(s=>{
+  // ---- approach, the boarded area players stand on ----
+  // A wide screen looks down past the near end of the lanes; without this the bottom of
+  // the frame is bare floor.
+  const appTex=woodTexture(); appTex.wrapS=appTex.wrapT=THREE.RepeatWrapping; appTex.repeat.set(8,3);
+  const approach=new THREE.Mesh(new THREE.BoxGeometry(26,0.2,9),
+    new THREE.MeshStandardMaterial({map:appTex,color:0xd9c7a6,roughness:0.5}));
+  approach.position.set(0,-0.1,8.5); approach.receiveShadow=true; scene.add(approach);
+
+  // neighbouring lanes for depth — two on each side, so the outer edges of a wide frame
+  // land on more alley instead of running out of scenery
+  [-2,-1,1,2].forEach(s=>{
     const off=s*3.0;
     const nt=woodTexture(); nt.wrapS=nt.wrapT=THREE.RepeatWrapping; nt.repeat.set(1,3);
     const nl=new THREE.Mesh(new THREE.BoxGeometry(2*C.laneHalf,0.2,18),
@@ -716,8 +725,8 @@ function initGame(){
   setter.visible=false; setter.position.set(0,0.90,C.pitZ-0.75);
   scene.add(setter); G.setterMesh=setter;
 
-  // dark pin-pit mouths + BOWLING signs above each lane
-  [-3,0,3].forEach(off=>{
+  // dark pin-pit mouths + BOWLING signs above each lane, outer pair included
+  [-6,-3,0,3,6].forEach(off=>{
     const pit=new THREE.Mesh(new THREE.BoxGeometry(2.2,1.5,0.2),
       new THREE.MeshStandardMaterial({color:0x160d09,roughness:1}));
     pit.position.set(off,0.55,C.pinFrontZ-1.48); scene.add(pit);
