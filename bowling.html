@@ -145,6 +145,95 @@
   #msgBtn:hover{box-shadow:0 0 34px rgba(127,212,255,.6);}
   #msgBtn:active{transform:scale(.95);}
 
+  /* ---- start screen ---- */
+  #startWrap{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;
+    padding:16px;background:radial-gradient(70% 55% at 50% 46%,rgba(4,7,11,.60),rgba(4,7,11,.88));}
+  #startWrap.hide{display:none;}
+  #startCard{width:min(410px,100%);max-height:100%;overflow-y:auto;text-align:center;
+    padding:24px 28px 26px;border-radius:20px;
+    background:rgba(12,16,22,.86);-webkit-backdrop-filter:blur(20px) saturate(1.2);
+    backdrop-filter:blur(20px) saturate(1.2);border:1px solid rgba(255,255,255,.15);
+    box-shadow:0 26px 70px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.08);
+    animation:pop .3s cubic-bezier(.2,1.4,.4,1);}
+  #startTitle{font-size:40px;color:#7fd4ff;text-shadow:0 0 30px rgba(127,212,255,.5);line-height:1.02;}
+  #startSub{font-size:10.5px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;
+    color:rgba(234,242,248,.5);margin-top:7px;}
+  .srule{height:1px;background:rgba(255,255,255,.10);margin:17px 0 13px;}
+  .slbl{font-size:9px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;
+    color:rgba(234,242,248,.42);text-align:left;}
+  #howto{display:flex;flex-direction:column;gap:9px;margin-top:11px;text-align:left;}
+  .howrow{display:flex;align-items:center;gap:11px;}
+  .hownum{flex:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-family:'Bungee',sans-serif;font-size:10px;color:#08131c;
+    background:#7fd4ff;box-shadow:0 0 14px rgba(127,212,255,.35);}
+  .howtxt{font-size:12px;font-weight:300;letter-spacing:.03em;line-height:1.35;
+    color:rgba(234,242,248,.82);}
+  .howtxt b{font-weight:500;color:#7fd4ff;}
+  .srow{display:flex;align-items:center;justify-content:space-between;gap:13px;margin-top:11px;}
+  .seg{display:flex;gap:6px;}
+  .sbtn{pointer-events:auto;cursor:pointer;padding:7px 15px;border-radius:99px;
+    font-family:'Bungee',sans-serif;font-size:11px;letter-spacing:.04em;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+    color:rgba(234,242,248,.5);transition:color .2s,border-color .2s,background .2s,box-shadow .2s;}
+  .sbtn:hover{color:#eaf2f8;border-color:rgba(255,255,255,.3);}
+  .sbtn.on{color:#08131c;background:#ffb63d;border-color:#ffb63d;
+    box-shadow:0 0 18px rgba(255,182,61,.35);}
+  #vol{-webkit-appearance:none;appearance:none;flex:1;height:5px;border-radius:99px;
+    background:rgba(255,255,255,.14);outline:none;cursor:pointer;}
+  #vol::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:#7fd4ff;box-shadow:0 0 14px rgba(127,212,255,.5);cursor:pointer;}
+  #vol::-moz-range-thumb{width:16px;height:16px;border:none;border-radius:50%;background:#7fd4ff;
+    box-shadow:0 0 14px rgba(127,212,255,.5);cursor:pointer;}
+  #volVal{flex:none;min-width:40px;text-align:right;font-family:'Bungee',sans-serif;
+    font-size:12px;color:#7fd4ff;}
+  #startFoot{margin-top:14px;font-size:9.5px;font-weight:300;letter-spacing:.1em;
+    text-transform:uppercase;color:rgba(234,242,248,.32);line-height:1.5;}
+  #playBtn{margin-top:18px;width:100%;padding:13px 30px;font-family:'Bungee',sans-serif;
+    font-size:16px;letter-spacing:.1em;color:#08131c;background:#7fd4ff;border:none;
+    border-radius:99px;cursor:pointer;box-shadow:0 0 26px rgba(127,212,255,.35);
+    transition:transform .12s, box-shadow .2s;}
+  #playBtn:hover{box-shadow:0 0 36px rgba(127,212,255,.65);}
+  #playBtn:active{transform:scale(.97);}
+  #menuBtn{margin:18px 0 0 8px;padding:11px 24px;font-family:'Bungee',sans-serif;font-size:14px;
+    letter-spacing:.08em;color:rgba(234,242,248,.7);background:transparent;
+    border:1px solid rgba(255,255,255,.2);border-radius:99px;cursor:pointer;display:none;
+    transition:color .2s,border-color .2s,transform .12s;}
+  #menuBtn:hover{color:#eaf2f8;border-color:rgba(255,255,255,.4);}
+  #menuBtn:active{transform:scale(.95);}
+  #startCols{display:block;}
+
+  /* Short viewports (a phone held sideways): the single column pushed PLAY below the
+     fold, so put the instructions and the settings next to each other instead. */
+  @media (max-height:560px) and (min-width:620px){
+    #startCard{width:min(700px,100%);padding:18px 24px 20px;}
+    #startTitle{font-size:28px;}
+    #startSub{margin-top:5px;}
+    #startCols{display:grid;grid-template-columns:1fr 1fr;column-gap:26px;align-items:start;}
+    #colSet .setrule{display:none;}
+    #howto{gap:7px;margin-top:9px;}
+    .howtxt{font-size:11.5px;}
+    .srow{margin-top:9px;}
+    #colSet .srow:first-of-type{margin-top:2px;}
+    #playBtn{margin-top:14px;padding:11px 24px;font-size:14px;}
+    #startFoot{margin-top:10px;}
+  }
+  /* short and narrow: no room for two columns, so just tighten everything */
+  @media (max-height:560px) and (max-width:619px){
+    #startCard{padding:15px 18px 17px;}
+    #startTitle{font-size:25px;}
+    .srule{margin:11px 0 9px;}
+    #howto{gap:6px;margin-top:8px;}
+    .howtxt{font-size:11px;}
+    .srow{margin-top:8px;}
+    #playBtn{margin-top:12px;padding:10px 22px;font-size:14px;}
+    #startFoot{margin-top:8px;}
+  }
+
+  /* the HUD belongs to the game, not to the menu */
+  #app.menu #board,#app.menu #info,#app.menu #pindeck,#app.menu #total,
+  #app.menu #controls,#app.menu #hint,#app.menu #turnBar,#app.menu #powerWrap{display:none;}
+
+
   /* Narrow viewports: the centred hint and the power meter would otherwise run
      under the SCORE plate and the round buttons, so lift them above that row. */
   @media (max-width:660px){
@@ -183,10 +272,19 @@
     #msgSub{font-size:11px;}
     #msgBox{padding:20px 30px 22px;}
   }
+
+  @media (max-width:560px){
+    #startCard{padding:20px 20px 22px;border-radius:17px;}
+    #startTitle{font-size:31px;}
+    #startSub{font-size:9.5px;}
+    .howtxt{font-size:11.5px;}
+    #playBtn{font-size:15px;padding:12px 24px;}
+    #menuBtn{font-size:12px;padding:10px 18px;}
+  }
 </style>
 </head>
 <body>
-<div id="app" class="notranslate" translate="no">
+<div id="app" class="notranslate menu" translate="no">
   <div id="mount"></div>
   <div id="vignette"></div>
 
@@ -221,11 +319,58 @@
   </div>
   <div id="hint">Aim &middot; hold to charge &middot; release to bowl</div>
 
+  <div id="startWrap">
+    <div id="startCard">
+      <div id="startTitle" class="fun">3D Bowling</div>
+      <div id="startSub">Ten pins &middot; Ten frames</div>
+
+      <div class="srule"></div>
+
+      <div id="startCols">
+      <div class="scol">
+      <div class="slbl">How to play</div>
+      <div id="howto">
+        <div class="howrow"><div class="hownum">1</div>
+          <div class="howtxt">Move left and right to <b>aim</b> down the lane.</div></div>
+        <div class="howrow"><div class="hownum">2</div>
+          <div class="howtxt">Press and <b>hold</b> to fill the power meter.</div></div>
+        <div class="howrow"><div class="hownum">3</div>
+          <div class="howtxt"><b>Release</b> to bowl. Ten frames &mdash; a strike scores the next
+          two balls, a spare the next one.</div></div>
+      </div>
+      </div>
+
+      <div class="scol" id="colSet">
+      <div class="srule setrule"></div>
+      <div class="srow"><div class="slbl">Players</div>
+        <div class="seg">
+          <button class="sbtn on fun" id="p1Btn">1P</button>
+          <button class="sbtn fun" id="p2Btn">2P</button>
+        </div>
+      </div>
+      <div class="srow"><div class="slbl">Volume</div>
+        <input id="vol" type="range" min="0" max="100" step="1" value="50" aria-label="Volume">
+        <div id="volVal">50%</div>
+      </div>
+      <div class="srow"><div class="slbl">Music</div>
+        <div class="seg">
+          <button class="sbtn on fun" id="mOnBtn">On</button>
+          <button class="sbtn fun" id="mOffBtn">Off</button>
+        </div>
+      </div>
+
+      <button id="playBtn" class="fun">Play</button>
+      <div id="startFoot">Keyboard &middot; Space to charge and release &middot; Arrows to fine-tune aim</div>
+      </div>
+      </div>
+    </div>
+  </div>
+
   <div id="msgWrap">
     <div id="msgBox">
       <div id="msgTitle" class="fun"></div>
       <div id="msgSub"></div>
-      <button id="msgBtn">PLAY AGAIN</button>
+      <button id="msgBtn">PLAY AGAIN</button><button id="menuBtn">MENU</button>
     </div>
   </div>
 </div>
@@ -259,6 +404,7 @@ const G = {
   standingBefore:10, rollTime:0, settleTime:0, last:0, raf:0,
   _tx:0,_ty:0.55,_tz:-6,
   numPlayers:1, players:[], cur:0,
+  started:false, needsReset:false,
   charging:false, chargeStart:0,
   frame:{fov:30,camY:1.3,camZ:8.0,lookY:0.5,lookZ:-6.5},
 };
@@ -681,6 +827,7 @@ function setPlayers(n){
 
 // ===== audio =====
 let _ac=null,_master=null,_noise=null,_room=null,_knockTime=0,_thudTime=0;
+let _vol=0.5;                       // master level, 0..1 — set from the start screen
 let _pinBuf=null,_crashUntil=0,_crash=null,_crashArmed=false;
 const CRASH_LEN=1.93;   // the take's usable length once its silent lead-in is skipped
 // recorded crash of a rack going over — used whole rather than synthesised per tap,
@@ -694,7 +841,7 @@ function unlockAudio(){
   try{
     const AC=window.AudioContext||window.webkitAudioContext;
     _ac=new AC();
-    _master=_ac.createGain(); _master.gain.value=0.5; _master.connect(_ac.destination);
+    _master=_ac.createGain(); _master.gain.value=_vol; _master.connect(_ac.destination);
     const len=Math.floor(_ac.sampleRate*0.2);
     _noise=_ac.createBuffer(1,len,_ac.sampleRate);
     const ch=_noise.getChannelData(0);
@@ -874,12 +1021,23 @@ function deckThud(level){
   o.connect(og); sendOut(og); o.start(t); o.stop(t+0.16);
 }
 let _muted=false;
+function setVolume(v){
+  _vol=Math.max(0,Math.min(1,v));
+  try{ localStorage.setItem('bowl.vol',String(_vol)); }catch(e){}
+  const lab=document.getElementById('volVal');
+  if(lab) lab.textContent=Math.round(_vol*100)+'%';
+  // the volume slider doubles as the mute switch: at zero we go silent
+  if(_vol<=0){ if(!_muted) setMuted(true); return; }
+  if(_muted) setMuted(false);
+  else if(_master) _master.gain.setTargetAtTime(_vol,_ac.currentTime,0.05);
+}
+
 function setMuted(m){
   _muted=m;
   try{ localStorage.setItem('bowl.muted',m?'1':'0'); }catch(e){}
   const b=document.getElementById('soundBtn');
   if(b) b.classList.toggle('off',m);
-  if(_master) _master.gain.setTargetAtTime(m?0.0001:0.5,_ac.currentTime,0.05);
+  if(_master) _master.gain.setTargetAtTime(m?0.0001:Math.max(0.0001,_vol),_ac.currentTime,0.05);
 }
 // ===== house music =====
 // Five original loops, synthesised in the page and cycled as you play. Each one is its
@@ -1850,6 +2008,7 @@ function updateHUD(){
     ttl.style.textShadow='0 0 30px '+col+'80';
     document.getElementById('msgSub').textContent=m.sub;
     document.getElementById('msgBtn').style.display=m.btn?'inline-block':'none';
+    document.getElementById('menuBtn').style.display=m.btn?'inline-block':'none';
   }else wrap.style.display='none';
 }
 
@@ -1863,13 +2022,57 @@ function loop(t){
   G.renderer.render(G.scene,G.camera);
 }
 
+// ===== start screen =====
+function syncMenu(){
+  document.getElementById('p1Btn').classList.toggle('on',G.numPlayers===1);
+  document.getElementById('p2Btn').classList.toggle('on',G.numPlayers===2);
+  document.getElementById('mOnBtn').classList.toggle('on',_musOn);
+  document.getElementById('mOffBtn').classList.toggle('on',!_musOn);
+  const sl=document.getElementById('vol');
+  if(sl) sl.value=Math.round(_vol*100);
+  const lab=document.getElementById('volVal');
+  if(lab) lab.textContent=Math.round(_vol*100)+'%';
+}
+function openMenu(){
+  G.started=false;
+  G.needsReset=true;            // PLAY then starts a fresh game
+  G.msg=null; updateHUD();
+  document.getElementById('app').classList.add('menu');
+  document.getElementById('startWrap').classList.remove('hide');
+  syncMenu();
+}
+function startFromMenu(){
+  unlockAudio();
+  setVolume(_vol);
+  if(G.needsReset){ G.needsReset=false; restart(); }
+  document.getElementById('startWrap').classList.add('hide');
+  document.getElementById('app').classList.remove('menu');
+  G.started=true;
+  updateHUD();
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
   G.mountEl=document.getElementById('mount');
+
+  try{
+    const v=parseFloat(localStorage.getItem('bowl.vol'));
+    if(isFinite(v)) _vol=Math.max(0,Math.min(1,v));
+  }catch(e){}
+
+  document.getElementById('p1Btn').addEventListener('click',()=>{ setPlayers(1); syncMenu(); });
+  document.getElementById('p2Btn').addEventListener('click',()=>{ setPlayers(2); syncMenu(); });
+  document.getElementById('mOnBtn').addEventListener('click',()=>{ unlockAudio(); setMusic(true); syncMenu(); });
+  document.getElementById('mOffBtn').addEventListener('click',()=>{ setMusic(false); syncMenu(); });
+  const sl=document.getElementById('vol');
+  sl.addEventListener('input',()=>{ unlockAudio(); setVolume(sl.value/100); });
+  document.getElementById('playBtn').addEventListener('click',startFromMenu);
+  document.getElementById('menuBtn').addEventListener('click',openMenu);
 
   document.getElementById('playersBtn').addEventListener('click',()=>{
     unlockAudio(); setPlayers(G.numPlayers===1?2:1);
   });
   document.getElementById('msgBtn').addEventListener('click',()=>{ unlockAudio(); restart(); });
+  document.getElementById('playersBtn').addEventListener('click',syncMenu);
 
   try{ _muted=localStorage.getItem('bowl.muted')==='1'; }catch(e){}
   document.getElementById('soundBtn').classList.toggle('off',_muted);
@@ -1878,17 +2081,20 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('musicBtn').classList.toggle('off',!_musOn);
   document.getElementById('musicBtn').addEventListener('click',()=>{ unlockAudio(); setMusic(!_musOn); });
 
-  addEventListener('pointermove',onPointerMove);
-  addEventListener('pointerdown',e=>{ unlockAudio(); onPointerDown(e); });
-  addEventListener('pointerup',onPointerUp);
-  addEventListener('pointercancel',onPointerUp);
+  addEventListener('pointermove',e=>{ if(G.started) onPointerMove(e); });
+  addEventListener('pointerdown',e=>{ if(!G.started) return; unlockAudio(); onPointerDown(e); });
+  addEventListener('pointerup',e=>{ if(G.started) onPointerUp(e); });
+  addEventListener('pointercancel',e=>{ if(G.started) onPointerUp(e); });
   addEventListener('keydown',e=>{
+    if(!G.started){ if(e.code==='Space'||e.code==='Enter'){ e.preventDefault(); startFromMenu(); } return; }
     if(e.code==='Space'&&!e.repeat){ e.preventDefault(); unlockAudio(); startCharge(); return; }
     if(e.code==='ArrowLeft'){ e.preventDefault(); nudgeAim(-0.012); }
     else if(e.code==='ArrowRight'){ e.preventDefault(); nudgeAim(0.012); }
   });
-  addEventListener('keyup',e=>{ if(e.code==='Space'){ e.preventDefault(); releaseThrow(); } });
+  addEventListener('keyup',e=>{ if(!G.started) return; if(e.code==='Space'){ e.preventDefault(); releaseThrow(); } });
   G.mountEl.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+
+  syncMenu();
 
   const t0=performance.now();
   const wait=()=>{
