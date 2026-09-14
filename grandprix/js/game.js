@@ -260,7 +260,9 @@
       el.classList.toggle('on', on);
     });
     if (S.countT > 0.85 * 5 + 0.9) {
-      $('lights').style.display = 'none';
+      L.forEach(function (el) { el.classList.remove('on'); el.classList.add('go'); });
+      setTimeout(function () { $('lights').style.display = 'none'; L.forEach(function (el) { el.classList.remove('go'); }); }, 700);
+      G.shake = Math.max(G.shake || 0, 0.22);
       S.phase = 'race'; S.raceT = 0; beep(true);
       var restart = !!S.restart;
       G.cars.forEach(function (c) {
@@ -1796,6 +1798,12 @@
         document.body.classList.toggle('rain', G.wet > 0.15);
       }
     }
+    if (G.player && S.started) {
+      var kmh = Math.max(0, G.player.speed) * GP.KMH, fxEl = $('speedFx');
+      var v = clamp((kmh - 190) / 140, 0, 1) * (G.camMode === 3 ? 0 : 1);
+      if (fxEl) { var op = (v * 0.55).toFixed(2); if (fxEl.style.opacity !== op) fxEl.style.opacity = op; }
+      if (v > 0.35 && (G.shake || 0) < 0.03) G.shake = 0.03 * v;
+    }
     if (S.penCd > 0) S.penCd -= dt;
     G.cars.forEach(function (c) { if (c.penCd > 0) c.penCd -= dt; });
     redTick(dt);
@@ -1844,6 +1852,7 @@
       }
       GP.collisions();
     }
+    GP.fxTick(dt);
     if (S.phase === 'race' || S.phase === 'finished') playerPitLogic(dt);
     if (racing) { drsTick(dt); scTick(dt); recoveryTick(dt); engineerTick(dt); }
     radioTick(dt);

@@ -436,6 +436,12 @@ body.redflag #hud::after{content:'';position:absolute;inset:0;box-shadow:inset 0
 #lights{position:absolute;left:50%;top:14%;transform:translateX(-50%);z-index:22;display:none;gap:10px}
 #lights i{width:clamp(20px,4.2vw,34px);height:clamp(20px,4.2vw,34px);border-radius:999px;
   background:rgba(32,30,29,.35);box-shadow:inset 0 0 0 3px rgba(32,30,29,.5);font-style:normal}
+#lights i.go{background:#2fd77a;box-shadow:0 0 22px rgba(47,215,122,.95),inset 0 0 0 2px rgba(255,255,255,.25)}
+#speedFx{position:absolute;inset:0;z-index:12;pointer-events:none;opacity:0;transition:opacity .25s;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 52%, rgba(255,255,255,0) 0deg 3.2deg, rgba(255,255,255,.13) 3.2deg 3.7deg),
+    radial-gradient(60% 55% at 50% 52%, rgba(0,0,0,0) 38%, rgba(0,0,0,.5) 100%);
+  -webkit-mask:radial-gradient(52% 48% at 50% 52%, transparent 30%, #000 78%);mask:radial-gradient(52% 48% at 50% 52%, transparent 30%, #000 78%)}
 #lights i.on{background:#d8382c;box-shadow:inset 0 0 0 3px rgba(32,30,29,.5),0 0 22px rgba(216,56,44,.85)}
 #flash{position:absolute;left:50%;top:32%;transform:translate(-50%,-50%) scale(.94);z-index:24;opacity:0;
   font:400 clamp(30px,7vw,72px)/1 var(--fh);color:#fffaf0;text-shadow:0 6px 26px rgba(32,30,29,.55);
@@ -492,6 +498,7 @@ body.sc #hud::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 
 <div id="snowfall"><div class="fl"></div><div class="fl b"></div><div class="fl c"></div></div>
 
 <!-- ================= HUD ================= -->
+<div id="speedFx"></div>
 <div id="hud">
   <div id="hudTL">
     <div class="plate">
