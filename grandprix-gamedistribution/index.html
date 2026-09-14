@@ -113,6 +113,64 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:3px solid var(
 #teamScreen{position:absolute;inset:0;z-index:60;display:none;background:rgba(32,30,29,.55);backdrop-filter:blur(6px);
   padding:clamp(16px,4vw,48px);overflow:auto}
 #teamScreen.show{display:block}
+#driverScreen{position:absolute;inset:0;z-index:60;display:none;background:rgba(32,30,29,.55);backdrop-filter:blur(6px);overflow:auto;padding:clamp(12px,3vw,40px)}
+#driverScreen.show{display:block}
+.dtabs{display:flex;gap:6px;margin:6px 0 18px;flex-wrap:wrap}
+.dtabs button{font:700 13px var(--fb);padding:9px 16px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink-60);cursor:pointer}
+.dtabs button.on{background:var(--ink);color:var(--surf);border-color:var(--ink)}
+.pchip{display:flex;align-items:center;gap:14px;background:var(--surf);border-radius:var(--r);padding:12px 16px;box-shadow:var(--sh-sm);margin:0 0 16px;max-width:520px}
+.plv{flex:none;width:50px;height:50px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font:400 22px var(--fh)}
+.pbody{flex:1;min-width:0}
+.pbody b{font:700 15px var(--fb);display:block}
+.pbody small{display:block;color:var(--ink-60);font-size:12px;margin-top:5px}
+.pbar{height:7px;border-radius:99px;background:rgba(32,30,29,.1);overflow:hidden;margin-top:7px}
+.pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),#e4a06a);border-radius:99px;transition:width .6s cubic-bezier(.2,.9,.3,1)}
+.pbar.big{height:10px;margin:10px 0 12px}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:6px}
+.statgrid div{background:var(--surf);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh-sm)}
+.statgrid b{font:400 26px var(--fh);display:block;line-height:1}
+.statgrid small{color:var(--ink-60);font-size:12px}
+.achgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.ach{display:flex;gap:12px;align-items:center;background:var(--surf);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh-sm);opacity:.5;filter:grayscale(1)}
+.ach.got{opacity:1;filter:none;outline:2px solid var(--acc-3)}
+.ach .ai{font-size:26px;flex:none;width:36px;text-align:center}
+.ach b{font:700 14px var(--fb);display:block}
+.ach small{color:var(--ink-60);font-size:12px;display:block;margin-top:2px}
+.ach.small{padding:9px 12px}.ach.small .ai{font-size:20px;width:28px}
+.award{background:var(--surf);border-radius:var(--r-lg);padding:16px 20px;box-shadow:var(--sh-md);margin:0 0 16px}
+.awhead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.awxp{font:400 34px var(--fh);color:var(--acc)}
+.awlvl{font:700 14px var(--fb)}
+.awlvl b{color:var(--acc)}
+.awlvl.muted{color:var(--ink-60);font-weight:500}
+.awlines{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink-60)}
+.awlines b{color:var(--ink);margin-left:5px}
+.awach{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:12px}
+.carwrap{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:22px;align-items:start}
+.carprev{background:var(--surf);border-radius:var(--r);padding:14px;box-shadow:var(--sh-sm);text-align:center}
+.carsvg{width:100%;max-width:170px;height:auto;display:block;margin:0 auto}
+.carprev small{display:block;color:var(--ink-60);font-size:12px;margin-top:10px}
+.crow{display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+.clbl{font:700 13px var(--fb);width:64px;flex:none}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.sw{width:32px;height:32px;border-radius:50%;border:2px solid rgba(32,30,29,.15);cursor:pointer;padding:0;position:relative;box-shadow:inset 0 -6px 10px rgba(0,0,0,.25);transition:transform .15s}
+.sw:hover{transform:scale(1.1)}
+.sw.on{border-color:var(--ink);transform:scale(1.14);box-shadow:0 0 0 3px var(--surf),0 0 0 5px var(--ink),inset 0 -6px 10px rgba(0,0,0,.25)}
+.sw.locked{cursor:not-allowed;opacity:.45;filter:saturate(.4)}
+.sw.locked i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-style:normal}
+.numpick{display:flex;align-items:center;gap:10px}
+.numpick input{width:76px;font:700 16px var(--fb);padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surf);color:var(--ink)}
+.numpick span{color:var(--ink-60);font-size:12px}
+.carnote{color:var(--ink-60);font-size:12px;margin:6px 0 0}
+@media (max-width:640px){.carwrap{grid-template-columns:1fr}.carsvg{max-width:120px}}
+.tbtn{flex-wrap:wrap;border-radius:16px;text-align:left}
+.tbtn small{flex-basis:100%;display:block;font:500 10.5px var(--fb);color:var(--ink-60);margin-top:2px;letter-spacing:0;text-transform:none}
+.tbtn.on small{color:var(--acc-7)}
+.tyhint{color:var(--ink-60);font-size:12.5px;margin:-4px 0 10px}
+.award.leveled{outline:2px solid var(--acc);animation:lvlpop .6s cubic-bezier(.2,1.4,.4,1)}
+.award.leveled .awlvl{font-size:18px}
+@keyframes lvlpop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+.flash.ach{color:#fff;background:var(--acc);padding:.18em .6em;border-radius:999px;font-size:clamp(18px,3.2vw,30px)}
 .dialog{max-width:980px;margin:0 auto;background:var(--bg);border-radius:var(--r-lg);padding:clamp(20px,3vw,34px);box-shadow:var(--sh-lg)}
 .dialog h3{font-size:clamp(24px,3vw,36px)}
 .dialog p{color:var(--ink-60);font-size:15px;margin:8px 0 20px}
@@ -436,8 +494,16 @@ body.redflag #hud::after{content:'';position:absolute;inset:0;box-shadow:inset 0
 
 /* lights, flash */
 #lights{position:absolute;left:50%;top:14%;transform:translateX(-50%);z-index:22;display:none;gap:10px}
+/* portrait phones: the lap plate reaches further down, so the lights sit below it */
+@media (max-aspect-ratio:1/1){#lights{top:max(24%,190px)}}
 #lights i{width:clamp(20px,4.2vw,34px);height:clamp(20px,4.2vw,34px);border-radius:999px;
   background:rgba(32,30,29,.35);box-shadow:inset 0 0 0 3px rgba(32,30,29,.5);font-style:normal}
+#lights i.go{background:#2fd77a;box-shadow:0 0 22px rgba(47,215,122,.95),inset 0 0 0 2px rgba(255,255,255,.25)}
+#speedFx{position:absolute;inset:0;z-index:12;pointer-events:none;opacity:0;transition:opacity .25s;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 52%, rgba(255,255,255,0) 0deg 3.2deg, rgba(255,255,255,.13) 3.2deg 3.7deg),
+    radial-gradient(60% 55% at 50% 52%, rgba(0,0,0,0) 38%, rgba(0,0,0,.5) 100%);
+  -webkit-mask:radial-gradient(52% 48% at 50% 52%, transparent 30%, #000 78%);mask:radial-gradient(52% 48% at 50% 52%, transparent 30%, #000 78%)}
 #lights i.on{background:#d8382c;box-shadow:inset 0 0 0 3px rgba(32,30,29,.5),0 0 22px rgba(216,56,44,.85)}
 #flash{position:absolute;left:50%;top:32%;transform:translate(-50%,-50%) scale(.94);z-index:24;opacity:0;
   font:400 clamp(30px,7vw,72px)/1 var(--fh);color:#fffaf0;text-shadow:0 6px 26px rgba(32,30,29,.55);
@@ -494,6 +560,7 @@ body.sc #hud::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 
 <div id="snowfall"><div class="fl"></div><div class="fl b"></div><div class="fl c"></div></div>
 
 <!-- ================= HUD ================= -->
+<div id="speedFx"></div>
 <div id="hud">
   <div id="hudTL">
     <div class="plate">
@@ -565,10 +632,13 @@ body.sc #hud::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 
       <h1>Grand <em>Prix</em> 3D</h1>
       <p class="lede">A full championship: qualifying, tyre wear, fuel, a drivable pit lane with your own crew,
         changing weather, safety cars and ten teams fighting over the same corner.</p>
+      <div id="profileChip"></div>
       <div class="mainacts">
+        <button class="bigbtn" id="quickBtn"><i>⚡</i><span class="txt"><b>Quick race</b><span id="quickSub">Three laps on a short circuit, no setup</span></span></button>
         <button class="bigbtn pri" id="newBtn"><i>01</i><span class="txt"><b>New season</b><span>Pick a team and start at round one</span></span></button>
         <button class="bigbtn" id="contBtn"><i>→</i><span class="txt"><b>Continue season</b><span id="contSub"></span></span></button>
         <button class="bigbtn" id="singleBtn"><i>GP</i><span class="txt"><b>Single race</b><span>One random circuit, no points</span></span></button>
+        <button class="bigbtn" id="driverBtn"><i>★</i><span class="txt"><b>Driver profile</b><span id="driverSub">Level, achievements and your car</span></span></button>
       </div>
     </div>
     <div class="settings">
@@ -606,6 +676,18 @@ body.sc #hud::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 
       <button class="btn btn-ghost" id="teamBack">Cancel</button>
       <button class="btn btn-primary" id="teamGo">Start the season</button>
     </div>
+  </div>
+</div>
+
+<!-- ================= driver profile ================= -->
+<div id="driverScreen">
+  <div class="dialog">
+    <h3>Driver profile</h3>
+    <div class="dtabs"><button class="on" data-tab="progress">Progress</button><button data-tab="ach">Achievements</button><button data-tab="car">My car</button></div>
+    <div class="dtab" id="dtab-progress"><div id="driverChip"></div><div id="driverStats"></div></div>
+    <div class="dtab" id="dtab-ach" style="display:none"><div id="driverAch"></div></div>
+    <div class="dtab" id="dtab-car" style="display:none"><div id="driverCar"></div></div>
+    <div class="dactions"><button class="btn btn-primary" id="driverBack">Done</button></div>
   </div>
 </div>
 
@@ -736,6 +818,7 @@ addEventListener('scroll', function () {
 <script src="three.min.js" defer></script>
 <script src="js/data.js" defer></script>
 <script src="js/engine.js" defer></script>
+<script src="js/progress.js" defer></script>
 <script src="js/game.js" defer></script>
 <script>
 /* GameDistribution SDK — replace the placeholder before publishing */

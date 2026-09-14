@@ -313,6 +313,7 @@
 
     if (G.group) { disposeGroup(G.group); G.scene.remove(G.group); }
     var scene = G.scene || (G.scene = new THREE.Scene());
+    fxInit(); fxReset();
     var grp = new THREE.Group(); G.group = grp; scene.add(grp);
 
     var P = palette(def);
@@ -1696,6 +1697,13 @@
   // front wing, sidepods with inlets, engine cover and airbox, halo, a driver
   // sat in the tub with hands on the wheel, and a rear wing whose upper flap
   // opens for DRS. Tyre sidewalls are recoloured per compound.
+  function numTexture(num) {
+    return makeTex(64, 64, function (x, w, h) {
+      x.fillStyle = '#fffaf0'; x.beginPath(); x.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#201e1d'; x.font = 'bold ' + (String(num).length > 2 ? 30 : 40) + 'px Helvetica,Arial,sans-serif';
+      x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(num), w / 2, h / 2 + 2);
+    });
+  }
   function makeCarMesh(color, color2, num) {
     var THREE = T(), g = new THREE.Group();
     var paint = new THREE.MeshStandardMaterial({ color: color, roughness: 0.26, metalness: 0.22 });
@@ -1804,13 +1812,9 @@
       new THREE.MeshBasicMaterial({ color: 0x5a1510 }), 0, 0.60, -2.12, 0, 0, 0, rw);
 
     /* number roundel on the airbox sides */
+    var numMat = null;
     if (num != null) {
-      var numTex = makeTex(64, 64, function (x, w, h) {
-        x.fillStyle = '#fffaf0'; x.beginPath(); x.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2); x.fill();
-        x.fillStyle = '#201e1d'; x.font = 'bold 40px Helvetica,Arial,sans-serif';
-        x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(num), w / 2, h / 2 + 2);
-      });
-      var numMat = new THREE.MeshBasicMaterial({ map: numTex, transparent: true });
+      numMat = new THREE.MeshBasicMaterial({ map: numTexture(num), transparent: true });
       [-1, 1].forEach(function (s) {
         var p = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.26), numMat);
         p.position.set(s * 0.24, 0.72, -0.7); p.rotation.y = s * Math.PI / 2; detail.add(p);
@@ -1848,7 +1852,8 @@
     return {
       group: g, wheels: wheels, paint: paint, trim: trim, fw: fw, rw: rw,
       helmet: helmet, driver: driver, halo: halo, drs: drsPivot, bands: bands,
-      rearLight: rearLight, nose: nose, detail: detail, fine: fine, lod: 1
+      rearLight: rearLight, nose: nose, detail: detail, fine: fine, lod: 1,
+      rim: rimMat, num: numMat
     };
   }
 
@@ -2086,6 +2091,7 @@
       if (c.hit <= 0) {
         var force = Math.min(1, Math.abs(vn) / 30);
         c.speed *= 0.55; c.hit = 0.35;
+        if (fxNear(c.x, c.z)) fxSparks(c.x + s0.nx * (over > 0 ? 1 : -1) * 0.9, c.z + s0.nz * (over > 0 ? 1 : -1) * 0.9, -s0.nx * (over > 0 ? 1 : -1) + fx * 0.6, -s0.nz * (over > 0 ? 1 : -1) + fz * 0.6, 8 + Math.round(force * 18));
         c.dmg = Math.min(1, c.dmg + force * 0.045 * (c.upg ? 1 - c.upg.rely * 0.08 : 1));
         if (c.dmg > 0.7 && c.mesh.fw.visible) c.mesh.fw.visible = false;
         if (GP.onHit) GP.onHit(c, force);
@@ -2109,6 +2115,7 @@
       var lit = inp.brake || (G.wet > 0.3 && (performance.now() % 500 < 250));
       c.mesh.rearLight.material.color.setHex(lit ? 0xff2a18 : 0x5a1510);
     }
+    fxCarTick(c, inp, dt);
   }
 
   function collisions() {
@@ -2137,6 +2144,7 @@
             a.vx -= s0.nx * side * kick * 0.35; a.vz -= s0.nz * side * kick * 0.35;
           }
           if (f > 0.3 && GP.onHit) { GP.onHit(a, f * 0.8); GP.onHit(b, f * 0.6); }
+          if (f > 0.25 && fxNear(a.x, a.z)) fxSparks((a.x + b.x) / 2, (a.z + b.z) / 2, -nx, -nz, 6 + Math.round(f * 12));
         }
       }
     }
@@ -2193,7 +2201,25 @@
     var lookAhead = 8 + Math.abs(c.speed) * (0.38 + skill * 0.08);
     var t = S[(c.idx + Math.round(lookAhead)) % n];
     c.lineTarget = t.line;
-    var tlat = t.line + c.laneT + laneBias + c.avoid;
+
+    // --- defending: someone close behind on a straight gets the door shut.
+    // The move is toward the attacker's side, eased in, and only bold drivers do it.
+    c.defend = c.defend || 0;
+    var threat = 0, tside = 0;
+    for (var q = 0; q < G.cars.length; q++) {
+      var o2 = G.cars[q]; if (o2 === c || o2.retired || o2.inPit) continue;
+      var ddx = o2.x - c.x, ddz = o2.z - c.z;
+      var back = -(ddx * Math.sin(c.h) + ddz * Math.cos(c.h));
+      var sd = ddx * Math.cos(c.h) - ddz * Math.sin(c.h);
+      // only a car that is actually closing counts as a threat
+      if (back > 1 && back < 14 && Math.abs(sd) < 4 && o2.speed > c.speed - 1.5) { var w = 1 - back / 14; if (w > threat) { threat = w; tside = sd; } }
+    }
+    var straight = Math.abs(t.curv) < 0.006 && Math.abs(S[(c.idx + 24) % n].curv) < 0.006;
+    var wantDef = (threat > 0.3 && straight && c.agg > 0.55 && !c.wantPit && ctx.phase === 'race' && ctx.t > 8000)
+      ? (tside > 0 ? 1 : -1) * Math.min(2.2, 1.0 + c.agg * 1.5) : 0;
+    c.defend += (wantDef - c.defend) * Math.min(1, ctx.dt * (wantDef ? 1.6 : 0.9));
+
+    var tlat = t.line + c.laneT + laneBias + c.avoid + c.defend;
     tlat = clamp(tlat, -G.HALF_W + 1.1, G.HALF_W - 1.1);
     var ang = wrapAng(Math.atan2(t.x + t.nx * tlat - c.x, t.z + t.nz * tlat - c.z) - c.h);
 
@@ -2246,11 +2272,14 @@
         c.mistCd = 6 + Math.random() * 30;
         var chance = (1 - c.cons) * 0.55 * ctx.mist * (1 + G.wet * 1.4) * (c.tw < 0.3 ? 1.6 : 1);
         if (Math.random() < chance) {
-          if (Math.random() < 0.45) { c.spin = 0.5 + Math.random() * 0.5; c.spinDir = Math.random() < 0.5 ? -1 : 1; }
-          c.mistake = 0.7 + Math.random() * 0.8;
+          var kind = Math.random();
+          if (kind < 0.5) c.lateBrake = 1.2 + Math.random() * 0.9;          // brakes too late, runs deep
+          else if (kind < 0.75) { c.spin = 0.5 + Math.random() * 0.5; c.spinDir = Math.random() < 0.5 ? -1 : 1; c.mistake = 0.7 + Math.random() * 0.8; }
+          else c.mistake = 0.7 + Math.random() * 0.8;                        // a lift, a moment lost
         }
       }
       if (c.mistake > 0) { c.mistake -= ctx.dt; tgt *= 0.62; }
+      if (c.lateBrake > 0) { c.lateBrake -= ctx.dt; tgt *= 1.09; }
     }
     // technical trouble
     if (ctx.phase === 'race' && !c.retired) {
@@ -2265,9 +2294,147 @@
     return {
       steer: clamp(ang * 2.5, -1, 1),
       gas: c.speed < tgt,
-      brake: c.speed > tgt + 2.5,
+      brake: c.speed > tgt + (c.lateBrake > 0 ? 7 : 2.5),
       hand: false
     };
+  }
+
+  /* =================================================================
+     FX — tyre smoke, grass dust, sparks and rubber on the road.
+     One Points object per blend mode and one InstancedMesh for the skid
+     marks, so the whole lot is three draw calls whatever is going on.
+     ================================================================= */
+  var FX = { n: 520, smoke: null, spark: null, skid: null, skidN: 1100, skidI: 0, ready: false, camX: 0, camZ: 0 };
+
+  function fxPoints(additive) {
+    var THREE = T(), n = FX.n;
+    var geo = new THREE.BufferGeometry();
+    var pos = new Float32Array(n * 3), col = new Float32Array(n * 3), siz = new Float32Array(n), alp = new Float32Array(n);
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('aCol', new THREE.BufferAttribute(col, 3));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(siz, 1));
+    geo.setAttribute('aAlpha', new THREE.BufferAttribute(alp, 1));
+    var mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+      vertexShader: 'attribute float aSize; attribute float aAlpha; attribute vec3 aCol; varying float vA; varying vec3 vC;' +
+        'void main(){ vA=aAlpha; vC=aCol; vec4 mv=modelViewMatrix*vec4(position,1.0);' +
+        ' gl_PointSize=aSize*(260.0/max(1.0,-mv.z)); gl_Position=projectionMatrix*mv; }',
+      fragmentShader: 'varying float vA; varying vec3 vC;' +
+        'void main(){ vec2 d=gl_PointCoord-0.5; float r=length(d); if(r>0.5) discard;' +
+        ' float a=smoothstep(0.5,0.12,r)*vA; gl_FragColor=vec4(vC,a); }'
+    });
+    var pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.renderOrder = 5;
+    return { pts: pts, geo: geo, pos: pos, col: col, siz: siz, alp: alp, i: 0,
+      vel: new Float32Array(n * 3), life: new Float32Array(n), max: new Float32Array(n), grow: new Float32Array(n), additive: additive };
+  }
+  function fxInit() {
+    if (FX.ready) return;
+    var THREE = T();
+    FX.smoke = fxPoints(false); FX.spark = fxPoints(true);
+    G.scene.add(FX.smoke.pts); G.scene.add(FX.spark.pts);
+    var skidMat = new THREE.MeshBasicMaterial({ color: 0x121417, transparent: true, opacity: 0.55, depthWrite: false });
+    var skid = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.36, 1.0), skidMat, FX.skidN);
+    skid.frustumCulled = false; skid.renderOrder = 2;
+    var zero = new THREE.Matrix4().makeScale(0, 0, 0);
+    for (var i = 0; i < FX.skidN; i++) skid.setMatrixAt(i, zero);
+    skid.instanceMatrix.needsUpdate = true;
+    FX.skid = skid; G.scene.add(skid);
+    FX.ready = true;
+  }
+  function fxReset() {
+    if (!FX.ready) return;
+    var zero = new (T().Matrix4)().makeScale(0, 0, 0);
+    for (var i = 0; i < FX.skidN; i++) FX.skid.setMatrixAt(i, zero);
+    FX.skid.instanceMatrix.needsUpdate = true; FX.skidI = 0;
+    [FX.smoke, FX.spark].forEach(function (P) { for (var k = 0; k < FX.n; k++) { P.life[k] = 0; P.alp[k] = 0; P.siz[k] = 0; } });
+  }
+  function fxEmit(P, x, y, z, vx, vy, vz, life, size, r, g, b, grow) {
+    var i = P.i; P.i = (P.i + 1) % FX.n;
+    P.pos[i * 3] = x; P.pos[i * 3 + 1] = y; P.pos[i * 3 + 2] = z;
+    P.vel[i * 3] = vx; P.vel[i * 3 + 1] = vy; P.vel[i * 3 + 2] = vz;
+    P.life[i] = life; P.max[i] = life; P.siz[i] = size; P.grow[i] = grow || 0;
+    P.col[i * 3] = r; P.col[i * 3 + 1] = g; P.col[i * 3 + 2] = b; P.alp[i] = 1;
+  }
+  // near the camera only: nobody sees a puff of smoke 300 metres away
+  function fxNear(x, z) { var dx = x - FX.camX, dz = z - FX.camZ; return dx * dx + dz * dz < 90 * 90; }
+
+  function fxSmoke(x, z, strength, dust) {
+    if (!FX.ready) return;
+    var n = dust ? 1 : 2;
+    for (var k = 0; k < n; k++) {
+      var a = Math.random() * Math.PI * 2, sp = 0.6 + Math.random() * 1.2;
+      if (dust) fxEmit(FX.smoke, x + (Math.random() - 0.5) * 0.6, 0.25, z + (Math.random() - 0.5) * 0.6,
+        Math.cos(a) * sp, 0.9 + Math.random() * 0.8, Math.sin(a) * sp, 0.7 + Math.random() * 0.5, 1.4 + Math.random(), 0.62, 0.52, 0.36, 2.2);
+      else fxEmit(FX.smoke, x + (Math.random() - 0.5) * 0.4, 0.28, z + (Math.random() - 0.5) * 0.4,
+        Math.cos(a) * sp * 0.7, 1.1 + Math.random() * 1.2, Math.sin(a) * sp * 0.7, 0.8 + Math.random() * 0.7 * strength, 1.0 + Math.random() * 0.8 * strength, 0.84, 0.84, 0.86, 2.0);
+    }
+  }
+  function fxSparks(x, z, dx, dz, count) {
+    if (!FX.ready) return;
+    for (var k = 0; k < count; k++) {
+      var a = Math.atan2(dx, dz) + (Math.random() - 0.5) * 1.6, sp = 6 + Math.random() * 12;
+      var hot = Math.random();
+      fxEmit(FX.spark, x, 0.22 + Math.random() * 0.3, z, Math.sin(a) * sp, 2 + Math.random() * 5, Math.cos(a) * sp,
+        0.25 + Math.random() * 0.35, 0.14 + Math.random() * 0.14, 1.0, 0.72 + hot * 0.25, 0.25 + hot * 0.4, -0.3);
+    }
+  }
+  var _m4 = null, _q = null, _v3 = null, _sc = null;
+  function fxSkid(x, z, h, dark) {
+    if (!FX.ready) return;
+    var THREE = T();
+    _m4 = _m4 || new THREE.Matrix4(); _q = _q || new THREE.Quaternion(); _v3 = _v3 || new THREE.Vector3(); _sc = _sc || new THREE.Vector3();
+    // a flat quad, turned to lie on the road and point along the heading
+    _q.setFromEuler(new THREE.Euler(-Math.PI / 2, h, 0, 'YXZ'));
+    _v3.set(x, 0.02, z); _sc.set(1, 1, 1);
+    _m4.compose(_v3, _q, _sc);
+    FX.skid.setMatrixAt(FX.skidI, _m4);
+    FX.skid.instanceMatrix.needsUpdate = true;
+    FX.skidI = (FX.skidI + 1) % FX.skidN;
+  }
+
+  // per car, per physics step: decide what the tyres are doing right now
+  function fxCarTick(c, inp, dt) {
+    if (!FX.ready || c.retired) return;
+    var sp = Math.abs(c.speed);
+    if (sp < 4 || !fxNear(c.x, c.z)) { c.skidAcc = 0; return; }
+    var fx = Math.sin(c.h), fz = Math.cos(c.h), rx = Math.cos(c.h), rz = -Math.sin(c.h);
+    var lockup = inp.brake && sp > 26 && !c.onGrass && (c.tw < 0.35 || c.slip > 0.05 || Math.random() < 0.12);
+    var sliding = c.slip > 0.16 || (inp.hand && sp > 14) || c.spin > 0 || lockup;
+    c.skidAcc = (c.skidAcc || 0) + sp * dt;
+    if (c.onGrass) {
+      if (Math.random() < dt * 24) fxSmoke(c.x - fx * 1.2, c.z - fz * 1.2, 0.8, true);
+      c.skidAcc = 0; return;
+    }
+    if (!sliding) { c.skidAcc = 0; return; }
+    var strength = Math.min(1, (c.slip > 0.16 ? c.slip * 2.2 : 0.6) + (c.spin > 0 ? 0.6 : 0));
+    var wet = G.wet > 0.3;
+    if (Math.random() < dt * (wet ? 8 : 22) * strength)
+      fxSmoke(c.x - fx * 1.15 + rx * (Math.random() < 0.5 ? 0.9 : -0.9), c.z - fz * 1.15 + rz * (Math.random() < 0.5 ? 0.9 : -0.9), strength, false);
+    // rubber every 0.55 units of travel, under both rear wheels
+    if (!wet && c.skidAcc > 0.55) {
+      c.skidAcc = 0;
+      fxSkid(c.x - fx * 1.15 + rx * 0.9, c.z - fz * 1.15 + rz * 0.9, c.h);
+      fxSkid(c.x - fx * 1.15 - rx * 0.9, c.z - fz * 1.15 - rz * 0.9, c.h);
+    }
+  }
+
+  function fxTick(dt) {
+    if (!FX.ready) return;
+    FX.camX = G.camera.position.x; FX.camZ = G.camera.position.z;
+    [FX.smoke, FX.spark].forEach(function (P) {
+      var any = false;
+      for (var i = 0; i < FX.n; i++) {
+        if (P.life[i] <= 0) { if (P.alp[i] !== 0) { P.alp[i] = 0; P.siz[i] = 0; any = true; } continue; }
+        any = true;
+        P.life[i] -= dt;
+        var t = 1 - P.life[i] / P.max[i];
+        if (P.additive) { P.vel[i * 3 + 1] -= 22 * dt; P.alp[i] = 1 - t; }
+        else { P.vel[i * 3] *= 0.97; P.vel[i * 3 + 2] *= 0.97; P.siz[i] += P.grow[i] * dt; P.alp[i] = (1 - t) * 0.42; }
+        P.pos[i * 3] += P.vel[i * 3] * dt; P.pos[i * 3 + 1] += P.vel[i * 3 + 1] * dt; P.pos[i * 3 + 2] += P.vel[i * 3 + 2] * dt;
+        if (P.additive && P.pos[i * 3 + 1] < 0.02) { P.pos[i * 3 + 1] = 0.02; P.vel[i * 3 + 1] *= -0.35; }
+      }
+      if (any) { P.geo.attributes.position.needsUpdate = true; P.geo.attributes.aAlpha.needsUpdate = true; P.geo.attributes.aSize.needsUpdate = true; P.geo.attributes.aCol.needsUpdate = true; }
+    });
   }
 
   /* =================================================================
@@ -2940,7 +3107,7 @@
     clamp: clamp, lerp: lerp, wrapAng: wrapAng, smooth: smooth,
     initRenderer: initRenderer, onResize: onResize, viewportSize: viewportSize,
     buildTrack: buildTrack, makeCar: makeCar, placeOnGrid: placeOnGrid,
-    makeSafetyCar: makeSafetyCar, makeCrane: makeCrane,
+    makeSafetyCar: makeSafetyCar, makeCrane: makeCrane, numTexture: numTexture,
     inDRS: inDRS, atDRSDetection: atDRSDetection, applyRenderScale: applyRenderScale,
     updateCarDetail: updateCarDetail,
     garageEnter: garageEnter, garageExit: garageExit, garageResize: garageResize,
@@ -2948,6 +3115,7 @@
     podiumEnter: podiumEnter, podiumExit: podiumExit, podiumResize: podiumResize,
     podiumTime: podiumTime, makePerson: makePerson, animateCrowd: animateCrowd,
     stepCar: stepCar, collisions: collisions, aiInput: aiInput,
+    fxTick: fxTick, fxSmoke: fxSmoke, fxSparks: fxSparks, fxReset: fxReset,
     updateCamera: updateCamera, laneLat: laneLat, pitU: pitU,
     tyreGrip: tyreGrip, applyWet: applyWet, makeTex: makeTex,
     onLap: null, onSector: null, onHit: null, onPenalty: null, onRetire: null

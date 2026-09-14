@@ -49,9 +49,15 @@
   function loadSave() {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var o = JSON.parse(raw); if (o && o.dstand) return o; }
+      if (raw) { var o = JSON.parse(raw); if (o && o.dstand) { PROG.ensure(o); return o; } }
     } catch (e) { }
-    return blankSave();
+    var b = blankSave(); PROG.ensure(b); return b;
+  }
+  function achToast(ids) {
+    if (!ids || !ids.length) return;
+    var a = PROG.byId[ids[0]]; if (!a) return;
+    flash(a.icon + ' ' + a.name.toUpperCase(), 'ach', 2.6);
+    beep(true);
   }
   function persist() { try { localStorage.setItem(KEY, JSON.stringify(S.save)); } catch (e) { } }
 
@@ -80,7 +86,7 @@
         laneT: 0, avoid: 0, jitter: i * 1.7, mistCd: 4 + i, relCd: 30 + i * 3,
         lineTarget: 0, boxU: 0, stopsDone: 0, stopsPlanned: 1, pitLaps: [3], mistake: 0
       });
-      if (isMe) { G.player = c; c.ai = false; }
+      if (isMe) { G.player = c; c.ai = false; applyCustom(c); }
       G.cars.push(c);
       entries.push(c);
     });
@@ -98,16 +104,28 @@
     var laps = S.laps;
     G.cars.forEach(function (c) {
       var stops = laps >= 9 ? 2 : 1;
-      if (c.ai && Math.random() < 0.25) stops = stops === 1 ? 2 : 1;
+      var gamble = false;
+      if (c.ai) {
+        // personality, not a coin toss: chargers stop more on softer rubber,
+        // the steady hands go long on hards, and a few try an early undercut
+        var r = Math.random();
+        if (c.agg > 0.65 && r < 0.5) stops = 2;
+        else if (c.cons > 0.7 && r < 0.4) stops = 1;
+        else if (r < 0.2) stops = stops === 1 ? 2 : 1;
+        if (laps <= 5) stops = 1;
+        gamble = stops === 2 && Math.random() < 0.15;
+      }
       c.stopsPlanned = stops; c.stopsDone = 0;
       c.pitLaps = [];
       for (var k = 1; k <= stops; k++) {
         var ideal = laps * k / (stops + 1);
+        if (gamble && k === 1) ideal = 2;
         c.pitLaps.push(clamp(Math.round(ideal + (Math.random() * 3 - 1.5)), 2, laps - 1));
       }
-      // starting compound
+      // starting compound follows the plan and the temperament
       if (G.wet > 0.5) c.tyre = G.wet > 0.75 ? 'W' : 'I';
-      else c.tyre = (stops === 2) ? (Math.random() < 0.6 ? 'S' : 'M') : (Math.random() < 0.55 ? 'M' : 'H');
+      else if (stops === 2) c.tyre = (c.agg > 0.55 || Math.random() < 0.5) ? 'S' : 'M';
+      else c.tyre = (c.cons > 0.65 || Math.random() < 0.45) ? 'H' : 'M';
       c.tw = 1;
     });
     if (!G.player.ai) { G.player.stopsPlanned = 9; G.player.stopsDone = 0; }
@@ -121,7 +139,7 @@
 
   function loadTrack(def) {
     GP.buildTrack(def);
-    S.laps = def.laps;
+    S.laps = S.quickLaps || def.laps;
     if (!G.cars.length) buildField();
     else G.cars.forEach(function (c) { G.scene.add(c.group); });
     buildCrew();
@@ -221,6 +239,7 @@
     });
     S.grid = order;
     S.phase = 'setup';
+    if (order[0] === G.player && G.player.bestLap) { var pf = PROG.pole(S.save.profile); persist(); if (pf) setTimeout(function () { achToast(pf); }, 600); }
     showQualiResult(order);
   }
 
@@ -242,6 +261,7 @@
     planStrategies();
     G.cars.forEach(function (c) { c.fuel = 1; });
     S.stintStart = 0;
+    PROG.raceStart({ gridPos: G.player.gridPos || order.indexOf(G.player) + 1 });
     showScreen(null);
     hudMode('race');
     $('lights').style.display = 'flex';
@@ -260,7 +280,9 @@
       el.classList.toggle('on', on);
     });
     if (S.countT > 0.85 * 5 + 0.9) {
-      $('lights').style.display = 'none';
+      L.forEach(function (el) { el.classList.remove('on'); el.classList.add('go'); });
+      setTimeout(function () { $('lights').style.display = 'none'; L.forEach(function (el) { el.classList.remove('go'); }); }, 700);
+      G.shake = Math.max(G.shake || 0, 0.22);
       S.phase = 'race'; S.raceT = 0; beep(true);
       var restart = !!S.restart;
       G.cars.forEach(function (c) {
@@ -307,7 +329,7 @@
     if (c.lap >= 2) {
       c.lastLap = S.raceT - c.lapStart;
       if (!c.bestLap || c.lastLap < c.bestLap) c.bestLap = c.lastLap;
-      if (c === G.player) c.boost = GP.BOOST_MAX;
+      if (c === G.player) { c.boost = GP.BOOST_MAX; var fl = PROG.lap(S.save.profile); if (fl) setTimeout(function () { achToast(fl); }, 1200); }
       else c.boost = GP.BOOST_MAX;
     }
     c.lapStart = S.raceT;
@@ -339,6 +361,7 @@
   function onHit(c, force) {
     if (c === G.player) {
       G.shake = Math.min(0.55, force * 0.7); sfxHit(force);
+      if (force > 0.12) PROG.contact();
     }
     // Anyone who runs into the back of the car ahead is judged at fault —
     // the AI is held to the same standard as the player.
@@ -499,6 +522,27 @@
     }
   }
 
+  // Roughly how many laps a fresh set will last before it is worth stopping,
+  // from the wear model and the circuit length — enough for the choice to mean something.
+  function stintLaps(t) {
+    var perLap = (G.trackLen || 3000) / (GP.MAX_SPEED * 0.72);          // seconds a lap at race pace
+    var load = 0.78, up = S.save.upg ? (1 - (S.save.upg.tyres || 0) * 0.055) : 1;
+    var lossPerLap = perLap * 0.0072 * t.wear * load * (1 - G.wet * 0.35) * up;
+    if (!t.dryOK && G.wet < 0.3) lossPerLap *= 2.6;                       // rain tyres cook on a dry road
+    return Math.max(1, Math.round(0.72 / Math.max(0.001, lossPerLap)));
+  }
+  function tyreAdvice(t) {
+    if (G.wet > 0.72) return t.id === 'W' ? 'Right call for this rain' : (t.id === 'I' ? 'Marginal in heavy rain' : 'Not in this weather');
+    if (G.wet > 0.35) return t.id === 'I' ? 'Right call for a damp track' : (t.id === 'W' ? 'Too much tyre for this' : 'Slicks will slide');
+    if (!t.dryOK) return 'Dry track: it will overheat';
+    var laps = stintLaps(t), left = S.laps - (G.player && S.phase === 'race' ? Math.max(0, G.player.lap - 1) : 0);
+    if (laps >= left) return 'Goes to the flag from here';
+    return 'About ' + laps + ' laps, then a stop';
+  }
+  function tyreButton(t, extra) {
+    return '<button class="tbtn' + (extra || '') + '" data-t="' + t.id + '" title="' + t.blurb + '"><i style="background:' + t.color + '"></i>' + t.label +
+      '<small>' + tyreAdvice(t) + '</small></button>';
+  }
   function openPitPanel() {
     var me = G.player;
     me.pitPhase = 0.5;
@@ -507,10 +551,9 @@
     crew.position.set(me.x, 0, me.z); crew.rotation.y = me.h; crew.visible = true;
     var p = $('pitPanel');
     p.classList.add('show');
-    var html = '<h4>Pit stop</h4><div class="tyrow">';
-    D.TYRES.forEach(function (t, i) {
-      html += '<button class="tbtn" data-t="' + t.id + '"><i style="background:' + t.color + '"></i>' + t.label + '</button>';
-    });
+    var html = '<h4>Pit stop</h4><p class="tyhint">' + Math.round(me.tw * 100) + '% left on the ' + D.tyre(me.tyre).name.toLowerCase() +
+      's · ' + Math.max(0, S.laps - me.lap + 1) + ' laps to go</p><div class="tyrow">';
+    D.TYRES.forEach(function (t) { html += tyreButton(t); });
     html += '</div><label class="fuelrow">Fuel <input id="pitFuel" type="range" min="35" max="100" value="' +
       Math.round(Math.max(35, me.fuel * 100)) + '"><span id="pitFuelV"></span></label>' +
       '<div class="pitacts"><button class="btn btn-primary" id="pitGo">Service the car</button>' +
@@ -990,6 +1033,7 @@
       teamName: team.name
     });
     applyGarageCar();
+    var rig = GP.garageRig(); if (rig && rig.car) applyCustom(null, rig.car);
     setTimeout(GP.garageResize, 60);
   }
   function renderGarage() {
@@ -1041,7 +1085,14 @@
       c.finishT = S.raceT + (owed / pace) * 1000 + c.penalty * 1000;
     });
     rows = classification();
+    var fastest = rows.filter(function (c) { return c.bestLap; }).sort(function (a, b) { return a.bestLap - b.bestLap; })[0];
+    S.award = PROG.raceEnd({
+      profile: S.save.profile, pos: rows.indexOf(me) + 1, field: rows.length, retired: !!me.retired,
+      fastest: fastest === me, wet: G.wet > 0.3, night: !!currentTrack().night,
+      diffMul: [0.8, 1, 1.25][S.diff] || 1, stops: me.stops || 0
+    });
     if (S.mode === 'season') awardPoints(rows);
+    persist();
     setTimeout(function () { showPodium(rows); }, 1100);
   }
 
@@ -1147,7 +1198,11 @@
       me: rows.indexOf(G.player) + 1
     });
     sv.round = Math.min(D.CAL.length, S.trackIdx + 1);
-    if (sv.round >= D.CAL.length) sv.done = true;
+    if (sv.round >= D.CAL.length) {
+      sv.done = true;
+      var lead = Object.keys(sv.dstand).sort(function (a, b) { return sv.dstand[b] - sv.dstand[a]; })[0];
+      if (lead === G.player.name && S.award) { var ch = PROG.champion(sv.profile); if (ch) S.award.fresh.push(PROG.byId.champion); }
+    }
     persist();
   }
 
@@ -1182,7 +1237,50 @@
     var sv = S.save;
     $('contBtn').style.display = (sv.round > 0 && !sv.done) ? 'flex' : 'none';
     $('contSub').textContent = sv.round > 0 ? ('Round ' + (sv.round + 1) + ' · ' + D.CAL[Math.min(sv.round, 24)].city) : '';
+    $('profileChip').innerHTML = PROG.chip(sv.profile);
+    var fresh = !sv.profile.stats.races;
+    $('quickBtn').classList.toggle('pri', fresh); $('newBtn').classList.toggle('pri', !fresh);
+    $('quickSub').textContent = fresh ? 'Three laps, straight to the lights — start here' : 'Three laps on a short circuit, no setup';
     syncDiff();
+  }
+  function playerTeam() { return D.team(G.player ? G.player.team : S.team); }
+  function applyCustom(car, mesh) {
+    var THREE = window.THREE, p = S.save.profile, team = playerTeam();
+    mesh = mesh || (car && car.mesh); if (!mesh) return;
+    var paint = PROG.resolve(p, 'paint', team.color), trim = PROG.resolve(p, 'trim', team.color2);
+    var helmet = PROG.resolve(p, 'helmet', team.color2), rim = PROG.resolve(p, 'rim', '#aeb4bc');
+    mesh.paint.color.set(paint); mesh.trim.color.set(trim);
+    if (mesh.helmet) mesh.helmet.material.color.set(helmet);
+    if (mesh.rim) mesh.rim.color.set(rim);
+    var num = p.custom.num || (car && car.num);
+    if (mesh.num && num && mesh.num.userData.num !== num) {
+      if (mesh.num.map) mesh.num.map.dispose();
+      mesh.num.map = GP.numTexture(num); mesh.num.needsUpdate = true; mesh.num.userData.num = num;
+    }
+    if (car) { car.color = new THREE.Color(paint).getHex(); if (num) car.num = num; }
+  }
+  function renderCarTab() {
+    $('driverCar').innerHTML = PROG.carTab(S.save.profile, playerTeam());
+    $('driverCar').querySelectorAll('.sw').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (PROG.setCustom(S.save.profile, b.dataset.cat, b.dataset.id)) { persist(); applyCustom(G.player); renderCarTab(); }
+      });
+    });
+    var inp = $('carNum');
+    if (inp) inp.addEventListener('change', function () { PROG.setCustom(S.save.profile, 'num', inp.value); persist(); applyCustom(G.player); renderCarTab(); });
+  }
+  function openDriver(tab) {
+    var p = S.save.profile;
+    $('driverChip').innerHTML = PROG.chip(p);
+    $('driverStats').innerHTML = PROG.stats(p);
+    $('driverAch').innerHTML = PROG.achievements(p);
+    if (typeof renderCarTab === 'function') renderCarTab();
+    driverTab(tab || 'progress');
+    $('driverScreen').classList.add('show');
+  }
+  function driverTab(tab) {
+    $('driverScreen').querySelectorAll('.dtabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
+    $('driverScreen').querySelectorAll('.dtab').forEach(function (d) { d.style.display = d.id === 'dtab-' + tab ? 'block' : 'none'; });
   }
 
   function openSeason() {
@@ -1234,7 +1332,20 @@
     $('stTabT').classList.toggle('on', kind === 'teams');
   }
 
+  // Quick race: the first-run path. A dry, daytime circuit with a short lap,
+  // three laps, mediums, no setup screen. Menu to lights out in a few seconds,
+  // chequered flag and the first XP inside three minutes.
+  function quickRace() {
+    unlockAudio(); S.mode = 'single'; S.quickLaps = 3;
+    var pool = D.CAL.map(function (d, i) { return { i: i, d: d }; }).filter(function (o) { return !o.d.night && o.d.rain < 0.3; });
+    var pick = pool[Math.floor(Math.random() * pool.length)] || { i: 0, d: D.CAL[0] };
+    S.trackIdx = pick.i;
+    setWeather(pick.d, Math.random() < 0.7 ? 'sunny' : 'cloudy');
+    S.startTyre = 'M';
+    goSession(false);
+  }
   function openSetup(i) {
+    S.quickLaps = 0;
     S.trackIdx = i;
     S.phase = 'setup';
     var def = D.CAL[i];
@@ -1253,15 +1364,15 @@
     var wrap = $('setupTyres'); wrap.innerHTML = '';
     D.TYRES.forEach(function (t) {
       var b = document.createElement('button');
-      b.className = 'tbtn'; b.dataset.t = t.id;
-      b.innerHTML = '<i style="background:' + t.color + '"></i>' + t.label;
+      b.className = 'tbtn'; b.dataset.t = t.id; b.title = t.blurb;
+      b.innerHTML = '<i style="background:' + t.color + '"></i>' + t.label + '<small>' + tyreAdvice(t) + '</small>';
       b.addEventListener('click', function () {
         S.startTyre = t.id;
         wrap.querySelectorAll('.tbtn').forEach(function (o) { o.classList.toggle('on', o.dataset.t === t.id); });
       });
       wrap.appendChild(b);
     });
-    S.startTyre = G.wet > 0.5 ? (G.wet > 0.75 ? 'W' : 'I') : 'M';
+    S.startTyre = G.wet > 0.72 ? 'W' : (G.wet > 0.35 ? 'I' : 'M');   // the same thresholds the advice uses
     wrap.querySelectorAll('.tbtn').forEach(function (o) { o.classList.toggle('on', o.dataset.t === S.startTyre); });
   }
 
@@ -1346,7 +1457,8 @@
         '<span class="t">' + t + '</span><span class="pts">' + (pts ? '+' + pts : '') + '</span></div>';
     });
     html += '</div>';
-    $('resultBody').innerHTML = html;
+    $('resultBody').innerHTML = (S.award ? PROG.awardCard(S.award) : '') + html;
+    if (S.award && S.award.leveled) { var aw = $('resultBody').querySelector('.award'); if (aw) aw.classList.add('leveled'); }
     $('resultTitle').textContent = me.retired ? 'Retired' : (pos === 1 ? 'Race win' : (pos <= 3 ? 'Podium · P' + pos : 'P' + pos));
     $('resultSub').textContent = currentTrack().gp + ' · best lap ' + fmtTime(me.bestLap) +
       ' · ' + me.stops + (me.stops === 1 ? ' stop' : ' stops') + (me.penalty ? ' · +' + me.penalty + 's penalty' : '');
@@ -1796,6 +1908,12 @@
         document.body.classList.toggle('rain', G.wet > 0.15);
       }
     }
+    if (G.player && S.started) {
+      var kmh = Math.max(0, G.player.speed) * GP.KMH, fxEl = $('speedFx');
+      var v = clamp((kmh - 190) / 140, 0, 1) * (G.camMode === 3 ? 0 : 1);
+      if (fxEl) { var op = (v * 0.55).toFixed(2); if (fxEl.style.opacity !== op) fxEl.style.opacity = op; }
+      if (v > 0.35 && (G.shake || 0) < 0.03) G.shake = 0.03 * v;
+    }
     if (S.penCd > 0) S.penCd -= dt;
     G.cars.forEach(function (c) { if (c.penCd > 0) c.penCd -= dt; });
     redTick(dt);
@@ -1843,6 +1961,11 @@
         GP.stepCar(c, inp, h);
       }
       GP.collisions();
+    }
+    GP.fxTick(dt);
+    if (S.phase === 'race' && G.player && !G.player.finished) {
+      var fresh = PROG.tick({ me: G.player, cars: G.cars, profile: S.save.profile });
+      if (fresh) achToast(fresh);
     }
     if (S.phase === 'race' || S.phase === 'finished') playerPitLogic(dt);
     if (racing) { drsTick(dt); scTick(dt); recoveryTick(dt); engineerTick(dt); }
@@ -1988,6 +2111,9 @@
   });
 
   function wireUI() {
+    $('driverBtn').addEventListener('click', function () { openDriver('progress'); });
+    $('driverBack').addEventListener('click', function () { if (!$('driverBack').onclick) $('driverScreen').classList.remove('show'); });
+    $('driverScreen').querySelectorAll('.dtabs button').forEach(function (b) { b.addEventListener('click', function () { driverTab(b.dataset.tab); }); });
     window.addEventListener('keydown', function (e) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].indexOf(e.code) >= 0) e.preventDefault();
       unlockAudio();
@@ -2020,6 +2146,14 @@
     $('teamGo').addEventListener('click', function () { $('teamScreen').classList.remove('show'); newSeason(); });
     $('teamBack').addEventListener('click', function () { $('teamScreen').classList.remove('show'); });
     $('contBtn').addEventListener('click', function () { unlockAudio(); openSeason(); });
+    $('quickBtn').addEventListener('click', function () {
+      // first time out: pick your colours, then race
+      if (!S.save.profile.stats.races) {
+        openDriver('car');
+        var back = $('driverBack'); back.textContent = 'Go race →';
+        back.onclick = function () { $('driverScreen').classList.remove('show'); back.textContent = 'Done'; back.onclick = null; quickRace(); };
+      } else quickRace();
+    });
     $('singleBtn').addEventListener('click', function () {
       unlockAudio(); S.mode = 'single';
       openSetup(Math.floor(Math.random() * D.CAL.length));

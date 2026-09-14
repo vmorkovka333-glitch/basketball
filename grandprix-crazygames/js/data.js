@@ -53,11 +53,11 @@
   // Tyres. grip is dry grip, wet is grip on a wet surface, wear is how fast the
   // compound loses it. Intermediates and wets are slow in the dry and overheat.
   var TYRES = [
-    { id:'S', name:'Soft',         label:'SOFT', color:'#d8382c', grip:1.045, wet:0.58, wear:1.55, dryOK:true },
-    { id:'M', name:'Medium',       label:'MED',  color:'#e8be1d', grip:1.000, wet:0.62, wear:1.00, dryOK:true },
-    { id:'H', name:'Hard',         label:'HARD', color:'#e6e2da', grip:0.962, wet:0.66, wear:0.66, dryOK:true },
-    { id:'I', name:'Intermediate', label:'INTER',color:'#1f9e4d', grip:0.905, wet:0.94, wear:1.15, dryOK:false },
-    { id:'W', name:'Wet',          label:'WET',  color:'#2f6fd0', grip:0.845, wet:1.02, wear:0.95, dryOK:false }
+    { id:'S', name:'Soft',         label:'SOFT', color:'#d8382c', grip:1.045, wet:0.58, wear:1.55, dryOK:true,  blurb:'Fastest, and gone in a few laps' },
+    { id:'M', name:'Medium',       label:'MED',  color:'#e8be1d', grip:1.000, wet:0.62, wear:1.00, dryOK:true,  blurb:'The balance: pace and a real stint' },
+    { id:'H', name:'Hard',         label:'HARD', color:'#e6e2da', grip:0.962, wet:0.66, wear:0.66, dryOK:true,  blurb:'Slower, but it goes the distance' },
+    { id:'I', name:'Intermediate', label:'INTER',color:'#1f9e4d', grip:0.905, wet:0.94, wear:1.15, dryOK:false, blurb:'For a damp track; overheats when it dries' },
+    { id:'W', name:'Wet',          label:'WET',  color:'#2f6fd0', grip:0.845, wet:1.02, wear:0.95, dryOK:false, blurb:'Standing water only; hopeless in the dry' }
   ];
 
   var POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
