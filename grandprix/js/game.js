@@ -522,6 +522,27 @@
     }
   }
 
+  // Roughly how many laps a fresh set will last before it is worth stopping,
+  // from the wear model and the circuit length — enough for the choice to mean something.
+  function stintLaps(t) {
+    var perLap = (G.trackLen || 3000) / (GP.MAX_SPEED * 0.72);          // seconds a lap at race pace
+    var load = 0.78, up = S.save.upg ? (1 - (S.save.upg.tyres || 0) * 0.055) : 1;
+    var lossPerLap = perLap * 0.0072 * t.wear * load * (1 - G.wet * 0.35) * up;
+    if (!t.dryOK && G.wet < 0.3) lossPerLap *= 2.6;                       // rain tyres cook on a dry road
+    return Math.max(1, Math.round(0.72 / Math.max(0.001, lossPerLap)));
+  }
+  function tyreAdvice(t) {
+    if (G.wet > 0.72) return t.id === 'W' ? 'Right call for this rain' : (t.id === 'I' ? 'Marginal in heavy rain' : 'Not in this weather');
+    if (G.wet > 0.35) return t.id === 'I' ? 'Right call for a damp track' : (t.id === 'W' ? 'Too much tyre for this' : 'Slicks will slide');
+    if (!t.dryOK) return 'Dry track: it will overheat';
+    var laps = stintLaps(t), left = S.laps - (G.player && S.phase === 'race' ? Math.max(0, G.player.lap - 1) : 0);
+    if (laps >= left) return 'Goes to the flag from here';
+    return 'About ' + laps + ' laps, then a stop';
+  }
+  function tyreButton(t, extra) {
+    return '<button class="tbtn' + (extra || '') + '" data-t="' + t.id + '" title="' + t.blurb + '"><i style="background:' + t.color + '"></i>' + t.label +
+      '<small>' + tyreAdvice(t) + '</small></button>';
+  }
   function openPitPanel() {
     var me = G.player;
     me.pitPhase = 0.5;
@@ -530,10 +551,9 @@
     crew.position.set(me.x, 0, me.z); crew.rotation.y = me.h; crew.visible = true;
     var p = $('pitPanel');
     p.classList.add('show');
-    var html = '<h4>Pit stop</h4><div class="tyrow">';
-    D.TYRES.forEach(function (t, i) {
-      html += '<button class="tbtn" data-t="' + t.id + '"><i style="background:' + t.color + '"></i>' + t.label + '</button>';
-    });
+    var html = '<h4>Pit stop</h4><p class="tyhint">' + Math.round(me.tw * 100) + '% left on the ' + D.tyre(me.tyre).name.toLowerCase() +
+      's · ' + Math.max(0, S.laps - me.lap + 1) + ' laps to go</p><div class="tyrow">';
+    D.TYRES.forEach(function (t) { html += tyreButton(t); });
     html += '</div><label class="fuelrow">Fuel <input id="pitFuel" type="range" min="35" max="100" value="' +
       Math.round(Math.max(35, me.fuel * 100)) + '"><span id="pitFuelV"></span></label>' +
       '<div class="pitacts"><button class="btn btn-primary" id="pitGo">Service the car</button>' +
@@ -1328,15 +1348,15 @@
     var wrap = $('setupTyres'); wrap.innerHTML = '';
     D.TYRES.forEach(function (t) {
       var b = document.createElement('button');
-      b.className = 'tbtn'; b.dataset.t = t.id;
-      b.innerHTML = '<i style="background:' + t.color + '"></i>' + t.label;
+      b.className = 'tbtn'; b.dataset.t = t.id; b.title = t.blurb;
+      b.innerHTML = '<i style="background:' + t.color + '"></i>' + t.label + '<small>' + tyreAdvice(t) + '</small>';
       b.addEventListener('click', function () {
         S.startTyre = t.id;
         wrap.querySelectorAll('.tbtn').forEach(function (o) { o.classList.toggle('on', o.dataset.t === t.id); });
       });
       wrap.appendChild(b);
     });
-    S.startTyre = G.wet > 0.5 ? (G.wet > 0.75 ? 'W' : 'I') : 'M';
+    S.startTyre = G.wet > 0.72 ? 'W' : (G.wet > 0.35 ? 'I' : 'M');   // the same thresholds the advice uses
     wrap.querySelectorAll('.tbtn').forEach(function (o) { o.classList.toggle('on', o.dataset.t === S.startTyre); });
   }
 
