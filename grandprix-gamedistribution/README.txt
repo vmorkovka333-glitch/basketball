@@ -4,12 +4,8 @@ GRAND PRIX 3D - SEASON  .  GameDistribution build
 HTML5 game (Three.js r128). Three.js and both fonts are bundled locally; the
 only external request is the GameDistribution SDK.
 
-BEFORE PUBLISHING - ONE EDIT REQUIRED
-  Open index.html and replace the placeholder near the bottom:
-
-      gameId: "YOUR-GAMEDISTRIBUTION-GAME-ID"
-
-  with the id from your GameDistribution dashboard.
+READY TO UPLOAD
+  gameId: c870d2c80d8e4890a2f936fd99059c53   (already set in index.html)
 
 FILES
   index.html     markup, styles, GD SDK loader and event wiring; fonts embedded
