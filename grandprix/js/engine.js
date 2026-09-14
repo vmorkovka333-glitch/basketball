@@ -2201,7 +2201,25 @@
     var lookAhead = 8 + Math.abs(c.speed) * (0.38 + skill * 0.08);
     var t = S[(c.idx + Math.round(lookAhead)) % n];
     c.lineTarget = t.line;
-    var tlat = t.line + c.laneT + laneBias + c.avoid;
+
+    // --- defending: someone close behind on a straight gets the door shut.
+    // The move is toward the attacker's side, eased in, and only bold drivers do it.
+    c.defend = c.defend || 0;
+    var threat = 0, tside = 0;
+    for (var q = 0; q < G.cars.length; q++) {
+      var o2 = G.cars[q]; if (o2 === c || o2.retired || o2.inPit) continue;
+      var ddx = o2.x - c.x, ddz = o2.z - c.z;
+      var back = -(ddx * Math.sin(c.h) + ddz * Math.cos(c.h));
+      var sd = ddx * Math.cos(c.h) - ddz * Math.sin(c.h);
+      // only a car that is actually closing counts as a threat
+      if (back > 1 && back < 14 && Math.abs(sd) < 4 && o2.speed > c.speed - 1.5) { var w = 1 - back / 14; if (w > threat) { threat = w; tside = sd; } }
+    }
+    var straight = Math.abs(t.curv) < 0.006 && Math.abs(S[(c.idx + 24) % n].curv) < 0.006;
+    var wantDef = (threat > 0.3 && straight && c.agg > 0.55 && !c.wantPit && ctx.phase === 'race' && ctx.t > 8000)
+      ? (tside > 0 ? 1 : -1) * Math.min(2.2, 1.0 + c.agg * 1.5) : 0;
+    c.defend += (wantDef - c.defend) * Math.min(1, ctx.dt * (wantDef ? 1.6 : 0.9));
+
+    var tlat = t.line + c.laneT + laneBias + c.avoid + c.defend;
     tlat = clamp(tlat, -G.HALF_W + 1.1, G.HALF_W - 1.1);
     var ang = wrapAng(Math.atan2(t.x + t.nx * tlat - c.x, t.z + t.nz * tlat - c.z) - c.h);
 
@@ -2254,11 +2272,14 @@
         c.mistCd = 6 + Math.random() * 30;
         var chance = (1 - c.cons) * 0.55 * ctx.mist * (1 + G.wet * 1.4) * (c.tw < 0.3 ? 1.6 : 1);
         if (Math.random() < chance) {
-          if (Math.random() < 0.45) { c.spin = 0.5 + Math.random() * 0.5; c.spinDir = Math.random() < 0.5 ? -1 : 1; }
-          c.mistake = 0.7 + Math.random() * 0.8;
+          var kind = Math.random();
+          if (kind < 0.5) c.lateBrake = 1.2 + Math.random() * 0.9;          // brakes too late, runs deep
+          else if (kind < 0.75) { c.spin = 0.5 + Math.random() * 0.5; c.spinDir = Math.random() < 0.5 ? -1 : 1; c.mistake = 0.7 + Math.random() * 0.8; }
+          else c.mistake = 0.7 + Math.random() * 0.8;                        // a lift, a moment lost
         }
       }
       if (c.mistake > 0) { c.mistake -= ctx.dt; tgt *= 0.62; }
+      if (c.lateBrake > 0) { c.lateBrake -= ctx.dt; tgt *= 1.09; }
     }
     // technical trouble
     if (ctx.phase === 'race' && !c.retired) {
@@ -2273,7 +2294,7 @@
     return {
       steer: clamp(ang * 2.5, -1, 1),
       gas: c.speed < tgt,
-      brake: c.speed > tgt + 2.5,
+      brake: c.speed > tgt + (c.lateBrake > 0 ? 7 : 2.5),
       hand: false
     };
   }

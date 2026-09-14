@@ -104,16 +104,28 @@
     var laps = S.laps;
     G.cars.forEach(function (c) {
       var stops = laps >= 9 ? 2 : 1;
-      if (c.ai && Math.random() < 0.25) stops = stops === 1 ? 2 : 1;
+      var gamble = false;
+      if (c.ai) {
+        // personality, not a coin toss: chargers stop more on softer rubber,
+        // the steady hands go long on hards, and a few try an early undercut
+        var r = Math.random();
+        if (c.agg > 0.65 && r < 0.5) stops = 2;
+        else if (c.cons > 0.7 && r < 0.4) stops = 1;
+        else if (r < 0.2) stops = stops === 1 ? 2 : 1;
+        if (laps <= 5) stops = 1;
+        gamble = stops === 2 && Math.random() < 0.15;
+      }
       c.stopsPlanned = stops; c.stopsDone = 0;
       c.pitLaps = [];
       for (var k = 1; k <= stops; k++) {
         var ideal = laps * k / (stops + 1);
+        if (gamble && k === 1) ideal = 2;
         c.pitLaps.push(clamp(Math.round(ideal + (Math.random() * 3 - 1.5)), 2, laps - 1));
       }
-      // starting compound
+      // starting compound follows the plan and the temperament
       if (G.wet > 0.5) c.tyre = G.wet > 0.75 ? 'W' : 'I';
-      else c.tyre = (stops === 2) ? (Math.random() < 0.6 ? 'S' : 'M') : (Math.random() < 0.55 ? 'M' : 'H');
+      else if (stops === 2) c.tyre = (c.agg > 0.55 || Math.random() < 0.5) ? 'S' : 'M';
+      else c.tyre = (c.cons > 0.65 || Math.random() < 0.45) ? 'H' : 'M';
       c.tw = 1;
     });
     if (!G.player.ai) { G.player.stopsPlanned = 9; G.player.stopsDone = 0; }
