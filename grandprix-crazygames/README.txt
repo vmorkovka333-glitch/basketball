@@ -1,42 +1,39 @@
-GRAND PRIX 3D  .  CrazyGames build
-==================================
+GRAND PRIX 3D - SEASON  .  CrazyGames build
+===========================================
 
 HTML5 game (Three.js r128). Three.js and both fonts are bundled locally; the
 only external request is the CrazyGames SDK.
 
 FILES
-  index.html     the game, with CrazyGames SDK v3 wiring; fonts embedded
-  three.min.js   Three.js r128 (bundled locally)
+  index.html     markup, styles, CrazyGames SDK wiring; fonts embedded
+  three.min.js   Three.js r128 (bundled)
+  js/            data.js, engine.js, game.js
 
 CRAZYGAMES SDK - ALREADY INTEGRATED
-  loadingStart/loadingStop around the loading screen, gameplayStart on RACE,
-  gameplayStop when a race ends or the menu opens. Midgame interstitials are
-  requested only between races, never during one; the simulation freezes and
-  audio mutes while an ad is on screen. Outside crazygames.com the game simply
+  loadingStart/loadingStop around SDK init, gameplayStart/gameplayStop around
+  the midgame interstitial, which is requested only between races. The game
+  freezes and mutes while an ad is on screen. Outside crazygames.com it simply
   plays ad-free.
 
 GAMEPLAY
-  Arcade open-wheel racing on a fictional circuit: a long pit straight, a fast
-  right-hander, a hairpin, a chicane and a sweeping back section. Five AI
-  rivals, 3 or 5 laps, start from the back of the grid behind five red lights.
-  Arcade handling with drift, grass slows you down, barriers cost speed.
+  A 25-round championship of original circuits, 20 drivers across 10 invented
+  teams. Qualifying, tyre wear and five compounds, fuel, a drivable pit lane
+  with a speed limit, changing weather, DRS, safety car, penalties, team radio,
+  a garage with upgrades, driver and constructor standings, a 3D podium.
+  Single race mode for a quick go. 7-10 laps per race.
 
 CONTROLS
-  Desktop  Arrows or WASD to steer, accelerate and brake; Space is a handbrake.
-  Mobile   On-screen buttons: steer left/right, GAS, BRAKE. Portrait and landscape.
-
-AUDIO
-  Web Audio, unlocked on the first tap: a synthesised engine that follows a
-  seven-gear rev bar, tyre screech on slip, start-light beeps, a finish jingle.
+  Desktop  Arrows or WASD steer, accelerate, brake. Space handbrake. Shift
+           overtake mode. E or Enter hold for DRS. P call the pit lane. C camera.
+  Mobile   On-screen buttons appear automatically. Portrait and landscape.
 
 STORAGE
-  localStorage keys "gp.vol" and "gp.muted" remember the audio settings.
-  Nothing else is stored; no cookies, no analytics, no tracking.
+  The season is saved in localStorage under "gp3.save.v1". No cookies, no
+  analytics, no tracking.
 
-LOADING
-  Three.js and the SDK are deferred, so a loading screen with real progress
-  appears at once; window.onGameLoaded fires when it finishes. Safe in an iframe
-  of any size, including one that starts at 0x0 and is sized later.
+LEGAL
+  No real team, driver, sponsor or circuit layout is reproduced. Host city and
+  country names are used as event names only.
 
 RUN LOCALLY
   Serve the folder over HTTP:  python3 -m http.server   ->  http://localhost:8000/
