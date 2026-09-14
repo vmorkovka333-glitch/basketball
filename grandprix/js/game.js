@@ -139,7 +139,7 @@
 
   function loadTrack(def) {
     GP.buildTrack(def);
-    S.laps = def.laps;
+    S.laps = S.quickLaps || def.laps;
     if (!G.cars.length) buildField();
     else G.cars.forEach(function (c) { G.scene.add(c.group); });
     buildCrew();
@@ -1238,6 +1238,9 @@
     $('contBtn').style.display = (sv.round > 0 && !sv.done) ? 'flex' : 'none';
     $('contSub').textContent = sv.round > 0 ? ('Round ' + (sv.round + 1) + ' · ' + D.CAL[Math.min(sv.round, 24)].city) : '';
     $('profileChip').innerHTML = PROG.chip(sv.profile);
+    var fresh = !sv.profile.stats.races;
+    $('quickBtn').classList.toggle('pri', fresh); $('newBtn').classList.toggle('pri', !fresh);
+    $('quickSub').textContent = fresh ? 'Three laps, straight to the lights — start here' : 'Three laps on a short circuit, no setup';
     syncDiff();
   }
   function playerTeam() { return D.team(G.player ? G.player.team : S.team); }
@@ -1329,7 +1332,20 @@
     $('stTabT').classList.toggle('on', kind === 'teams');
   }
 
+  // Quick race: the first-run path. A dry, daytime circuit with a short lap,
+  // three laps, mediums, no setup screen. Menu to lights out in a few seconds,
+  // chequered flag and the first XP inside three minutes.
+  function quickRace() {
+    unlockAudio(); S.mode = 'single'; S.quickLaps = 3;
+    var pool = D.CAL.map(function (d, i) { return { i: i, d: d }; }).filter(function (o) { return !o.d.night && o.d.rain < 0.3; });
+    var pick = pool[Math.floor(Math.random() * pool.length)] || { i: 0, d: D.CAL[0] };
+    S.trackIdx = pick.i;
+    setWeather(pick.d, Math.random() < 0.7 ? 'sunny' : 'cloudy');
+    S.startTyre = 'M';
+    goSession(false);
+  }
   function openSetup(i) {
+    S.quickLaps = 0;
     S.trackIdx = i;
     S.phase = 'setup';
     var def = D.CAL[i];
@@ -1442,6 +1458,7 @@
     });
     html += '</div>';
     $('resultBody').innerHTML = (S.award ? PROG.awardCard(S.award) : '') + html;
+    if (S.award && S.award.leveled) { var aw = $('resultBody').querySelector('.award'); if (aw) aw.classList.add('leveled'); }
     $('resultTitle').textContent = me.retired ? 'Retired' : (pos === 1 ? 'Race win' : (pos <= 3 ? 'Podium · P' + pos : 'P' + pos));
     $('resultSub').textContent = currentTrack().gp + ' · best lap ' + fmtTime(me.bestLap) +
       ' · ' + me.stops + (me.stops === 1 ? ' stop' : ' stops') + (me.penalty ? ' · +' + me.penalty + 's penalty' : '');
@@ -2095,7 +2112,7 @@
 
   function wireUI() {
     $('driverBtn').addEventListener('click', function () { openDriver('progress'); });
-    $('driverBack').addEventListener('click', function () { $('driverScreen').classList.remove('show'); });
+    $('driverBack').addEventListener('click', function () { if (!$('driverBack').onclick) $('driverScreen').classList.remove('show'); });
     $('driverScreen').querySelectorAll('.dtabs button').forEach(function (b) { b.addEventListener('click', function () { driverTab(b.dataset.tab); }); });
     window.addEventListener('keydown', function (e) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].indexOf(e.code) >= 0) e.preventDefault();
@@ -2129,6 +2146,14 @@
     $('teamGo').addEventListener('click', function () { $('teamScreen').classList.remove('show'); newSeason(); });
     $('teamBack').addEventListener('click', function () { $('teamScreen').classList.remove('show'); });
     $('contBtn').addEventListener('click', function () { unlockAudio(); openSeason(); });
+    $('quickBtn').addEventListener('click', function () {
+      // first time out: pick your colours, then race
+      if (!S.save.profile.stats.races) {
+        openDriver('car');
+        var back = $('driverBack'); back.textContent = 'Go race →';
+        back.onclick = function () { $('driverScreen').classList.remove('show'); back.textContent = 'Done'; back.onclick = null; quickRace(); };
+      } else quickRace();
+    });
     $('singleBtn').addEventListener('click', function () {
       unlockAudio(); S.mode = 'single';
       openSetup(Math.floor(Math.random() * D.CAL.length));

@@ -165,6 +165,9 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:3px solid var(
 .tbtn small{flex-basis:100%;display:block;font:500 10.5px var(--fb);color:var(--ink-60);margin-top:2px;letter-spacing:0;text-transform:none}
 .tbtn.on small{color:var(--acc-7)}
 .tyhint{color:var(--ink-60);font-size:12.5px;margin:-4px 0 10px}
+.award.leveled{outline:2px solid var(--acc);animation:lvlpop .6s cubic-bezier(.2,1.4,.4,1)}
+.award.leveled .awlvl{font-size:18px}
+@keyframes lvlpop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
 .flash.ach{color:#fff;background:var(--acc);padding:.18em .6em;border-radius:999px;font-size:clamp(18px,3.2vw,30px)}
 .dialog{max-width:980px;margin:0 auto;background:var(--bg);border-radius:var(--r-lg);padding:clamp(20px,3vw,34px);box-shadow:var(--sh-lg)}
 .dialog h3{font-size:clamp(24px,3vw,36px)}
@@ -629,6 +632,7 @@ body.sc #hud::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 
         changing weather, safety cars and ten teams fighting over the same corner.</p>
       <div id="profileChip"></div>
       <div class="mainacts">
+        <button class="bigbtn" id="quickBtn"><i>⚡</i><span class="txt"><b>Quick race</b><span id="quickSub">Three laps on a short circuit, no setup</span></span></button>
         <button class="bigbtn pri" id="newBtn"><i>01</i><span class="txt"><b>New season</b><span>Pick a team and start at round one</span></span></button>
         <button class="bigbtn" id="contBtn"><i>→</i><span class="txt"><b>Continue season</b><span id="contSub"></span></span></button>
         <button class="bigbtn" id="singleBtn"><i>GP</i><span class="txt"><b>Single race</b><span>One random circuit, no points</span></span></button>
