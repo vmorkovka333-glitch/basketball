@@ -147,6 +147,110 @@
   }
   function champion(profile) { profile.stats.seasons++; return unlock(profile, 'champion') ? ['champion'] : null; }
 
+  // ---- the car: paints, helmets, rims, a number ---------------------------
+  // Nothing here is bought. Everything opens with levels or achievements.
+  var PAINTS = [
+    { id: 'team',     name: 'Team livery', hex: null },
+    { id: 'crimson',  name: 'Crimson',     hex: '#d8382c', lvl: 1 },
+    { id: 'ivory',    name: 'Ivory',       hex: '#f3efe6', lvl: 1 },
+    { id: 'ink',      name: 'Ink',         hex: '#201e1d', lvl: 1 },
+    { id: 'sky',      name: 'Sky',         hex: '#7fd4ff', lvl: 1 },
+    { id: 'amber',    name: 'Amber',       hex: '#e6a63c', lvl: 3 },
+    { id: 'sage',     name: 'Sage',        hex: '#7a8a5e', lvl: 5 },
+    { id: 'violet',   name: 'Violet',      hex: '#8a6cff', lvl: 8 },
+    { id: 'mint',     name: 'Mint',        hex: '#2fd7a2', lvl: 12 },
+    { id: 'tangerine',name: 'Tangerine',   hex: '#ff7a1a', lvl: 16 },
+    { id: 'rose',     name: 'Rose',        hex: '#ff5c8a', lvl: 20 },
+    { id: 'chrome',   name: 'Chrome',      hex: '#c9ced6', lvl: 25 },
+    { id: 'purple',   name: 'Purple',      hex: '#6a1fb5', ach: 'purple' },
+    { id: 'rain',     name: 'Rain',        hex: '#2f6fd6', ach: 'rain_master' },
+    { id: 'midnight', name: 'Midnight',    hex: '#0d1226', ach: 'night_shift' },
+    { id: 'gold',     name: 'Gold',        hex: '#d4a017', ach: 'champion' }
+  ];
+  var HELMETS = [
+    { id: 'team',   name: 'Team colours', hex: null },
+    { id: 'white',  name: 'White',  hex: '#f4f1ea', lvl: 1 },
+    { id: 'black',  name: 'Black',  hex: '#1a1a1e', lvl: 1 },
+    { id: 'red',    name: 'Red',    hex: '#d8382c', lvl: 2 },
+    { id: 'blue',   name: 'Blue',   hex: '#2f6fd6', lvl: 4 },
+    { id: 'yellow', name: 'Yellow', hex: '#f2c231', lvl: 6 },
+    { id: 'green',  name: 'Green',  hex: '#3c9a4f', lvl: 9 },
+    { id: 'pink',   name: 'Pink',   hex: '#ff5c8a', lvl: 13 },
+    { id: 'gold',   name: 'Gold',   hex: '#d4a017', ach: 'first_win' },
+    { id: 'purple', name: 'Purple', hex: '#7a3fd6', ach: 'perfect_lap' }
+  ];
+  var RIMS = [
+    { id: 'silver', name: 'Silver', hex: '#aeb4bc', lvl: 1 },
+    { id: 'black',  name: 'Black',  hex: '#23262c', lvl: 5 },
+    { id: 'bronze', name: 'Bronze', hex: '#b07a3a', lvl: 10 },
+    { id: 'white',  name: 'White',  hex: '#eef0f2', ach: 'clean_race' },
+    { id: 'gold',   name: 'Gold',   hex: '#d4a017', ach: 'champion' }
+  ];
+  var CATS = { paint: PAINTS, trim: PAINTS, helmet: HELMETS, rim: RIMS };
+  function find(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
+  function unlocked(profile, item) {
+    if (!item) return false;
+    if (item.ach) return !!profile.ach[item.ach];
+    if (item.lvl) return levelOf(profile.xp).level >= item.lvl;
+    return true;
+  }
+  function reqText(item) { return item.ach ? ('Achievement: ' + (BY_ID[item.ach] ? BY_ID[item.ach].name : item.ach)) : (item.lvl ? 'Level ' + item.lvl : ''); }
+  // resolve what the car should actually wear: a custom pick if it is still unlocked, else the team's
+  function resolve(profile, cat, teamHex) {
+    var id = profile.custom[cat], item = id ? find(CATS[cat], id) : null;
+    if (item && item.hex && unlocked(profile, item)) return item.hex;
+    return teamHex;
+  }
+  function carSvg(paint, trim, helmet, rim, num) {
+    // a top-down open-wheel car; nothing fancy, just enough to show the colours
+    return '<svg viewBox="0 0 200 320" class="carsvg" aria-hidden="true">' +
+      '<rect x="18" y="52" width="164" height="14" rx="4" fill="' + trim + '"/>' +
+      '<rect x="16" y="46" width="8" height="26" rx="2" fill="#2a2d33"/><rect x="176" y="46" width="8" height="26" rx="2" fill="#2a2d33"/>' +
+      '<path d="M100 30 L118 92 L118 210 L100 236 L82 210 L82 92 Z" fill="' + paint + '"/>' +
+      '<rect x="48" y="128" width="34" height="90" rx="10" fill="' + paint + '"/><rect x="118" y="128" width="34" height="90" rx="10" fill="' + paint + '"/>' +
+      '<rect x="48" y="128" width="34" height="10" fill="' + trim + '"/><rect x="118" y="128" width="34" height="10" fill="' + trim + '"/>' +
+      '<rect x="30" y="238" width="140" height="12" rx="4" fill="' + trim + '"/>' +
+      '<rect x="26" y="232" width="8" height="30" rx="2" fill="#2a2d33"/><rect x="166" y="232" width="8" height="30" rx="2" fill="#2a2d33"/>' +
+      '<g fill="#1b1d22"><rect x="18" y="74" width="26" height="46" rx="6"/><rect x="156" y="74" width="26" height="46" rx="6"/><rect x="14" y="184" width="30" height="50" rx="6"/><rect x="156" y="184" width="30" height="50" rx="6"/></g>' +
+      '<g fill="' + rim + '"><rect x="26" y="86" width="10" height="22" rx="3"/><rect x="164" y="86" width="10" height="22" rx="3"/><rect x="24" y="198" width="10" height="22" rx="3"/><rect x="166" y="198" width="10" height="22" rx="3"/></g>' +
+      '<circle cx="100" cy="146" r="13" fill="' + helmet + '" stroke="#14161b" stroke-width="2"/>' +
+      '<circle cx="100" cy="196" r="15" fill="#fffaf0"/><text x="100" y="201" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="15" fill="#201e1d">' + num + '</text>' +
+      '</svg>';
+  }
+  function swatchRow(profile, cat, label, teamHex) {
+    var cur = profile.custom[cat] || 'team';
+    var html = '<div class="crow"><div class="clbl">' + label + '</div><div class="swatches">';
+    CATS[cat].forEach(function (it) {
+      if (cat === 'rim' && it.id === 'team') return;
+      var ok = unlocked(profile, it), on = (it.id === cur) || (!profile.custom[cat] && it.id === 'team');
+      var bg = it.hex || teamHex || '#999';
+      html += '<button class="sw' + (on ? ' on' : '') + (ok ? '' : ' locked') + '" data-cat="' + cat + '" data-id="' + it.id + '" ' +
+        'title="' + it.name + (ok ? '' : ' · ' + reqText(it)) + '" style="background:' + bg + '"' + (ok ? '' : ' disabled') + '>' +
+        (ok ? '' : '<i>🔒</i>') + '</button>';
+    });
+    return html + '</div></div>';
+  }
+  function carTab(profile, team) {
+    var paint = resolve(profile, 'paint', team.color), trim = resolve(profile, 'trim', team.color2);
+    var helmet = resolve(profile, 'helmet', team.color2), rim = resolve(profile, 'rim', '#aeb4bc');
+    var num = profile.custom.num || team.num || 7;
+    var lvl = levelOf(profile.xp).level;
+    var open = 0, total = 0;
+    [PAINTS, HELMETS, RIMS].forEach(function (L) { L.forEach(function (it) { if (it.hex) { total++; if (unlocked(profile, it)) open++; } }); });
+    return '<div class="carwrap"><div class="carprev">' + carSvg(paint, trim, helmet, rim, num) +
+      '<small>' + open + ' of ' + total + ' colours unlocked · level ' + lvl + '</small></div><div class="caropts">' +
+      swatchRow(profile, 'paint', 'Paint', team.color) + swatchRow(profile, 'trim', 'Accent', team.color2) +
+      swatchRow(profile, 'helmet', 'Helmet', team.color2) + swatchRow(profile, 'rim', 'Rims', '#aeb4bc') +
+      '<div class="crow"><div class="clbl">Number</div><div class="numpick"><input type="number" id="carNum" min="1" max="99" value="' + num + '"><span>1–99</span></div></div>' +
+      '<p class="carnote">Locked colours open with levels and achievements — nothing here is sold.</p></div></div>';
+  }
+  function setCustom(profile, cat, id) {
+    if (cat === 'num') { var n = parseInt(id, 10); profile.custom.num = (n >= 1 && n <= 99) ? n : null; return true; }
+    var it = find(CATS[cat], id); if (!it) return false;
+    if (it.hex && !unlocked(profile, it)) return false;
+    profile.custom[cat] = it.hex ? id : null; return true;
+  }
+
   // ---- rendering ---------------------------------------------------------
   function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
   function pct(l) { return l.need ? Math.round(l.into / l.need * 100) : 100; }
@@ -188,5 +292,6 @@
 
   window.PROG = { ACH: ACH, byId: BY_ID, ensure: ensure, raceStart: raceStart, tick: tick, contact: contact, lap: lap,
     pole: pole, raceEnd: raceEnd, champion: champion, levelOf: levelOf, titleOf: titleOf, need: need,
-    chip: chip, achievements: achievements, awardCard: awardCard, stats: stats, current: function () { return R; } };
+    chip: chip, achievements: achievements, awardCard: awardCard, stats: stats, current: function () { return R; },
+    PAINTS: PAINTS, HELMETS: HELMETS, RIMS: RIMS, resolve: resolve, carTab: carTab, setCustom: setCustom, unlocked: unlocked };
 })();

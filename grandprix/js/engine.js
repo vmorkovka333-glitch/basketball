@@ -1697,6 +1697,13 @@
   // front wing, sidepods with inlets, engine cover and airbox, halo, a driver
   // sat in the tub with hands on the wheel, and a rear wing whose upper flap
   // opens for DRS. Tyre sidewalls are recoloured per compound.
+  function numTexture(num) {
+    return makeTex(64, 64, function (x, w, h) {
+      x.fillStyle = '#fffaf0'; x.beginPath(); x.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2); x.fill();
+      x.fillStyle = '#201e1d'; x.font = 'bold ' + (String(num).length > 2 ? 30 : 40) + 'px Helvetica,Arial,sans-serif';
+      x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(num), w / 2, h / 2 + 2);
+    });
+  }
   function makeCarMesh(color, color2, num) {
     var THREE = T(), g = new THREE.Group();
     var paint = new THREE.MeshStandardMaterial({ color: color, roughness: 0.26, metalness: 0.22 });
@@ -1805,13 +1812,9 @@
       new THREE.MeshBasicMaterial({ color: 0x5a1510 }), 0, 0.60, -2.12, 0, 0, 0, rw);
 
     /* number roundel on the airbox sides */
+    var numMat = null;
     if (num != null) {
-      var numTex = makeTex(64, 64, function (x, w, h) {
-        x.fillStyle = '#fffaf0'; x.beginPath(); x.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2); x.fill();
-        x.fillStyle = '#201e1d'; x.font = 'bold 40px Helvetica,Arial,sans-serif';
-        x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(num), w / 2, h / 2 + 2);
-      });
-      var numMat = new THREE.MeshBasicMaterial({ map: numTex, transparent: true });
+      numMat = new THREE.MeshBasicMaterial({ map: numTexture(num), transparent: true });
       [-1, 1].forEach(function (s) {
         var p = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.26), numMat);
         p.position.set(s * 0.24, 0.72, -0.7); p.rotation.y = s * Math.PI / 2; detail.add(p);
@@ -1849,7 +1852,8 @@
     return {
       group: g, wheels: wheels, paint: paint, trim: trim, fw: fw, rw: rw,
       helmet: helmet, driver: driver, halo: halo, drs: drsPivot, bands: bands,
-      rearLight: rearLight, nose: nose, detail: detail, fine: fine, lod: 1
+      rearLight: rearLight, nose: nose, detail: detail, fine: fine, lod: 1,
+      rim: rimMat, num: numMat
     };
   }
 
@@ -3082,7 +3086,7 @@
     clamp: clamp, lerp: lerp, wrapAng: wrapAng, smooth: smooth,
     initRenderer: initRenderer, onResize: onResize, viewportSize: viewportSize,
     buildTrack: buildTrack, makeCar: makeCar, placeOnGrid: placeOnGrid,
-    makeSafetyCar: makeSafetyCar, makeCrane: makeCrane,
+    makeSafetyCar: makeSafetyCar, makeCrane: makeCrane, numTexture: numTexture,
     inDRS: inDRS, atDRSDetection: atDRSDetection, applyRenderScale: applyRenderScale,
     updateCarDetail: updateCarDetail,
     garageEnter: garageEnter, garageExit: garageExit, garageResize: garageResize,

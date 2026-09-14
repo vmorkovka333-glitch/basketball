@@ -86,7 +86,7 @@
         laneT: 0, avoid: 0, jitter: i * 1.7, mistCd: 4 + i, relCd: 30 + i * 3,
         lineTarget: 0, boxU: 0, stopsDone: 0, stopsPlanned: 1, pitLaps: [3], mistake: 0
       });
-      if (isMe) { G.player = c; c.ai = false; }
+      if (isMe) { G.player = c; c.ai = false; applyCustom(c); }
       G.cars.push(c);
       entries.push(c);
     });
@@ -1001,6 +1001,7 @@
       teamName: team.name
     });
     applyGarageCar();
+    var rig = GP.garageRig(); if (rig && rig.car) applyCustom(null, rig.car);
     setTimeout(GP.garageResize, 60);
   }
   function renderGarage() {
@@ -1206,6 +1207,32 @@
     $('contSub').textContent = sv.round > 0 ? ('Round ' + (sv.round + 1) + ' · ' + D.CAL[Math.min(sv.round, 24)].city) : '';
     $('profileChip').innerHTML = PROG.chip(sv.profile);
     syncDiff();
+  }
+  function playerTeam() { return D.team(G.player ? G.player.team : S.team); }
+  function applyCustom(car, mesh) {
+    var THREE = window.THREE, p = S.save.profile, team = playerTeam();
+    mesh = mesh || (car && car.mesh); if (!mesh) return;
+    var paint = PROG.resolve(p, 'paint', team.color), trim = PROG.resolve(p, 'trim', team.color2);
+    var helmet = PROG.resolve(p, 'helmet', team.color2), rim = PROG.resolve(p, 'rim', '#aeb4bc');
+    mesh.paint.color.set(paint); mesh.trim.color.set(trim);
+    if (mesh.helmet) mesh.helmet.material.color.set(helmet);
+    if (mesh.rim) mesh.rim.color.set(rim);
+    var num = p.custom.num || (car && car.num);
+    if (mesh.num && num && mesh.num.userData.num !== num) {
+      if (mesh.num.map) mesh.num.map.dispose();
+      mesh.num.map = GP.numTexture(num); mesh.num.needsUpdate = true; mesh.num.userData.num = num;
+    }
+    if (car) { car.color = new THREE.Color(paint).getHex(); if (num) car.num = num; }
+  }
+  function renderCarTab() {
+    $('driverCar').innerHTML = PROG.carTab(S.save.profile, playerTeam());
+    $('driverCar').querySelectorAll('.sw').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (PROG.setCustom(S.save.profile, b.dataset.cat, b.dataset.id)) { persist(); applyCustom(G.player); renderCarTab(); }
+      });
+    });
+    var inp = $('carNum');
+    if (inp) inp.addEventListener('change', function () { PROG.setCustom(S.save.profile, 'num', inp.value); persist(); applyCustom(G.player); renderCarTab(); });
   }
   function openDriver(tab) {
     var p = S.save.profile;

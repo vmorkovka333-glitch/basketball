@@ -144,6 +144,23 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border:3px solid var(
 .awlines{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink-60)}
 .awlines b{color:var(--ink);margin-left:5px}
 .awach{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:12px}
+.carwrap{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:22px;align-items:start}
+.carprev{background:var(--surf);border-radius:var(--r);padding:14px;box-shadow:var(--sh-sm);text-align:center}
+.carsvg{width:100%;max-width:170px;height:auto;display:block;margin:0 auto}
+.carprev small{display:block;color:var(--ink-60);font-size:12px;margin-top:10px}
+.crow{display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+.clbl{font:700 13px var(--fb);width:64px;flex:none}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.sw{width:32px;height:32px;border-radius:50%;border:2px solid rgba(32,30,29,.15);cursor:pointer;padding:0;position:relative;box-shadow:inset 0 -6px 10px rgba(0,0,0,.25);transition:transform .15s}
+.sw:hover{transform:scale(1.1)}
+.sw.on{border-color:var(--ink);transform:scale(1.14);box-shadow:0 0 0 3px var(--surf),0 0 0 5px var(--ink),inset 0 -6px 10px rgba(0,0,0,.25)}
+.sw.locked{cursor:not-allowed;opacity:.45;filter:saturate(.4)}
+.sw.locked i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-style:normal}
+.numpick{display:flex;align-items:center;gap:10px}
+.numpick input{width:76px;font:700 16px var(--fb);padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surf);color:var(--ink)}
+.numpick span{color:var(--ink-60);font-size:12px}
+.carnote{color:var(--ink-60);font-size:12px;margin:6px 0 0}
+@media (max-width:640px){.carwrap{grid-template-columns:1fr}.carsvg{max-width:120px}}
 .flash.ach{color:#fff;background:var(--acc);padding:.18em .6em;border-radius:999px;font-size:clamp(18px,3.2vw,30px)}
 .dialog{max-width:980px;margin:0 auto;background:var(--bg);border-radius:var(--r-lg);padding:clamp(20px,3vw,34px);box-shadow:var(--sh-lg)}
 .dialog h3{font-size:clamp(24px,3vw,36px)}
@@ -468,6 +485,8 @@ body.redflag #hud::after{content:'';position:absolute;inset:0;box-shadow:inset 0
 
 /* lights, flash */
 #lights{position:absolute;left:50%;top:14%;transform:translateX(-50%);z-index:22;display:none;gap:10px}
+/* portrait phones: the lap plate reaches further down, so the lights sit below it */
+@media (max-aspect-ratio:1/1){#lights{top:max(24%,190px)}}
 #lights i{width:clamp(20px,4.2vw,34px);height:clamp(20px,4.2vw,34px);border-radius:999px;
   background:rgba(32,30,29,.35);box-shadow:inset 0 0 0 3px rgba(32,30,29,.5);font-style:normal}
 #lights i.go{background:#2fd77a;box-shadow:0 0 22px rgba(47,215,122,.95),inset 0 0 0 2px rgba(255,255,255,.25)}
