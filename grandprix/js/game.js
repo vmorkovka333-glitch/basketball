@@ -49,9 +49,15 @@
   function loadSave() {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var o = JSON.parse(raw); if (o && o.dstand) return o; }
+      if (raw) { var o = JSON.parse(raw); if (o && o.dstand) { PROG.ensure(o); return o; } }
     } catch (e) { }
-    return blankSave();
+    var b = blankSave(); PROG.ensure(b); return b;
+  }
+  function achToast(ids) {
+    if (!ids || !ids.length) return;
+    var a = PROG.byId[ids[0]]; if (!a) return;
+    flash(a.icon + ' ' + a.name.toUpperCase(), 'ach', 2.6);
+    beep(true);
   }
   function persist() { try { localStorage.setItem(KEY, JSON.stringify(S.save)); } catch (e) { } }
 
@@ -221,6 +227,7 @@
     });
     S.grid = order;
     S.phase = 'setup';
+    if (order[0] === G.player && G.player.bestLap) { var pf = PROG.pole(S.save.profile); persist(); if (pf) setTimeout(function () { achToast(pf); }, 600); }
     showQualiResult(order);
   }
 
@@ -242,6 +249,7 @@
     planStrategies();
     G.cars.forEach(function (c) { c.fuel = 1; });
     S.stintStart = 0;
+    PROG.raceStart({ gridPos: G.player.gridPos || order.indexOf(G.player) + 1 });
     showScreen(null);
     hudMode('race');
     $('lights').style.display = 'flex';
@@ -309,7 +317,7 @@
     if (c.lap >= 2) {
       c.lastLap = S.raceT - c.lapStart;
       if (!c.bestLap || c.lastLap < c.bestLap) c.bestLap = c.lastLap;
-      if (c === G.player) c.boost = GP.BOOST_MAX;
+      if (c === G.player) { c.boost = GP.BOOST_MAX; var fl = PROG.lap(S.save.profile); if (fl) setTimeout(function () { achToast(fl); }, 1200); }
       else c.boost = GP.BOOST_MAX;
     }
     c.lapStart = S.raceT;
@@ -341,6 +349,7 @@
   function onHit(c, force) {
     if (c === G.player) {
       G.shake = Math.min(0.55, force * 0.7); sfxHit(force);
+      if (force > 0.12) PROG.contact();
     }
     // Anyone who runs into the back of the car ahead is judged at fault —
     // the AI is held to the same standard as the player.
@@ -1043,7 +1052,14 @@
       c.finishT = S.raceT + (owed / pace) * 1000 + c.penalty * 1000;
     });
     rows = classification();
+    var fastest = rows.filter(function (c) { return c.bestLap; }).sort(function (a, b) { return a.bestLap - b.bestLap; })[0];
+    S.award = PROG.raceEnd({
+      profile: S.save.profile, pos: rows.indexOf(me) + 1, field: rows.length, retired: !!me.retired,
+      fastest: fastest === me, wet: G.wet > 0.3, night: !!currentTrack().night,
+      diffMul: [0.8, 1, 1.25][S.diff] || 1, stops: me.stops || 0
+    });
     if (S.mode === 'season') awardPoints(rows);
+    persist();
     setTimeout(function () { showPodium(rows); }, 1100);
   }
 
@@ -1149,7 +1165,11 @@
       me: rows.indexOf(G.player) + 1
     });
     sv.round = Math.min(D.CAL.length, S.trackIdx + 1);
-    if (sv.round >= D.CAL.length) sv.done = true;
+    if (sv.round >= D.CAL.length) {
+      sv.done = true;
+      var lead = Object.keys(sv.dstand).sort(function (a, b) { return sv.dstand[b] - sv.dstand[a]; })[0];
+      if (lead === G.player.name && S.award) { var ch = PROG.champion(sv.profile); if (ch) S.award.fresh.push(PROG.byId.champion); }
+    }
     persist();
   }
 
@@ -1184,7 +1204,21 @@
     var sv = S.save;
     $('contBtn').style.display = (sv.round > 0 && !sv.done) ? 'flex' : 'none';
     $('contSub').textContent = sv.round > 0 ? ('Round ' + (sv.round + 1) + ' · ' + D.CAL[Math.min(sv.round, 24)].city) : '';
+    $('profileChip').innerHTML = PROG.chip(sv.profile);
     syncDiff();
+  }
+  function openDriver(tab) {
+    var p = S.save.profile;
+    $('driverChip').innerHTML = PROG.chip(p);
+    $('driverStats').innerHTML = PROG.stats(p);
+    $('driverAch').innerHTML = PROG.achievements(p);
+    if (typeof renderCarTab === 'function') renderCarTab();
+    driverTab(tab || 'progress');
+    $('driverScreen').classList.add('show');
+  }
+  function driverTab(tab) {
+    $('driverScreen').querySelectorAll('.dtabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
+    $('driverScreen').querySelectorAll('.dtab').forEach(function (d) { d.style.display = d.id === 'dtab-' + tab ? 'block' : 'none'; });
   }
 
   function openSeason() {
@@ -1348,7 +1382,7 @@
         '<span class="t">' + t + '</span><span class="pts">' + (pts ? '+' + pts : '') + '</span></div>';
     });
     html += '</div>';
-    $('resultBody').innerHTML = html;
+    $('resultBody').innerHTML = (S.award ? PROG.awardCard(S.award) : '') + html;
     $('resultTitle').textContent = me.retired ? 'Retired' : (pos === 1 ? 'Race win' : (pos <= 3 ? 'Podium · P' + pos : 'P' + pos));
     $('resultSub').textContent = currentTrack().gp + ' · best lap ' + fmtTime(me.bestLap) +
       ' · ' + me.stops + (me.stops === 1 ? ' stop' : ' stops') + (me.penalty ? ' · +' + me.penalty + 's penalty' : '');
@@ -1853,6 +1887,10 @@
       GP.collisions();
     }
     GP.fxTick(dt);
+    if (S.phase === 'race' && G.player && !G.player.finished) {
+      var fresh = PROG.tick({ me: G.player, cars: G.cars, profile: S.save.profile });
+      if (fresh) achToast(fresh);
+    }
     if (S.phase === 'race' || S.phase === 'finished') playerPitLogic(dt);
     if (racing) { drsTick(dt); scTick(dt); recoveryTick(dt); engineerTick(dt); }
     radioTick(dt);
@@ -1997,6 +2035,9 @@
   });
 
   function wireUI() {
+    $('driverBtn').addEventListener('click', function () { openDriver('progress'); });
+    $('driverBack').addEventListener('click', function () { $('driverScreen').classList.remove('show'); });
+    $('driverScreen').querySelectorAll('.dtabs button').forEach(function (b) { b.addEventListener('click', function () { driverTab(b.dataset.tab); }); });
     window.addEventListener('keydown', function (e) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].indexOf(e.code) >= 0) e.preventDefault();
       unlockAudio();
