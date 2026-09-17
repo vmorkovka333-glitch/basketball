@@ -513,6 +513,114 @@
   @keyframes flashPulse{0%{opacity:.85}100%{opacity:0}}
 
   #app.menu #toastHost,#app.menu #strikeFlash,#app.menu #msgWrap{display:none;}
+
+  /* ================= results card ================= */
+  #resultWrap{position:absolute;inset:0;z-index:7;display:none;align-items:center;justify-content:center;
+    padding:14px;background:radial-gradient(70% 55% at 50% 46%,rgba(4,7,11,.62),rgba(4,7,11,.90));}
+  #resultWrap.show{display:flex;}
+  #resultCard{width:min(430px,100%);max-height:96%;overflow-y:auto;text-align:center;
+    padding:20px 22px 20px;border-radius:20px;background:rgba(12,16,22,.92);
+    -webkit-backdrop-filter:blur(20px) saturate(1.2);backdrop-filter:blur(20px) saturate(1.2);
+    border:1px solid rgba(255,255,255,.15);box-shadow:0 26px 70px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08);
+    animation:pop .35s cubic-bezier(.2,1.4,.4,1);}
+  #resultCard.win{border-color:rgba(255,182,61,.45);box-shadow:0 26px 70px rgba(0,0,0,.65),0 0 60px rgba(255,182,61,.14);}
+  #resultCard.lose{border-color:rgba(255,82,64,.35);}
+  #resTitle{font-size:38px;line-height:1.02;color:#7fd4ff;text-shadow:0 0 30px rgba(127,212,255,.5);}
+  #resultCard.win #resTitle{color:#ffd08a;text-shadow:0 0 30px rgba(255,182,61,.55);}
+  #resultCard.lose #resTitle{color:#ff7a6a;text-shadow:0 0 30px rgba(255,82,64,.45);}
+  #resSub{margin-top:5px;font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:rgba(234,242,248,.55);min-height:14px;}
+  #resSub.best{color:#ffd08a;}
+  .resScores{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;}
+  .resSeat{flex:1;padding:10px 8px 9px;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);}
+  .resSeat.winner{border-color:rgba(255,182,61,.5);background:rgba(255,182,61,.08);}
+  .resSeat .who{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(234,242,248,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .resSeat .sc{font-family:'Bungee',sans-serif;font-size:30px;line-height:1.1;margin-top:2px;color:#f4f9fd;}
+  .resSeat.winner .sc{color:#ffd08a;}
+  .resVs{font-family:'Bungee',sans-serif;font-size:11px;color:rgba(234,242,248,.35);}
+  .resStats{display:flex;justify-content:center;gap:8px;margin-top:10px;}
+  .resStat{flex:1;padding:7px 4px;border-radius:11px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);}
+  .resStat b{display:block;font-family:'Bungee',sans-serif;font-size:15px;color:#7fd4ff;}
+  .resStat span{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(234,242,248,.45);}
+  .resStat.coins b{color:#ffd08a;}
+  .resBlock{margin-top:10px;padding:10px 12px 11px;border-radius:14px;text-align:left;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);}
+  .resRow{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .resLbl{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:rgba(234,242,248,.5);}
+  .resGain{font-family:'Bungee',sans-serif;font-size:12px;color:#ffd08a;white-space:nowrap;}
+  .resGain.neg{color:#ff7a6a;}
+  .resBar{margin-top:7px;height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}
+  .resBar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#7fd4ff,#ffb63d);
+    transition:width 1.2s cubic-bezier(.2,.8,.2,1);}
+  .resNote{margin-top:5px;font-size:9.5px;color:rgba(234,242,248,.45);letter-spacing:.04em;}
+  .resLvl{display:flex;align-items:center;gap:9px;}
+  .resLvl .lvlBadge{width:30px;height:30px;font-size:11px;}
+  .resLvl .nm{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#f4f9fd;}
+  .resCh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;font-size:11px;color:rgba(234,242,248,.8);}
+  .resCh.done{color:#7fd4ff;}
+  .resCh small{font-size:9.5px;color:rgba(234,242,248,.4);letter-spacing:.05em;white-space:nowrap;}
+  .resCh.done small{color:#7fd4ff;}
+  .resAch{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+  .resAchChip{display:flex;align-items:center;gap:6px;padding:5px 10px 5px 7px;border-radius:99px;font-size:10.5px;
+    background:rgba(255,182,61,.12);border:1px solid rgba(255,182,61,.4);color:#ffd08a;}
+  .resBtns{display:flex;gap:8px;margin-top:14px;justify-content:center;}
+  .resBtn{pointer-events:auto;cursor:pointer;padding:11px 24px;border-radius:99px;font-family:'Bungee',sans-serif;
+    font-size:13px;letter-spacing:.06em;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);
+    color:rgba(234,242,248,.8);transition:transform .12s,box-shadow .2s;}
+  .resBtn.pri{color:#08131c;background:#7fd4ff;border-color:#7fd4ff;box-shadow:0 0 26px rgba(127,212,255,.35);}
+  .resBtn:active{transform:scale(.95);}
+  @media (max-height:700px){
+    #resultCard{padding:14px 18px 14px;}
+    #resTitle{font-size:30px;}
+    .resScores{margin-top:8px;gap:10px;}
+    .resSeat{padding:6px 8px;} .resSeat .sc{font-size:24px;}
+    .resStats{margin-top:7px;} .resStat{padding:5px 4px;}
+    .resBlock{margin-top:7px;padding:7px 10px 8px;}
+    .resBar{margin-top:5px;height:6px;} .resNote{margin-top:3px;}
+    .resCh{padding:2px 0;}
+    .resBtns{margin-top:10px;} .resBtn{padding:9px 20px;font-size:12px;}
+  }
+
+  /* ================= level up ================= */
+  #lvlWrap{position:absolute;inset:0;z-index:10;display:none;align-items:center;justify-content:center;
+    pointer-events:none;background:radial-gradient(55% 45% at 50% 48%,rgba(255,182,61,.16),rgba(4,7,11,0) 70%);}
+  #lvlWrap.show{display:flex;}
+  #lvlCard{pointer-events:auto;cursor:pointer;text-align:center;padding:24px 42px 26px;border-radius:22px;
+    background:rgba(12,16,22,.9);-webkit-backdrop-filter:blur(20px) saturate(1.2);backdrop-filter:blur(20px) saturate(1.2);
+    border:1px solid rgba(255,182,61,.5);box-shadow:0 26px 70px rgba(0,0,0,.65),0 0 80px rgba(255,182,61,.22);
+    animation:lvlPop .55s cubic-bezier(.2,1.5,.4,1);}
+  @keyframes lvlPop{0%{transform:scale(.6) rotate(-4deg);opacity:0}60%{transform:scale(1.06) rotate(1deg);opacity:1}100%{transform:none}}
+  #lvlHead{font-size:13px;letter-spacing:.3em;color:#ffd08a;text-shadow:0 0 18px rgba(255,182,61,.6);}
+  #lvlBig{margin:10px auto 0;width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:'Bungee',sans-serif;font-size:36px;color:#08131c;background:linear-gradient(135deg,#ffd08a,#ffb63d);
+    box-shadow:0 0 40px rgba(255,182,61,.65),0 0 0 6px rgba(255,182,61,.18);animation:lvlGlow 1.4s ease-in-out infinite alternate;}
+  @keyframes lvlGlow{from{box-shadow:0 0 30px rgba(255,182,61,.5),0 0 0 6px rgba(255,182,61,.14)}to{box-shadow:0 0 60px rgba(255,182,61,.9),0 0 0 10px rgba(255,182,61,.22)}}
+  #lvlName{margin-top:12px;font-size:24px;color:#f4f9fd;text-shadow:0 0 20px rgba(255,255,255,.25);}
+  #lvlSub{margin-top:5px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(234,242,248,.55);}
+  #lvlReward{margin-top:9px;font-family:'Bungee',sans-serif;font-size:13px;color:#ffd08a;}
+  .lvlRay{position:absolute;left:50%;top:50%;width:2px;height:46vmin;margin-left:-1px;transform-origin:50% 0;
+    background:linear-gradient(180deg,rgba(255,208,138,.55),rgba(255,208,138,0));animation:rayFade 2.4s ease-out forwards;pointer-events:none;}
+  @keyframes rayFade{0%{opacity:0;transform:rotate(var(--a)) scaleY(.2)}25%{opacity:1}100%{opacity:0;transform:rotate(var(--a)) scaleY(1.15)}}
+
+  /* ================= achievements ================= */
+  .achGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .achItem{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:13px;text-align:left;
+    background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);opacity:.5;}
+  .achItem.got{opacity:1;background:rgba(255,182,61,.08);border-color:rgba(255,182,61,.35);}
+  .achIco{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:15px;background:rgba(255,255,255,.06);filter:grayscale(1);}
+  .achItem.got .achIco{background:rgba(255,182,61,.16);filter:none;}
+  .achName{font-size:11px;font-weight:500;color:#f4f9fd;}
+  .achDesc{font-size:9px;color:rgba(234,242,248,.45);margin-top:1px;line-height:1.25;}
+  .achCount{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(234,242,248,.5);text-align:center;margin-bottom:10px;}
+  .navBtn.hasNew{border-color:rgba(255,182,61,.5);color:#ffd08a;}
+
+  /* rival intro strip under the turn bar */
+  #rivalTag{position:absolute;top:126px;left:50%;transform:translateX(-50%);z-index:3;display:none;
+    padding:4px 12px;border-radius:99px;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:rgba(234,242,248,.55);background:rgba(12,16,22,.6);border:1px solid rgba(255,255,255,.08);white-space:nowrap;}
+  #app.cpu #rivalTag{display:block;}
+  #app.menu #rivalTag,#app.menu #resultWrap,#app.menu #lvlWrap{display:none;}
+  @media (max-width:560px){ #rivalTag{top:122px;} #app.cpu #profileBar{top:150px;} }
 </style>
 </head>
 <body>
@@ -556,6 +664,7 @@
   </div>
 
   <div id="turnBar"></div>
+  <div id="rivalTag"></div>
   <div id="powerWrap"><div id="powerFill"></div></div>
 
   <div id="controls">
@@ -618,6 +727,8 @@
           <b>hook</b> on it &mdash; it breaks late, right before the pocket.</div></div>
         <div class="howrow"><div class="hownum">4</div>
           <div class="howtxt">Ten frames &mdash; a strike scores the next two balls, a spare the next one.</div></div>
+        <div class="howrow"><div class="hownum">5</div>
+          <div class="howtxt">Beat your <b>rival</b> to earn league points and climb from Bronze to Legend.</div></div>
       </div>
       </div>
 
@@ -625,7 +736,8 @@
       <div class="srule setrule"></div>
       <div class="srow"><div class="slbl">Players</div>
         <div class="seg">
-          <button class="sbtn on fun" id="p1Btn">1P</button>
+          <button class="sbtn fun" id="p1Btn">Solo</button>
+          <button class="sbtn on fun" id="pcBtn">VS CPU</button>
           <button class="sbtn fun" id="p2Btn">2P</button>
         </div>
       </div>
@@ -676,6 +788,18 @@
     </div>
   </div>
 
+  <div id="resultWrap"><div id="resultCard"></div></div>
+
+  <div id="lvlWrap">
+    <div id="lvlCard">
+      <div id="lvlHead" class="fun">LEVEL UP!</div>
+      <div id="lvlBig">5</div>
+      <div id="lvlName" class="fun">PRO</div>
+      <div id="lvlSub">Level 5 reached</div>
+      <div id="lvlReward">+100 &#129689;</div>
+    </div>
+  </div>
+
   <div id="dailyWrap">
     <div id="dailyCard">
       <div id="dailyTitle" class="fun">&#127873; DAILY REWARD</div>
@@ -723,6 +847,8 @@ function defaultProfile(){
     ownedLanes:['classic'], selectedLane:'classic',
     dailyRewardStreak:0, lastRewardDate:null,
     challengeDate:null, challenges:[],
+    wins:0, losses:0, ties:0, winStreak:0, bestWinStreak:0,
+    ach:[], achSeen:0,
   };
 }
 let PROFILE=defaultProfile();
@@ -778,16 +904,24 @@ const BALL_SKINS={
   fire:  {name:'Fire Ball',  emoji:'\u{1F534}', cost:150, color:0xff5a3c, emissive:0x481200, trail:'fire'},
   galaxy:{name:'Galaxy Ball',emoji:'\u{1F7E3}', cost:250, color:0x8a4fe0, emissive:0x230c4a, trail:'galaxy'},
   gold:  {name:'Gold Ball',  emoji:'\u{1F7E1}', cost:400, color:0xffd24a, emissive:0x4a3400, trail:'gold'},
+  obsidian:{name:'Obsidian Ball',emoji:'\u{1F311}', cost:900, color:0x1a1b24, emissive:0x3a0608, trail:'obsidian'},
+  prism: {name:'Prism Ball', emoji:'\u{1F308}', cost:1500, color:0xf2f6ff, emissive:0x2a1a44, trail:'prism'},
+  // the rival's house ball — never sold, only rolled by the CPU seat
+  rival: {name:'House Ball', emoji:'', cost:0, color:0x8a1e2a, emissive:0x1e0407, trail:null},
 };
-const BALL_ORDER=['basic','ice','fire','galaxy','gold'];
+const BALL_ORDER=['basic','ice','fire','galaxy','gold','obsidian','prism'];
 const LANE_THEMES={
   classic:{name:'Classic', emoji:'\u{1F3B3}', cost:0,   desc:'The house lane.'},
   neon:   {name:'Neon',    emoji:'\u{1F303}', cost:200, desc:'Neon night club.'},
   space:  {name:'Space',   emoji:'\u{1F680}', cost:300, desc:'Cosmic arena.'},
   volcano:{name:'Volcano', emoji:'\u{1F30B}', cost:300, desc:'Volcanic arena.'},
   ice:    {name:'Ice',     emoji:'❄️', cost:250, desc:'Frozen arena.'},
+  royal:  {name:'Royal',   emoji:'\u{1F451}', cost:800, desc:'Purple and gold.'},
 };
-const LANE_ORDER=['classic','neon','space','volcano','ice'];
+const LANE_ORDER=['classic','neon','space','volcano','ice','royal'];
+// swatch colours for the shop cards (the themes themselves are in LANE_THEME_COLORS)
+LANE_THEMES.classic.color=0x9a5a2e; LANE_THEMES.neon.color=0xc12fd0; LANE_THEMES.space.color=0x2a3aa0;
+LANE_THEMES.volcano.color=0xd8461a; LANE_THEMES.ice.color=0x7fd4ff; LANE_THEMES.royal.color=0x6a1fb0;
 
 // same room, same physics — a theme only ever repaints background/fog/lights/rails/arches,
 // which applyLaneTheme() below does directly on the live materials (no rebuild, no reload)
@@ -797,6 +931,7 @@ const LANE_THEME_COLORS={
   space:  {bg:0x05070f,fog:0x05070f,ambient:0x3a4bff,hemiSky:0x2233aa,hemiGround:0x05030f,dir:0x8fa8ff,rail:0x3a4bff,arch:0x8a4fe0,sign:0x0a0f2a},
   volcano:{bg:0x1a0805,fog:0x1a0805,ambient:0xff6a2c,hemiSky:0xff8a3c,hemiGround:0x2a0800,dir:0xffb347,rail:0x8a1a0a,arch:0xff5a1a,sign:0x2a0a02},
   ice:    {bg:0x0c1b26,fog:0x0c1b26,ambient:0xbfe9ff,hemiSky:0xcdf1ff,hemiGround:0x102530,dir:0xdff6ff,rail:0x2a7fae,arch:0x7fe0ff,sign:0x0a2a36},
+  royal:  {bg:0x120a26,fog:0x120a26,ambient:0xffd27a,hemiSky:0xb08cff,hemiGround:0x1a0830,dir:0xffe2a0,rail:0x5a1fa0,arch:0xffd24a,sign:0x3a0a5a},
 };
 function applyLaneTheme(key){
   const t=LANE_THEME_COLORS[key]||LANE_THEME_COLORS.classic;
@@ -819,7 +954,8 @@ function applyBallSkin(key){
   if(G.ballMat && Color){ G.ballMat.color=new Color(sk.color); G.ballMat.emissive=new Color(sk.emissive); }
   G.ballSkin=key;
 }
-const TRAIL_COLORS={ice:[0xbdf3ff,0xffffff],fire:[0xff6a2c,0xffd24a],galaxy:[0xb98cff,0xff9de2],gold:[0xffe08a,0xfff6cf]};
+const TRAIL_COLORS={ice:[0xbdf3ff,0xffffff],fire:[0xff6a2c,0xffd24a],galaxy:[0xb98cff,0xff9de2],gold:[0xffe08a,0xfff6cf],
+  obsidian:[0x2a2a36,0xff3b3b,0x6a0a12],prism:[0xff5fd2,0x5fffd2,0xffe66d,0x6da8ff]};
 // a small recycled-particle trail behind a rolling ball — nothing is allocated per frame,
 // the pool built once in initGame is just faded in and out
 function updateTrail(dt){
@@ -951,6 +1087,151 @@ function claimDailyReward(pending){
   saveProfile();
 }
 
+// ===================================================================
+// ===== rivals: the CPU opponent that gives the league its matches =====
+// ===================================================================
+// A rival bowls the same physics with the same ball — no cheating, no scripted
+// scores. Skill only sets how tight the aim is and how good the spare reads are.
+const RIVALS=[
+  {name:'Sam',        title:'Weekend bowler',   skill:0.22, hex:'#8fd18f'},
+  {name:'Lucy',       title:'League rookie',    skill:0.30, hex:'#f2a1c9'},
+  {name:'Ben',        title:'Friday regular',   skill:0.27, hex:'#f6c06a'},
+  {name:'Diego',      title:'Club player',      skill:0.42, hex:'#6fc3ff'},
+  {name:'Mia',        title:'Spare hunter',     skill:0.47, hex:'#c79bff'},
+  {name:'Kenji',      title:'Tournament regular',skill:0.58, hex:'#ffb63d'},
+  {name:'Nora',       title:'Hook specialist',  skill:0.62, hex:'#ff7f9e'},
+  {name:'Viktor',     title:'State champion',   skill:0.74, hex:'#7fd4ff'},
+  {name:'Aisha',      title:'Pro tour',         skill:0.78, hex:'#a0ffe0'},
+  {name:'Big Earl',   title:'Hall of famer',    skill:0.87, hex:'#ff5240'},
+  {name:'The Machine',title:'Never misses',     skill:0.95, hex:'#e0e0ff'},
+];
+// which rivals a league tier draws from: each tier overlaps the next so a promotion
+// never feels like a wall, and Legend keeps the two monsters to itself
+const RIVAL_TIERS=[[0,1,2],[1,2,3,4],[3,4,5,6],[5,6,7,8],[7,8,9,10]];
+function pickRival(){
+  const li=leagueInfo(PROFILE.leaguePoints);
+  const pool=RIVAL_TIERS[li.idx]||RIVAL_TIERS[0];
+  const r=RIVALS[pool[Math.floor(Math.random()*pool.length)]];
+  return {name:r.name,title:r.title,skill:Math.max(0.05,Math.min(1,r.skill+(Math.random()-0.5)*0.08)),hex:r.hex,tier:li.idx};
+}
+function isCpuTurn(){ return G.mode==='cpu' && G.cur===1 && !G.gameOver; }
+function gauss(){ return (Math.random()+Math.random()+Math.random()-1.5)*2; }
+// Where to roll: a fresh rack gets the pocket; a leave gets the biggest cluster of
+// what is standing (a split is bowled for the side with more pins in it). The ball
+// starts at startZ, so the angle for a target x on the deck is a plain arctangent.
+function cpuPlan(skill){
+  const up=G.pins.filter(p=>p.active&&!p.knocked);
+  let tx=0.06, tz=C.pinFrontZ, hook=0;
+  if(up.length && up.length<10){
+    const xs=up.map(p=>p.x).sort((a,b)=>a-b);
+    let best=null;
+    for(let i=0;i<xs.length;i++){                // widest group that fits under the ball
+      let j=i; while(j+1<xs.length && xs[j+1]-xs[i]<0.46) j++;
+      const n=j-i+1;
+      if(!best||n>best.n) best={n,x:(xs[i]+xs[j])/2};
+    }
+    tx=best.x; tz=up.reduce((a,p)=>a+p.z,0)/up.length;
+    // a good bowler reads the leave; a weak one aims at "roughly there"
+    tx+=gauss()*0.07*(1-skill);
+  }else if(skill>0.5){
+    hook=(Math.random()<0.5?-1:1)*(0.02+0.05*(skill-0.5));   // the pros play a hook into the pocket
+    tx=hook>0?-0.04:0.10;
+  }
+  const dist=C.startZ-tz;
+  let angle=Math.atan2(tx,dist);
+  // calibrated on the real physics: skill .22 averages ~85, .45 ~120, .6 ~145, .75 ~165, .95 ~215
+  const sd=0.004+0.075*Math.pow(1-skill,1.4);
+  angle+=gauss()*sd;
+  angle=Math.max(-0.20,Math.min(0.20,angle));
+  let power=9.0+6.5*skill+gauss()*(0.6+1.4*(1-skill));
+  power=Math.max(MINP,Math.min(MAXP,power));
+  return {angle,power,hook,powerF:(power-MINP)/(MAXP-MINP)};
+}
+// drives the rival's turn: walk the aim over, hold the power meter, let go
+function cpuTick(dt){
+  if(!isCpuTurn()||G.phase!=='aim'||!G.started) { if(G.cpuAct&&!isCpuTurn()) G.cpuAct=null; return; }
+  if(!G.cpuAct){
+    const plan=cpuPlan(G.rival?G.rival.skill:0.3);
+    G.cpuAct=Object.assign({t:0,from:G.aimAngle,aimT:0.8+Math.random()*0.5,holdT:0.25+Math.random()*0.2,
+      chargeT:0.15+CHARGE_MS/1000*plan.powerF},plan);
+  }
+  const a=G.cpuAct; a.t+=dt;
+  const k=Math.min(1,a.t/a.aimT), e=k<0.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+  G.aimAngle=a.from+(a.angle-a.from)*e;
+  if(G.guide) G.guide.rotation.y=-G.aimAngle;
+  const tc=a.t-a.aimT-a.holdT;
+  if(tc>=0){
+    const cf=Math.min(1,tc/a.chargeT);
+    const pw=document.getElementById('powerWrap');
+    pw.classList.add('on'); document.getElementById('powerFill').style.width=(cf*100)+'%';
+    if(cf>=1){
+      pw.classList.remove('on'); document.getElementById('powerFill').style.width='0%';
+      G.aimAtChargeStart=a.angle; G.cpuAct=null;
+      throwBall(a.power,a.hook);
+    }
+  }
+}
+
+// ===================================================================
+// ===== achievements: one-off badges, each paying out coins once =====
+// ===================================================================
+const ACHIEVEMENTS=[
+  {id:'first_game',  name:'First Frames',   desc:'Finish a game',                 icon:'\u{1F3B3}', coins:50},
+  {id:'first_strike',name:'Strike!',        desc:'Bowl your first strike',        icon:'\u{1F4A5}', coins:50},
+  {id:'turkey',      name:'Turkey',         desc:'Three strikes in a row',        icon:'\u{1F983}', coins:150},
+  {id:'four_bagger', name:'Four-Bagger',    desc:'Four strikes in a row',         icon:'\u{1F525}', coins:250},
+  {id:'six_pack',    name:'Six-Pack',       desc:'Six strikes in a row',          icon:'\u{1F680}', coins:500},
+  {id:'clean_game',  name:'Clean Game',     desc:'No open frames in a game',      icon:'\u{1F9F9}', coins:300},
+  {id:'score150',    name:'Big 150',        desc:'Score 150 or more',             icon:'\u{1F3AF}', coins:150},
+  {id:'score200',    name:'Double Century', desc:'Score 200 or more',             icon:'\u{1F3C5}', coins:300},
+  {id:'score250',    name:'Elite',          desc:'Score 250 or more',             icon:'\u{1F48E}', coins:600},
+  {id:'perfect',     name:'Perfect Game',   desc:'Score 300',                     icon:'\u{1F451}', coins:2500},
+  {id:'first_win',   name:'First Blood',    desc:'Beat a rival',                  icon:'\u{1F94A}', coins:100},
+  {id:'hat_trick',   name:'Hat-Trick',      desc:'Win three matches in a row',    icon:'\u{1F3A9}', coins:300},
+  {id:'giant_killer',name:'Giant Killer',   desc:'Beat a Diamond or Legend rival',icon:'\u{1F5E1}️', coins:500},
+  {id:'hooked',      name:'Hooked',         desc:'Strike with a hook shot',       icon:'\u{1FA9D}', coins:150},
+  {id:'gutter',      name:'Ouch',           desc:'Roll a gutter ball',            icon:'\u{1F648}', coins:20},
+  {id:'spares50',    name:'Spare Master',   desc:'50 career spares',              icon:'\u{1F527}', coins:250},
+  {id:'strikes100',  name:'Hundred Strikes',desc:'100 career strikes',            icon:'\u{1F4AF}', coins:400},
+  {id:'games10',     name:'Regular',        desc:'Play 10 games',                 icon:'\u{1F4C5}', coins:100},
+  {id:'games50',     name:'House Legend',   desc:'Play 50 games',                 icon:'\u{1F3E0}', coins:500},
+  {id:'streak5',     name:'Dedicated',      desc:'Five-day login streak',         icon:'\u{1F501}', coins:200},
+  {id:'collector',   name:'Collector',      desc:'Own every ball',                icon:'\u{1F9FA}', coins:400},
+];
+function hasAch(id){ return Array.isArray(PROFILE.ach) && PROFILE.ach.indexOf(id)>=0; }
+// evt: {strike, streak, hook, gutter, gameOver, score, clean, win, rivalTier}
+function checkAchievements(evt){
+  evt=evt||{};
+  if(!Array.isArray(PROFILE.ach)) PROFILE.ach=[];
+  const got=[];
+  const ok=(id,cond)=>{ if(cond&&!hasAch(id)){ PROFILE.ach.push(id); got.push(id); } };
+  ok('first_strike',evt.strike);
+  ok('turkey',evt.streak>=3); ok('four_bagger',evt.streak>=4); ok('six_pack',evt.streak>=6);
+  ok('hooked',evt.strike&&Math.abs(evt.hook||0)>=0.03);
+  ok('gutter',evt.gutter);
+  ok('spares50',PROFILE.totalSpares>=50); ok('strikes100',PROFILE.totalStrikes>=100);
+  if(evt.gameOver){
+    ok('first_game',PROFILE.gamesPlayed>=1);
+    ok('games10',PROFILE.gamesPlayed>=10); ok('games50',PROFILE.gamesPlayed>=50);
+    ok('score150',evt.score>=150); ok('score200',evt.score>=200); ok('score250',evt.score>=250); ok('perfect',evt.score>=300);
+    ok('clean_game',evt.clean);
+    ok('first_win',evt.win); ok('hat_trick',evt.win&&PROFILE.winStreak>=3);
+    ok('giant_killer',evt.win&&evt.rivalTier>=3);
+  }
+  ok('streak5',(PROFILE.dailyRewardStreak||0)>=5);
+  ok('collector',BALL_ORDER.every(k=>PROFILE.ownedBalls.indexOf(k)>=0));
+  if(got.length){
+    got.forEach(id=>{
+      const a=ACHIEVEMENTS.find(x=>x.id===id);
+      PROFILE.coins+=a.coins; addSessionGain(0,a.coins);
+      if(G.session) (G.session.newAch=G.session.newAch||[]).push(id);
+      queueToast({title:'ACHIEVEMENT',sub:a.icon+' '+a.name+' — '+a.desc,coins:a.coins});
+    });
+    saveProfile(); refreshProfileUI();
+  }
+  return got;
+}
+
 const G = {
   scene:null, camera:null, renderer:null, mountEl:null,
   pins:[], ball:null, guide:null, guideDashes:[], guideRing:null,
@@ -959,7 +1240,7 @@ const G = {
   gameOver:false, pinsStanding:10, msg:null,
   standingBefore:10, rollTime:0, settleTime:0, last:0, raf:0,
   _tx:0,_ty:0.55,_tz:-6,
-  numPlayers:1, players:[], cur:0,
+  numPlayers:2, players:[], cur:0, mode:'cpu', rival:null, cpuAct:null,
   started:false, needsReset:false,
   charging:false, chargeStart:0,
   frame:{fov:30,camY:1.3,camZ:8.0,lookY:0.5,lookZ:-6.5},
@@ -1319,6 +1600,8 @@ function initGame(){
   camera.lookAt(0,G.frame.lookY,G.frame.lookZ);
   G._tx=0; G._ty=G.frame.lookY; G._tz=G.frame.lookZ;
   initPlayers(G.numPlayers);
+  document.getElementById('playersGlyph').textContent=MODE_GLYPH[G.mode]||(G.numPlayers+'P');
+  document.getElementById('app').classList.toggle('cpu',G.mode==='cpu');
   respawnPins(); resetBall();
   G.phase='aim'; updateHUD();
 
@@ -1406,15 +1689,32 @@ function buildGuide(){
 
 // ===== players =====
 function initPlayers(n){
-  G.numPlayers=n; G.cur=0;
+  G.numPlayers=n; G.cur=0; G.cpuAct=null;
   // bumping the generation invalidates any pending end-of-ball callback, so starting a
   // new game mid-resolve cannot have the old ball finish itself into the fresh one
   G.gen=(G.gen||0)+1;
   G.players=Array.from({length:n},()=>({frames:Array.from({length:10},()=>({rolls:[]})),streak:0}));
+  if(G.mode==='cpu'){ G.rival=pickRival(); G.players[1].cpu=true; }
+  else G.rival=null;
   G.framesData=G.players[0].frames;
   G.gameOver=false; G.msg=null;
-  // per-game progression tally, shown on the GAME COMPLETE screen and folded into PROFILE
-  G.session={strikes:0,spares:0,bestStreak:0,xpGained:0,coinsGained:0};
+  hideResults();
+  // per-game progression tally, shown on the results card and folded into PROFILE
+  G.session={strikes:0,spares:0,bestStreak:0,xpGained:0,coinsGained:0,newAch:[],
+    xpStart:PROFILE.xp,lpStart:PROFILE.leaguePoints,coinsStart:PROFILE.coins};
+  if(G.ballMat) applyBallSkin(PROFILE.selectedBall);
+  const tag=document.getElementById('rivalTag');
+  if(tag&&G.rival) tag.textContent=G.rival.title+' · '+LEAGUES[G.rival.tier].name.replace(' League','');
+}
+function seatName(i){
+  if(G.mode==='cpu') return i===0?'YOU':G.rival.name.toUpperCase();
+  return G.numPlayers>1?('PLAYER '+(i+1)):'YOU';
+}
+function seatHex(i){ return (G.mode==='cpu'&&i===1&&G.rival)?G.rival.hex:PLAYER_HEX[i]; }
+const MODE_GLYPH={solo:'1P',cpu:'CPU','2p':'2P'};
+function setMode(m){
+  G.mode=m;
+  setPlayers(m==='solo'?1:2);
 }
 function nextPlayerIndex(){
   for(let k=1;k<=G.numPlayers;k++){
@@ -1425,8 +1725,10 @@ function nextPlayerIndex(){
 }
 function setPlayers(n){
   initPlayers(n);
-  document.getElementById('playersGlyph').textContent=n+'P';
+  document.getElementById('playersGlyph').textContent=MODE_GLYPH[G.mode]||(n+'P');
+  document.getElementById('app').classList.toggle('cpu',G.mode==='cpu');
   respawnPins(); resetBall(); G.phase='aim'; updateHUD();
+  if(G.started&&G.rival) queueToast({title:'MATCH VS '+G.rival.name.toUpperCase(),sub:G.rival.title});
 }
 
 // ===== audio =====
@@ -1883,9 +2185,33 @@ function playChime(strike){
   });
 }
 
+// level-up fanfare: a rising major arpeggio with a soft bell on top
+function playFanfare(){
+  if(!_ac) return; const t=_ac.currentTime;
+  [[523,0],[659,0.09],[784,0.18],[1047,0.27],[1319,0.40]].forEach(([f,d],i)=>{
+    const o=_ac.createOscillator(); o.type=i<4?'triangle':'sine'; o.frequency.value=f;
+    const g=_ac.createGain(); const st=t+d;
+    g.gain.setValueAtTime(0.0001,st); g.gain.exponentialRampToValueAtTime(i<4?0.18:0.26,st+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,st+(i<4?0.35:0.9));
+    o.connect(g); sendOut(g); o.start(st); o.stop(st+1.0);
+  });
+  duckMusic(1.2);
+}
+function playWinSting(win){
+  if(!_ac) return; const t=_ac.currentTime;
+  const seq=win?[[392,0],[523,0.12],[659,0.24],[784,0.36]]:[[392,0],[349,0.18],[311,0.36]];
+  seq.forEach(([f,d])=>{
+    const o=_ac.createOscillator(); o.type='triangle'; o.frequency.value=f;
+    const g=_ac.createGain(); const st=t+d;
+    g.gain.setValueAtTime(0.0001,st); g.gain.exponentialRampToValueAtTime(0.16,st+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,st+0.5);
+    o.connect(g); sendOut(g); o.start(st); o.stop(st+0.55);
+  });
+}
+
 // ===== charge =====
 function startCharge(){
-  if(G.phase!=='aim'||G.charging) return;
+  if(G.phase!=='aim'||G.charging||isCpuTurn()) return;
   G.charging=true; G.chargeStart=performance.now();
   // your line is committed here — any further aim change while charging becomes hook,
   // not a new straight-line direction (see releaseThrow / the hook note in step())
@@ -1905,11 +2231,12 @@ function releaseThrow(){
 
 // ===== input =====
 function nudgeAim(d){
-  if(G.phase!=='aim') return;
+  if(G.phase!=='aim'||isCpuTurn()) return;
   G.aimAngle=Math.max(-0.20,Math.min(0.20,G.aimAngle+d));
   if(G.guide) G.guide.rotation.y=-G.aimAngle;
 }
 function setAimFromX(clientX){
+  if(isCpuTurn()) return;
   const r=G.mountEl.getBoundingClientRect();
   const nx=((clientX-r.left)/r.width)*2-1;
   G.aimAngle=Math.max(-0.20,Math.min(0.20,nx*0.23));
@@ -1932,7 +2259,7 @@ function onPointerUp(){
 
 function throwBall(power,hook){
   if(G.phase!=='aim') return;
-  const drift=(Math.random()-0.5)*0.036;
+  const drift=(Math.random()-0.5)*0.024;
   // the release direction is where you were aiming when charging STARTED — see
   // startCharge()/releaseThrow(); anything you drag after that is hook, not a new line
   const base=(G.aimAtChargeStart!=null)?G.aimAtChargeStart:G.aimAngle;
@@ -2243,6 +2570,8 @@ function step(dt){
 
   if(G.camPunch>0) G.camPunch=Math.max(0,G.camPunch-dt*1.35);
   updateTrail(dt);
+  cpuTick(dt);
+  if(G.pendingLevel && G.started && !G.msg && !G.lvlShowing && (G.phase==='aim'||G.phase==='over')) showLevelUp();
 }
 
 // Hitting a pin below its centre of mass, with the foot gripping the deck, makes it
@@ -2276,21 +2605,25 @@ function ballPinCollisions(){
       const nx=dx/d, nz=dz/d;
       if((p.vx-b.vx)*nx+(p.vz-b.vz)*nz>0) return;  // already separating
       const vn=Math.max(b.vx*nx+b.vz*nz,0);
-      strikePin(p,nx,nz,vn*0.46+1.05,3.6+Math.min(2.8,vn*0.32),0.07+Math.min(0.18,vn*0.020),true);
-      p.vx+=b.vx*0.11; p.vz+=b.vz*0.11;
+      strikePin(p,nx,nz,vn*0.60+1.05,3.6+Math.min(2.8,vn*0.34),0.07+Math.min(0.18,vn*0.020),true);
+      p.vx+=b.vx*0.18; p.vz+=b.vz*0.18;
       p.x+=nx*(reach-d)*0.55; p.z+=nz*(reach-d)*0.55;
       // The ball keeps driving through the rack, but a solid hit still turns it — that
       // deflection is what leaves splits instead of a strike on every centre ball.
-      b.vx=(b.vx-nx*vn*0.40)*0.978;
-      b.vz=(b.vz-nz*vn*0.40)*0.978;
+      b.vx=(b.vx-nx*vn*0.20)*0.978;
+      b.vz=(b.vz-nz*vn*0.20)*0.978;
     }
   });
 }
 
 function pinPinCollisions(){
-  const thr=C.bellyR*2+0.015;
+  const thr0=C.bellyR*2+0.015;
   const movers=G.pins.filter(p=>p.active&&p.moving&&Math.hypot(p.vx,p.vz)>0.32);
   movers.forEach(a=>{
+    // The bodies are tracked by their feet, but a toppling pin's body swings well past
+    // its foot — without this the 4 and 6 pins survived most mid-speed balls because
+    // the 2 and 3 fell "next to" them without ever touching.
+    const thr=thr0+0.25*Math.max(0,1-Math.max(0,a.ay));
     G.pins.forEach(b=>{
       if(b===a||!b.active) return;
       if(Math.abs(a.y-b.y)>0.34) return;            // one is flying over the other
@@ -2298,13 +2631,13 @@ function pinPinCollisions(){
       if(d<thr&&d>1e-6){
         const nx=dx/d, nz=dz/d;
         if((b.vx-a.vx)*nx+(b.vz-a.vz)*nz>0) return;
-        const ov=(thr-d)*0.5;
+        const ov=Math.max(0,(thr0-d)*0.5);          // only the feet themselves get pushed apart
         // A pin already lying on the deck cannot be knocked over again — two flat pins
         // side by side sit permanently inside this radius, and striking them each frame
         // was feeding energy back into a rack that should be coming to rest.
         if(b.ay<0.5){ b.x+=nx*ov; b.z+=nz*ov; a.x-=nx*ov; a.z-=nz*ov; return; }
         const spd=Math.hypot(a.vx,a.vz);
-        strikePin(b,nx,nz,spd*0.21+0.10,0.9+Math.min(1.15,spd*0.21),Math.min(0.09,spd*0.018),false);
+        strikePin(b,nx,nz,spd*0.50+0.25,0.9+Math.min(1.15,spd*0.36),Math.min(0.09,spd*0.018),false);
         a.vx-=nx*spd*0.64; a.vz-=nz*spd*0.64;
         b.x+=nx*ov; b.z+=nz*ov; a.x-=nx*ov; a.z-=nz*ov;
       }
@@ -2358,7 +2691,7 @@ function integratePins(dt){
         if(p.vy<-0.55) deckThud(Math.min(1,-p.vy/3.2));   // pin landing on the maple deck
         p.vy=-p.vy*0.28; if(Math.abs(p.vy)<0.5) p.vy=0;
       }
-      const gf=Math.min(1,dt*(p.sweep?1.6:5.0));   p.vx*=(1-gf); p.vz*=(1-gf);
+      const gf=Math.min(1,dt*(p.sweep?1.6:2.5));   p.vx*=(1-gf); p.vz*=(1-gf);
       const ad=Math.min(1,dt*2.6);   p.ox*=(1-ad); p.oz*=(1-ad); p.oy*=(1-Math.min(1,dt*3.2));
 
       const hl=Math.hypot(axis.x,axis.z);
@@ -2484,12 +2817,13 @@ function onSettled(){
     if(strike){
       pl.streak=(pl.streak||0)+1;
       G.session.strikes++; G.session.bestStreak=Math.max(G.session.bestStreak,pl.streak);
+      PROFILE.totalStrikes=(PROFILE.totalStrikes||0)+1;
       const bonus=pl.streak>=3?50*(pl.streak-2):0;
       gainedXp=100+bonus; gainedCoins=20;
       comboInfo=comboText(pl.streak);
     }else{
       pl.streak=0;
-      if(spare){ G.session.spares++; gainedXp=50; gainedCoins=10; }
+      if(spare){ G.session.spares++; PROFILE.totalSpares=(PROFILE.totalSpares||0)+1; gainedXp=50; gainedCoins=10; }
       else if(knocked>0){ gainedXp=knocked*3; gainedCoins=Math.floor(knocked/3); }
     }
     if(gainedXp||gainedCoins){
@@ -2497,6 +2831,7 @@ function onSettled(){
       saveProfile(); refreshProfileUI();
     }
     evaluateChallenges({strike,spare,knocked,streak:pl.streak,score:currentRunningTotal()});
+    checkAchievements({strike,streak:pl.streak,hook:G.ball.hook,gutter:!!G.ball.gutter&&knocked===0});
   }
 
   const newIndex=currentFrameIndex(fr);
@@ -2555,17 +2890,30 @@ function onSettled(){
 function setupNextBall(fresh){
   if(fresh) respawnPins(); else clearFallen();
   resetBall(); updateHUD();
+  // the rival rolls the house ball; the player's own skin (and trail) comes back on their turn
+  if(G.mode==='cpu') applyBallSkin(G.cur===1?'rival':PROFILE.selectedBall);
   if(fresh){ G.phase='resolve'; startSetter(); }
   else G.phase='aim';
 }
 function playerTotal(i){
   const s=computeScores(G.players[i].frames); let t=0; s.forEach(x=>{if(x!=null) t=x;}); return t;
 }
+function cleanGame(frames){
+  for(let i=0;i<10;i++){
+    const r=frames[i].rolls;
+    if(r.length<1) return false;
+    if(r[0]===10) continue;
+    if(r.length<2||r[0]+r[1]<10) return false;
+  }
+  return true;
+}
 function endGame(){
-  G.gameOver=true; G.phase='over';
+  G.gameOver=true; G.phase='over'; G.cpuAct=null;
   const score=playerTotal(0);
+  const other=G.numPlayers>1?playerTotal(1):null;
   const isNewBest=score>PROFILE.bestScore;
-  const win2p=(G.numPlayers===2 && score>playerTotal(1));
+  const vsCpu=G.mode==='cpu';
+  const win=(other!=null && score>other), tie=(other!=null && score===other), loss=(other!=null && score<other);
   const bonusXp=isNewBest?100:0;
 
   // ---- fold this game into career progression: stats, league points, bonuses ----
@@ -2573,30 +2921,122 @@ function endGame(){
   PROFILE.totalScoreSum+=score;
   PROFILE.bestScore=Math.max(PROFILE.bestScore,score);
   PROFILE.bestStreak=Math.max(PROFILE.bestStreak,G.session.bestStreak||0);
-  // league points reward the performance itself, not just the win — a good game
-  // still climbs the ladder even in a loss
-  PROFILE.leaguePoints+=Math.round(score/5)+G.session.strikes*5+G.session.spares*2;
-  PROFILE.coins+=100; PROFILE.xp+=20+bonusXp;               // flat participation + a personal-best kicker
-  addSessionGain(20+bonusXp,100);
-  evaluateChallenges({score,win:win2p});
+  // League points reward the performance itself — a good game still climbs the ladder —
+  // and a match against a rival adds a bonus for the win or a bite for the loss. A loss
+  // never drops you out of the tier you already reached.
+  const base=Math.round(score/5)+G.session.strikes*5+G.session.spares*2;
+  let lp=base;
+  if(vsCpu){
+    if(win) lp=base+50+G.rival.tier*10;
+    else if(loss) lp=base-60;
+    PROFILE.wins=PROFILE.wins||0; PROFILE.losses=PROFILE.losses||0; PROFILE.ties=PROFILE.ties||0;
+    if(win){ PROFILE.wins++; PROFILE.winStreak=(PROFILE.winStreak||0)+1; PROFILE.bestWinStreak=Math.max(PROFILE.bestWinStreak||0,PROFILE.winStreak); }
+    else if(loss){ PROFILE.losses++; PROFILE.winStreak=0; }
+    else PROFILE.ties++;
+  }
+  const tierMin=leagueInfo(PROFILE.leaguePoints).min;
+  const lpBefore=PROFILE.leaguePoints;
+  PROFILE.leaguePoints=Math.max(tierMin,PROFILE.leaguePoints+lp);
+  const lpGain=PROFILE.leaguePoints-lpBefore;
+  const winXp=vsCpu&&win?60:0;
+  PROFILE.coins+=100+(vsCpu&&win?50:0); PROFILE.xp+=20+bonusXp+winXp;     // participation + best + win
+  addSessionGain(20+bonusXp+winXp,100+(vsCpu&&win?50:0));
+  evaluateChallenges({score,win:(win&&!vsCpu)||(win&&vsCpu)});
+  const newAch=checkAchievements({gameOver:true,score,clean:cleanGame(G.players[0].frames),
+    win:vsCpu&&win,rivalTier:G.rival?G.rival.tier:-1});
   saveProfile(); refreshProfileUI();
 
-  const gx=G.session.xpGained||0, gc=G.session.coinsGained||0;
-  const gainLine=(gx||gc)?('+'+gx+' XP'+(gc?('   +'+gc+' Coins'):'')):'';
-  if(G.numPlayers===1){
-    G.msg={title:score>=270?'AWESOME!':'GAME OVER',
-      sub:(isNewBest?'NEW PERSONAL BEST!  ':'')+'Final score '+score,
-      btn:true, xpText:gainLine};
-  }else{
-    const a=score, b=playerTotal(1);
-    if(a===b) G.msg={title:'TIE GAME',sub:a+' — '+b,btn:true,xpText:gainLine};
-    else G.msg={title:'PLAYER '+(a>b?1:2)+' WINS',sub:a+' — '+b,btn:true,xpText:gainLine};
-  }
+  let title, cls='';
+  if(G.numPlayers===1) title=score>=270?'AWESOME!':'GAME OVER';
+  else if(vsCpu){ title=win?'YOU WIN!':(tie?'TIE GAME':'YOU LOSE'); cls=win?'win':(loss?'lose':''); }
+  else title=tie?'TIE GAME':('PLAYER '+(score>other?1:2)+' WINS');
+  if(vsCpu) playWinSting(win);
+  showResults({title,cls,score,other,isNewBest,lpGain,win,loss,tie,newAch});
   updateHUD();
 }
 function restart(){
   initPlayers(G.numPlayers);
   respawnPins(); resetBall(); G.phase='aim'; updateHUD();
+  if(G.rival) queueToast({title:'MATCH VS '+G.rival.name.toUpperCase(),sub:G.rival.title});
+}
+
+// ===== results card =====
+function hideResults(){ const w=document.getElementById('resultWrap'); if(w) w.classList.remove('show'); }
+function showResults(r){
+  const wrap=document.getElementById('resultWrap'), card=document.getElementById('resultCard');
+  card.className=r.cls||'';
+  const s=G.session;
+  const liNow=levelInfo(PROFILE.xp), liWas=levelInfo(s.xpStart);
+  const pctNow=Math.max(2,Math.min(100,Math.round(liNow.into/liNow.need*100)));
+  const pctWas=liNow.level>liWas.level?0:Math.max(2,Math.min(100,Math.round(liWas.into/liWas.need*100)));
+  const lg=leagueInfo(PROFILE.leaguePoints), lgWas=leagueInfo(s.lpStart);
+  const lgPct=v=>{ const t=leagueInfo(v); if(!t.next) return 100; return Math.max(2,Math.min(100,Math.round((v-t.min)/(t.next.min-t.min)*100))); };
+  const lgNow=lgPct(PROFILE.leaguePoints), lgFrom=lg.idx>lgWas.idx?0:lgPct(s.lpStart);
+  let html='<div id="resTitle" class="fun">'+r.title+'</div>';
+  html+='<div id="resSub" class="'+(r.isNewBest?'best':'')+'">'+(r.isNewBest?'★ New personal best':(G.rival?('vs '+G.rival.name+' · '+G.rival.title):''))+'</div>';
+  if(r.other!=null){
+    html+='<div class="resScores">'+
+      '<div class="resSeat'+(r.score>r.other?' winner':'')+'"><div class="who">'+seatName(0)+'</div><div class="sc">'+r.score+'</div></div>'+
+      '<div class="resVs">VS</div>'+
+      '<div class="resSeat'+(r.other>r.score?' winner':'')+'"><div class="who">'+seatName(1)+'</div><div class="sc">'+r.other+'</div></div></div>';
+  }else{
+    html+='<div class="resScores"><div class="resSeat winner"><div class="who">Final score</div><div class="sc">'+r.score+'</div></div></div>';
+  }
+  html+='<div class="resStats"><div class="resStat"><b>'+s.strikes+'</b><span>Strikes</span></div>'+
+    '<div class="resStat"><b>'+s.spares+'</b><span>Spares</span></div>'+
+    '<div class="resStat"><b>'+(s.bestStreak||0)+'</b><span>Streak</span></div>'+
+    '<div class="resStat coins"><b>+'+(s.coinsGained||0)+'</b><span>Coins</span></div></div>';
+  html+='<div class="resBlock"><div class="resRow"><div class="resLvl"><div class="lvlBadge fun" id="resLvlNum">'+liNow.level+'</div>'+
+    '<div class="nm">'+liNow.name+'</div></div><div class="resGain">+'+(s.xpGained||0)+' XP</div></div>'+
+    '<div class="resBar"><i id="resXpBar" style="width:'+pctWas+'%"></i></div>'+
+    '<div class="resNote">'+(liNow.level>liWas.level?'Level up! ':'')+liNow.into+' / '+liNow.need+' XP to level '+(liNow.level+1)+'</div></div>';
+  const lpTxt=(r.lpGain>=0?'+':'')+r.lpGain+' LP';
+  html+='<div class="resBlock"><div class="resRow"><div class="resLbl">'+lg.emoji+' '+lg.name+(lg.idx>lgWas.idx?' — promoted!':'')+'</div>'+
+    '<div class="resGain'+(r.lpGain<0?' neg':'')+'">'+lpTxt+'</div></div>'+
+    '<div class="resBar"><i id="resLgBar" style="width:'+lgFrom+'%"></i></div>'+
+    '<div class="resNote">'+(lg.next?(Math.max(0,lg.next.min-PROFILE.leaguePoints)+' points to '+lg.next.name):'Top of the ladder')+'</div></div>';
+  if(Array.isArray(PROFILE.challenges)&&PROFILE.challenges.length){
+    html+='<div class="resBlock"><div class="resLbl">Today’s challenges</div>'+PROFILE.challenges.map(c=>
+      '<div class="resCh'+(c.done?' done':'')+'"><span>'+(c.done?'✓ ':'')+c.desc+'</span><small>'+(c.done?'DONE':c.progress+' / '+c.target)+'</small></div>').join('')+'</div>';
+  }
+  if(r.newAch&&r.newAch.length||(s.newAch&&s.newAch.length)){
+    const ids=Array.from(new Set([].concat(s.newAch||[],r.newAch||[])));
+    html+='<div class="resBlock"><div class="resLbl">Achievements unlocked</div><div class="resAch">'+ids.map(id=>{
+      const a=ACHIEVEMENTS.find(x=>x.id===id); return '<div class="resAchChip"><span>'+a.icon+'</span>'+a.name+' <small>+'+a.coins+' \u{1FA99}</small></div>'; }).join('')+'</div></div>';
+  }
+  html+='<div class="resBtns"><button class="resBtn pri fun" id="resAgain">'+(G.rival?'NEXT MATCH':'PLAY AGAIN')+'</button><button class="resBtn fun" id="resMenu">MENU</button></div>';
+  card.innerHTML=html;
+  wrap.classList.add('show');
+  card.scrollTop=0;
+  document.getElementById('resAgain').addEventListener('click',()=>{ unlockAudio(); hideResults(); restart(); });
+  document.getElementById('resMenu').addEventListener('click',()=>{ hideResults(); openMenu(); });
+  // bars sweep from where the game started to where it ended
+  setTimeout(()=>{ const a=document.getElementById('resXpBar'), b=document.getElementById('resLgBar');
+    if(a) a.style.width=pctNow+'%'; if(b) b.style.width=lgNow+'%'; },120);
+}
+
+// ===== level up =====
+function checkLevelUp(){
+  const lv=levelInfo(PROFILE.xp).level;
+  if(G.lastLevel==null){ G.lastLevel=lv; return; }
+  if(lv>G.lastLevel){ G.pendingLevel=lv; G.lastLevel=lv; }
+}
+function showLevelUp(){
+  const lv=G.pendingLevel; G.pendingLevel=0; G.lvlShowing=true;
+  const reward=50+lv*10;
+  PROFILE.coins+=reward; addSessionGain(0,reward); saveProfile(); refreshProfileUI();
+  const wrap=document.getElementById('lvlWrap');
+  document.getElementById('lvlBig').textContent=lv;
+  document.getElementById('lvlName').textContent=levelName(lv).toUpperCase();
+  document.getElementById('lvlSub').textContent='Level '+lv+' reached';
+  document.getElementById('lvlReward').textContent='+'+reward+' \u{1FA99}';
+  wrap.querySelectorAll('.lvlRay').forEach(e=>e.remove());
+  for(let i=0;i<12;i++){ const r=document.createElement('i'); r.className='lvlRay'; r.style.setProperty('--a',(i*30)+'deg'); r.style.animationDelay=(i*0.03)+'s'; wrap.appendChild(r); }
+  wrap.classList.add('show');
+  playFanfare();
+  const close=()=>{ wrap.classList.remove('show'); G.lvlShowing=false; };
+  document.getElementById('lvlCard').onclick=close;
+  setTimeout(()=>{ if(G.lvlShowing) close(); },3200);
 }
 
 // ===== scoring =====
@@ -2671,6 +3111,7 @@ function renderPindeck(){
   ).join('');
 }
 
+const HINT_TEXT='Aim · hold to charge · drag to hook · release to bowl';
 function updateHUD(){
   const curIdx=G.gameOver?-1:currentFrameIndex();
   const scores=computeScores(G.framesData);
@@ -2693,7 +3134,7 @@ function updateHUD(){
   document.getElementById('throwLabel').textContent=G.gameOver?'Finished':('Throw '+throwN);
   renderPindeck();
   document.getElementById('totalStr').textContent=String(total);
-  document.getElementById('boardWho').textContent=G.numPlayers>1?('PLAYER '+(G.cur+1)):'';
+  document.getElementById('boardWho').textContent=G.numPlayers>1?seatName(G.cur):'';
 
   const tb=document.getElementById('turnBar');
   document.getElementById('app').classList.toggle('p2',G.numPlayers>1);
@@ -2701,11 +3142,14 @@ function updateHUD(){
     tb.style.display='flex';
     tb.innerHTML=G.players.map((p,i)=>{
       const act=(i===G.cur&&!G.gameOver)?' act':'';
-      return `<span class="pseg${act}"><span class="pdot" style="background:${PLAYER_HEX[i]};color:${PLAYER_HEX[i]}"></span>P${i+1} ${playerTotal(i)}</span>`;
+      const nm=G.mode==='cpu'?(i===0?'YOU':G.rival.name.toUpperCase()):('P'+(i+1));
+      return `<span class="pseg${act}"><span class="pdot" style="background:${seatHex(i)};color:${seatHex(i)}"></span>${nm} ${playerTotal(i)}</span>`;
     }).join('');
   }else tb.style.display='none';
 
-  document.getElementById('hint').style.opacity=(G.phase==='aim')?'1':'0';
+  const hint=document.getElementById('hint');
+  hint.style.opacity=(G.phase==='aim')?'1':'0';
+  hint.textContent=isCpuTurn()?(G.rival.name+' is bowling…'):HINT_TEXT;
 
   const m=G.msg, wrap=document.getElementById('msgWrap');
   if(m){
@@ -2804,6 +3248,7 @@ function queueToast(t){
 }
 
 function refreshProfileUI(){
+  checkLevelUp();
   const li=levelInfo(PROFILE.xp);
   const pct=Math.max(2,Math.min(100,Math.round((li.into/li.need)*100)));
   const n1=document.getElementById('pbLvlNum'); if(n1) n1.textContent=li.level;
@@ -2826,7 +3271,7 @@ function openPanel(kind){
   if(kind==='league') buildLeaguePanel(title,body);
   else if(kind==='challenges') buildChallengesPanel(title,body);
   else if(kind==='shop') buildShopPanel(title,body,G._shopTab||'balls');
-  else if(kind==='stats') buildStatsPanel(title,body);
+  else if(kind==='stats') buildStatsPanel(title,body,G._statsTab);
 }
 function closePanel(){ document.getElementById('panelWrap').classList.remove('show'); }
 
@@ -2866,16 +3311,33 @@ function buildChallengesPanel(title,body){
   }).join('');
 }
 
-function buildStatsPanel(title,body){
-  title.textContent='My Stats';
-  const avg=PROFILE.gamesPlayed?Math.round(PROFILE.totalScoreSum/PROFILE.gamesPlayed):0;
-  const stat=(l,v)=>'<div class="statItem"><div class="statVal fun">'+v+'</div><div class="statLbl">'+l+'</div></div>';
-  body.innerHTML='<div class="statGrid">'+
-    stat('Games',PROFILE.gamesPlayed)+stat('Strikes',PROFILE.totalStrikes)+
-    stat('Spares',PROFILE.totalSpares)+stat('Average',avg)+
-    stat('Best Streak',PROFILE.bestStreak)+stat('Coins',PROFILE.coins)+
-    '<div class="statBest"><div class="statVal fun">'+PROFILE.bestScore+'</div>'+
-    '<div class="statLbl">\u{1F3C6} Personal Best</div></div></div>';
+function buildStatsPanel(title,body,tab){
+  tab=tab||G._statsTab||'stats'; G._statsTab=tab;
+  title.textContent=tab==='stats'?'My Stats':'Achievements';
+  const got=(PROFILE.ach||[]).length;
+  let html='<div class="tabRow"><div class="tabBtn'+(tab==='stats'?' on':'')+'" id="statsTabA">STATS</div>'+
+    '<div class="tabBtn'+(tab==='ach'?' on':'')+'" id="statsTabB">AWARDS '+got+'/'+ACHIEVEMENTS.length+'</div></div>';
+  if(tab==='stats'){
+    const avg=PROFILE.gamesPlayed?Math.round(PROFILE.totalScoreSum/PROFILE.gamesPlayed):0;
+    const stat=(l,v)=>'<div class="statItem"><div class="statVal fun">'+v+'</div><div class="statLbl">'+l+'</div></div>';
+    html+='<div class="statGrid">'+
+      stat('Games',PROFILE.gamesPlayed)+stat('Average',avg)+
+      stat('Strikes',PROFILE.totalStrikes||0)+stat('Spares',PROFILE.totalSpares||0)+
+      stat('Matches won',(PROFILE.wins||0)+' – '+(PROFILE.losses||0))+stat('Win streak',PROFILE.bestWinStreak||0)+
+      stat('Best Streak',PROFILE.bestStreak)+stat('Coins',PROFILE.coins)+
+      '<div class="statBest"><div class="statVal fun">'+PROFILE.bestScore+'</div>'+
+      '<div class="statLbl">\u{1F3C6} Personal Best</div></div></div>';
+  }else{
+    PROFILE.achSeen=got; saveProfile();
+    html+='<div class="achCount">'+got+' of '+ACHIEVEMENTS.length+' unlocked</div><div class="achGrid">'+ACHIEVEMENTS.map(a=>{
+      const has=hasAch(a.id);
+      return '<div class="achItem'+(has?' got':'')+'"><div class="achIco">'+a.icon+'</div><div><div class="achName">'+a.name+'</div>'+
+        '<div class="achDesc">'+a.desc+' · +'+a.coins+' \u{1FA99}</div></div></div>'; }).join('')+'</div>';
+  }
+  body.innerHTML=html;
+  document.getElementById('statsTabA').addEventListener('click',()=>buildStatsPanel(title,body,'stats'));
+  document.getElementById('statsTabB').addEventListener('click',()=>buildStatsPanel(title,body,'ach'));
+  const nb=document.getElementById('navStats'); if(nb) nb.classList.remove('hasNew');
 }
 
 function buildShopPanel(title,body,tab){
@@ -2920,6 +3382,7 @@ function buildShopPanel(title,body,tab){
       saveProfile();
       if(tab==='balls') applyBallSkin(key); else applyLaneTheme(key);
       refreshProfileUI();
+      checkAchievements({});
       buildShopPanel(title,body,tab);
     });
   });
@@ -2927,7 +3390,7 @@ function buildShopPanel(title,body,tab){
 
 function maybeShowDailyReward(){
   const pending=pendingDailyReward();
-  if(!pending) return;
+  if(!pending||G.started) return;          // menu only — never over a game in progress
   const wrap=document.getElementById('dailyWrap');
   const row=document.getElementById('dayRow');
   row.innerHTML=DAILY_PLAN.map((p,i)=>{
@@ -2941,6 +3404,7 @@ function maybeShowDailyReward(){
     claimDailyReward(pending);
     wrap.classList.remove('show');
     refreshProfileUI();
+    checkAchievements({});
     queueToast({title:'DAILY REWARD',sub:'Day '+pending.streak+' streak',
       xp:pending.plan.kind==='xp'?pending.plan.amount:0,
       coins:pending.plan.kind==='coins'?pending.plan.amount:0});
@@ -2950,8 +3414,11 @@ function maybeShowDailyReward(){
 
 // ===== start screen =====
 function syncMenu(){
-  document.getElementById('p1Btn').classList.toggle('on',G.numPlayers===1);
-  document.getElementById('p2Btn').classList.toggle('on',G.numPlayers===2);
+  document.getElementById('p1Btn').classList.toggle('on',G.mode==='solo');
+  document.getElementById('pcBtn').classList.toggle('on',G.mode==='cpu');
+  document.getElementById('p2Btn').classList.toggle('on',G.mode==='2p');
+  const nb=document.getElementById('navStats');
+  if(nb) nb.classList.toggle('hasNew',(PROFILE.ach||[]).length>(PROFILE.achSeen||0));
   document.getElementById('mOnBtn').classList.toggle('on',_musOn);
   document.getElementById('mOffBtn').classList.toggle('on',!_musOn);
   const sl=document.getElementById('vol');
@@ -2960,7 +3427,8 @@ function syncMenu(){
   if(lab) lab.textContent=Math.round(_vol*100)+'%';
 }
 function openMenu(){
-  G.started=false;
+  G.started=false; G.cpuAct=null; hideResults();
+  setTimeout(maybeShowDailyReward,300);
   if(typeof window.onGameplayStop==='function') window.onGameplayStop();
   G.needsReset=true;            // PLAY then starts a fresh game
   G.msg=null; updateHUD();
@@ -2989,6 +3457,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 
   loadProfile();
   ensureDailyChallenges();
+  G.lastLevel=levelInfo(PROFILE.xp).level;
   refreshProfileUI();
   document.getElementById('navLeague').addEventListener('click',()=>openPanel('league'));
   document.getElementById('navChallenges').addEventListener('click',()=>openPanel('challenges'));
@@ -2999,8 +3468,9 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('panelClose').addEventListener('click',closePanel);
   document.getElementById('panelWrap').addEventListener('click',e=>{ if(e.target.id==='panelWrap') closePanel(); });
 
-  document.getElementById('p1Btn').addEventListener('click',()=>{ setPlayers(1); syncMenu(); });
-  document.getElementById('p2Btn').addEventListener('click',()=>{ setPlayers(2); syncMenu(); });
+  document.getElementById('p1Btn').addEventListener('click',()=>{ setMode('solo'); syncMenu(); });
+  document.getElementById('pcBtn').addEventListener('click',()=>{ setMode('cpu'); syncMenu(); });
+  document.getElementById('p2Btn').addEventListener('click',()=>{ setMode('2p'); syncMenu(); });
   document.getElementById('mOnBtn').addEventListener('click',()=>{ unlockAudio(); setMusic(true); syncMenu(); });
   document.getElementById('mOffBtn').addEventListener('click',()=>{ setMusic(false); syncMenu(); });
   const sl=document.getElementById('vol');
@@ -3009,7 +3479,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('menuBtn').addEventListener('click',openMenu);
 
   document.getElementById('playersBtn').addEventListener('click',()=>{
-    unlockAudio(); setPlayers(G.numPlayers===1?2:1);
+    unlockAudio(); setMode(G.mode==='solo'?'cpu':(G.mode==='cpu'?'2p':'solo'));
   });
   document.getElementById('msgBtn').addEventListener('click',()=>{ unlockAudio(); restart(); });
   document.getElementById('playersBtn').addEventListener('click',syncMenu);

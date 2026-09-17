@@ -42,20 +42,40 @@ CONTROLS
   Mobile   drag to aim, hold to charge, lift to bowl. Portrait and landscape.
   Buttons  MUS = music on/off, note = sound on/off, 1P/2P = player count.
 
+RIVALS (1P = you vs a CPU bowler)
+  The default mode is a match against one of eleven named rivals, drawn from the
+  player's current league tier (Bronze rivals average ~85, Legend rivals ~200+).
+  A rival bowls the same physics with the same ball - nothing is scripted; its
+  skill only sets how tight its aim and spare reads are. Its turn is fully
+  animated (walks the aim over, holds the power meter, releases) and player
+  input is ignored meanwhile. SOLO (no rival) and 2P hot-seat are still there.
+
+RESULTS
+  Every game ends on a results card: scores side by side, strikes / spares /
+  best streak / coins, the level bar sweeping from where the game started to
+  where it ended, league points won or lost with the tier bar, today's
+  challenges, and any achievements unlocked. NEXT MATCH draws a new rival.
+
 PROGRESSION (client-side, cosmetic only - never pay to win)
+  Level up   A LEVEL UP card with a fanfare whenever a level is crossed (shown
+            between balls, never over a throw), paying 50 + 10 x level coins.
+  Achievements  21 one-off badges (first strike, turkey, clean game, 200+, beat a
+            Diamond rival, hook strike, 50 career spares ...), each paying coins
+            once; listed under MY STATS > AWARDS and on the results card.
   Levels    Rookie -> Pro (5) -> Star (10) -> Champion (20) -> Bowling Legend (50).
             XP for strikes, spares, pins knocked down and a growing strike combo
             ("3X STRIKE STREAK" -> "ON FIRE" -> "UNSTOPPABLE"), shown on the
             strike/spare card and on the level pill during play.
   League    A five-tier ladder (Bronze/Silver/Gold/Diamond/Legend) driven by
-            career "league points" earned from every game's performance, win
-            or lose.
+            career "league points": every game pays for its own performance,
+            a win over a rival adds a bonus, a loss costs points - but never
+            drops you out of a tier you have already reached.
   Challenges  Three picked deterministically from the date (reset free at local
             midnight), tracked live during play, paid out in XP + coins.
-  Shop      Five ball skins (Basic/Ice/Fire/Galaxy/Gold - different colour and
-            particle trail only, identical physics) and five lane themes
-            (Classic/Neon/Space/Volcano/Ice - relight the room, pins and
-            physics unchanged), bought with coins earned from play.
+  Shop      Seven ball skins (Basic/Ice/Fire/Galaxy/Gold/Obsidian/Prism -
+            different colour and particle trail only, identical physics) and
+            six lane themes (Classic/Neon/Space/Volcano/Ice/Royal - relight the
+            room, pins and physics unchanged), bought with coins earned from play.
   Daily reward  A 5-day login cycle (XP, coins, a ball unlock) on first play
             of a new calendar day; the streak resets if a day is missed.
 
