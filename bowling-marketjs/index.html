@@ -315,12 +315,206 @@
     #playBtn{font-size:15px;padding:12px 24px;}
     #menuBtn{font-size:12px;padding:10px 18px;}
   }
+
+  /* ================= progression / meta-game UI ================= */
+
+  /* level badge + xp bar, shared look used on the start card and in the HUD pill */
+  .lvlChip{display:flex;align-items:center;gap:9px;}
+  .lvlBadge{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-family:'Bungee',sans-serif;font-size:12px;color:#08131c;
+    background:linear-gradient(135deg,#ffd08a,#ffb63d);box-shadow:0 0 14px rgba(255,182,61,.4);}
+  .lvlMeta{flex:1;min-width:0;text-align:left;}
+  .lvlName{font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#f4f9fd;
+    display:flex;justify-content:space-between;gap:8px;}
+  .lvlName span:last-child{color:rgba(234,242,248,.45);font-weight:400;letter-spacing:.04em;text-transform:none;}
+  .xpTrack{margin-top:4px;height:6px;border-radius:99px;background:rgba(255,255,255,.10);overflow:hidden;}
+  .xpFill{height:100%;border-radius:99px;background:linear-gradient(90deg,#7fd4ff,#ffb63d);
+    box-shadow:0 0 10px rgba(255,182,61,.4);transition:width .4s ease;}
+
+  /* top-left in-game HUD pill: level + coins, quiet until you look for it */
+  #profileBar{position:absolute;top:14px;left:14px;z-index:3;display:flex;align-items:center;
+    gap:9px;padding:6px 13px 6px 7px;}
+  #profileBar .xpTrack{width:74px;}
+  #coinPill{display:flex;align-items:center;gap:5px;font-family:'Bungee',sans-serif;font-size:12px;
+    color:#ffd08a;padding-left:9px;border-left:1px solid rgba(255,255,255,.13);}
+  .app.menu #profileBar{display:none;}
+  #app.menu #profileBar{display:none;}
+  /* under ~900px the pill would run into the centred scoreboard, so it moves
+     below it on the left; with two players it drops under the turn bar as well */
+  @media (max-width:900px){
+    #profileBar{top:92px;left:14px;}
+    #app.p2 #profileBar{top:138px;}
+  }
+  @media (max-width:560px){
+    #profileBar{top:88px;left:9px;gap:7px;padding:5px 10px 5px 5px;}
+    #profileBar .lvlBadge{width:28px;height:28px;font-size:10px;}
+    #profileBar .lvlName{font-size:9.5px;}
+    #profileBar .xpTrack{width:54px;}
+    #coinPill{font-size:11px;padding-left:7px;}
+    #app.p2 #profileBar{top:132px;}
+  }
+
+  /* secondary nav row on the start card */
+  #navRow{display:flex;gap:8px;margin-top:14px;}
+  .navBtn{flex:1;pointer-events:auto;cursor:pointer;padding:10px 4px;border-radius:12px;
+    font-family:'Bungee',sans-serif;font-size:9.5px;letter-spacing:.05em;text-align:center;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:rgba(234,242,248,.72);
+    transition:color .2s,border-color .2s,background .2s;}
+  .navBtn:hover{color:#eaf2f8;border-color:rgba(127,212,255,.5);background:rgba(127,212,255,.08);}
+  .navBtn:active{transform:scale(.96);}
+
+  .pickRow{display:flex;align-items:center;justify-content:space-between;gap:13px;margin-top:11px;
+    pointer-events:auto;cursor:pointer;}
+  .pickRow:hover .pickVal{color:#eaf2f8;}
+  .pickVal{font-size:11.5px;font-weight:500;color:rgba(234,242,248,.75);display:flex;align-items:center;gap:6px;}
+  .pickVal .arrow{color:#7fd4ff;font-size:10px;}
+
+  /* ---- generic overlay panel (challenges / shop / stats / league) ---- */
+  #panelWrap{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;
+    padding:16px;background:radial-gradient(70% 55% at 50% 46%,rgba(4,7,11,.65),rgba(4,7,11,.92));}
+  #panelWrap.show{display:flex;}
+  #panelCard{width:min(460px,100%);max-height:92%;overflow-y:auto;text-align:center;
+    padding:22px 24px 24px;border-radius:20px;background:rgba(12,16,22,.92);
+    -webkit-backdrop-filter:blur(20px) saturate(1.2);backdrop-filter:blur(20px) saturate(1.2);
+    border:1px solid rgba(255,255,255,.15);box-shadow:0 26px 70px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08);
+    animation:pop .3s cubic-bezier(.2,1.4,.4,1);}
+  #panelHead{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  #panelTitle{font-size:24px;color:#7fd4ff;text-shadow:0 0 22px rgba(127,212,255,.45);text-align:left;}
+  #panelClose{pointer-events:auto;cursor:pointer;width:32px;height:32px;flex:none;border-radius:50%;
+    background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#eaf2f8;font-size:15px;
+    display:flex;align-items:center;justify-content:center;transition:background .2s,border-color .2s;}
+  #panelClose:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);}
+  .srule2{height:1px;background:rgba(255,255,255,.10);margin:13px 0;}
+  #panelBody{text-align:left;}
+
+  .tabRow{display:flex;gap:6px;margin-bottom:14px;}
+  .tabBtn{flex:1;pointer-events:auto;cursor:pointer;padding:8px 4px;border-radius:99px;
+    font-family:'Bungee',sans-serif;font-size:10px;letter-spacing:.04em;text-align:center;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:rgba(234,242,248,.5);
+    transition:color .2s,border-color .2s,background .2s;}
+  .tabBtn.on{color:#08131c;background:#7fd4ff;border-color:#7fd4ff;}
+
+  /* challenges */
+  .chItem{padding:12px 13px;border-radius:14px;background:rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.09);margin-bottom:9px;}
+  .chItem.done{border-color:rgba(127,212,255,.4);background:rgba(127,212,255,.07);}
+  .chTop{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .chDesc{font-size:12.5px;font-weight:500;color:#f4f9fd;}
+  .chReward{font-size:10px;color:#ffd08a;white-space:nowrap;}
+  .chBarTrack{margin-top:8px;height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}
+  .chBarFill{height:100%;border-radius:99px;background:linear-gradient(90deg,#7fd4ff,#ffb63d);}
+  .chItem.done .chBarFill{background:#7fd4ff;}
+  .chProgTxt{margin-top:5px;font-size:9.5px;color:rgba(234,242,248,.45);letter-spacing:.05em;}
+  .chCheck{color:#7fd4ff;font-size:13px;}
+
+  /* shop */
+  .shopGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .shopItem{border-radius:14px;padding:12px 10px 11px;text-align:center;
+    background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.10);}
+  .shopItem.selected{border-color:#7fd4ff;box-shadow:0 0 0 1px rgba(127,212,255,.4) inset;}
+  .shopSwatch{width:46px;height:46px;border-radius:50%;margin:0 auto 8px;box-shadow:0 6px 18px rgba(0,0,0,.4);}
+  .laneSwatch{width:100%;height:46px;border-radius:9px;margin:0 auto 8px;box-shadow:0 6px 18px rgba(0,0,0,.4);}
+  .shopName{font-size:11.5px;font-weight:500;color:#f4f9fd;}
+  .shopSub{margin-top:2px;font-size:9.5px;color:rgba(234,242,248,.4);}
+  .shopBtn{margin-top:9px;width:100%;padding:7px 4px;border-radius:99px;font-family:'Bungee',sans-serif;
+    font-size:9.5px;letter-spacing:.04em;cursor:pointer;pointer-events:auto;border:1px solid rgba(255,255,255,.16);
+    background:rgba(255,255,255,.06);color:rgba(234,242,248,.75);transition:background .2s,border-color .2s,color .2s;}
+  .shopBtn:hover{border-color:rgba(127,212,255,.5);color:#eaf2f8;}
+  .shopBtn.on{background:#7fd4ff;border-color:#7fd4ff;color:#08131c;}
+  .shopBtn.buy{background:rgba(255,182,61,.14);border-color:rgba(255,182,61,.5);color:#ffd08a;}
+  .shopBtn:disabled{opacity:.4;cursor:default;}
+  #shopBalance{display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Bungee',sans-serif;
+    font-size:13px;color:#ffd08a;margin-bottom:13px;}
+
+  /* stats */
+  .statGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .statItem{padding:12px 10px;border-radius:14px;background:rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.09);text-align:center;}
+  .statVal{font-family:'Bungee',sans-serif;font-size:21px;color:#7fd4ff;}
+  .statLbl{margin-top:3px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(234,242,248,.45);}
+  .statBest{grid-column:1 / -1;text-align:center;padding:13px;border-radius:14px;
+    background:linear-gradient(135deg,rgba(255,182,61,.14),rgba(255,182,61,.04));
+    border:1px solid rgba(255,182,61,.3);}
+  .statBest .statVal{color:#ffd08a;font-size:26px;}
+
+  /* league */
+  .leagueTier{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:14px;
+    margin-bottom:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);opacity:.55;}
+  .leagueTier.cur{opacity:1;background:rgba(127,212,255,.08);border-color:rgba(127,212,255,.35);}
+  .leagueEmoji{font-size:22px;}
+  .leagueName{font-size:12.5px;font-weight:500;color:#f4f9fd;}
+  .leagueNeed{font-size:9.5px;color:rgba(234,242,248,.42);margin-top:2px;}
+  #leagueBarTrack{margin-top:6px;height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;}
+  #leagueBarFill{height:100%;border-radius:99px;background:linear-gradient(90deg,#7fd4ff,#ffb63d);}
+
+  /* ---- daily reward ---- */
+  #dailyWrap{position:absolute;inset:0;z-index:9;display:none;align-items:center;justify-content:center;
+    padding:16px;background:radial-gradient(70% 55% at 50% 46%,rgba(4,7,11,.7),rgba(4,7,11,.94));}
+  #dailyWrap.show{display:flex;}
+  #dailyCard{width:min(360px,100%);text-align:center;padding:26px 24px 24px;border-radius:20px;
+    background:rgba(12,16,22,.92);-webkit-backdrop-filter:blur(20px) saturate(1.2);backdrop-filter:blur(20px) saturate(1.2);
+    border:1px solid rgba(255,182,61,.3);box-shadow:0 26px 70px rgba(0,0,0,.65),0 0 60px rgba(255,182,61,.12);
+    animation:pop .3s cubic-bezier(.2,1.4,.4,1);}
+  #dailyTitle{font-size:26px;color:#ffd08a;text-shadow:0 0 26px rgba(255,182,61,.5);}
+  #dailySub{margin-top:6px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(234,242,248,.5);}
+  #dayRow{display:flex;gap:6px;justify-content:center;margin-top:18px;}
+  .dayChip{flex:1;padding:9px 2px;border-radius:11px;background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.1);}
+  .dayChip.done{background:rgba(127,212,255,.1);border-color:rgba(127,212,255,.35);}
+  .dayChip.cur{background:rgba(255,182,61,.16);border-color:#ffb63d;box-shadow:0 0 16px rgba(255,182,61,.3);}
+  .dayNum{font-size:8.5px;letter-spacing:.1em;color:rgba(234,242,248,.4);}
+  .dayIco{font-size:16px;margin-top:3px;}
+  #dailyClaim{margin-top:19px;width:100%;padding:12px 30px;font-family:'Bungee',sans-serif;font-size:14px;
+    letter-spacing:.08em;color:#08131c;background:#ffb63d;border:none;border-radius:99px;cursor:pointer;
+    box-shadow:0 0 26px rgba(255,182,61,.4);transition:transform .12s,box-shadow .2s;}
+  #dailyClaim:hover{box-shadow:0 0 36px rgba(255,182,61,.6);}
+  #dailyClaim:active{transform:scale(.97);}
+
+  /* ---- toasts (challenge complete, etc.) ---- */
+  #toastHost{position:absolute;top:100px;left:50%;transform:translateX(-50%);z-index:6;
+    display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(320px,86%);}
+  .toast{opacity:0;transform:translateY(-10px) scale(.96);transition:opacity .3s,transform .3s;
+    padding:11px 20px 12px;border-radius:14px;text-align:center;width:100%;
+    background:rgba(12,16,22,.88);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+    border:1px solid rgba(127,212,255,.35);box-shadow:0 14px 36px rgba(0,0,0,.5),0 0 24px rgba(127,212,255,.12);}
+  .toast.show{opacity:1;transform:none;}
+  .toastTitle{font-size:12px;letter-spacing:.1em;color:#7fd4ff;}
+  .toastSub{margin-top:2px;font-size:12.5px;color:#f4f9fd;}
+  .toastXp{margin-top:4px;font-family:'Bungee',sans-serif;font-size:12px;color:#ffd08a;}
+
+  /* ---- strike message extras ---- */
+  #msgCombo{font-size:14px;letter-spacing:.06em;margin-bottom:4px;
+    text-shadow:0 0 16px currentColor;}
+  #msgXp{margin-top:6px;font-family:'Bungee',sans-serif;font-size:15px;color:#ffd08a;}
+  #msgCoins{margin-top:2px;font-size:11px;color:rgba(255,208,138,.75);}
+
+  /* ---- strike camera flash ---- */
+  #strikeFlash{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;
+    background:radial-gradient(60% 45% at 50% 42%,rgba(255,255,255,.55),rgba(255,182,61,0) 70%);}
+  #strikeFlash.pulse{animation:flashPulse .5s ease-out;}
+  @keyframes flashPulse{0%{opacity:.85}100%{opacity:0}}
+
+  #app.menu #toastHost,#app.menu #strikeFlash,#app.menu #msgWrap{display:none;}
 </style>
 </head>
 <body>
 <div id="app" class="notranslate menu" translate="no">
   <div id="mount"></div>
   <div id="vignette"></div>
+  <div id="strikeFlash"></div>
+
+  <div id="profileBar" class="plate">
+    <div class="lvlChip">
+      <div class="lvlBadge fun" id="pbLvlNum">1</div>
+      <div class="lvlMeta">
+        <div class="lvlName"><span id="pbLvlName">Rookie</span></div>
+        <div class="xpTrack"><div class="xpFill" id="pbXpFill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div id="coinPill"><span>&#129689;</span><span id="pbCoins">0</span></div>
+  </div>
+
+  <div id="toastHost"></div>
 
   <div id="board">
     <div id="boardHead"><span class="t fun">BOWLING</span><span class="who" id="boardWho"></span></div>
@@ -351,7 +545,7 @@
     <button id="soundBtn" class="rbtn"><span class="fun">&#9834;</span></button>
     <button id="playersBtn" class="rbtn"><span class="fun" id="playersGlyph">1P</span></button>
   </div>
-  <div id="hint">Aim &middot; hold to charge &middot; release to bowl</div>
+  <div id="hint">Aim &middot; hold to charge &middot; drag to hook &middot; release to bowl</div>
 
   <div id="loadWrap">
     <div id="loadCard">
@@ -376,6 +570,21 @@
       <div id="startTitle" class="fun">3D Bowling</div>
       <div id="startSub">Ten pins &middot; Ten frames</div>
 
+      <div class="lvlChip" style="margin-top:14px;">
+        <div class="lvlBadge fun" id="menuLvlNum">1</div>
+        <div class="lvlMeta">
+          <div class="lvlName"><span id="menuLvlName">Rookie</span><span id="menuXpTxt">0 / 100 XP</span></div>
+          <div class="xpTrack"><div class="xpFill" id="menuXpFill" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div id="navRow">
+        <button class="navBtn fun" id="navLeague">LEAGUE</button>
+        <button class="navBtn fun" id="navChallenges">CHALLENGES</button>
+        <button class="navBtn fun" id="navShop">SHOP</button>
+        <button class="navBtn fun" id="navStats">MY STATS</button>
+      </div>
+
       <div class="srule"></div>
 
       <div id="startCols">
@@ -387,8 +596,10 @@
         <div class="howrow"><div class="hownum">2</div>
           <div class="howtxt">Press and <b>hold</b> to fill the power meter.</div></div>
         <div class="howrow"><div class="hownum">3</div>
-          <div class="howtxt"><b>Release</b> to bowl. Ten frames &mdash; a strike scores the next
-          two balls, a spare the next one.</div></div>
+          <div class="howtxt"><b>Release</b> to bowl. Nudge your aim while charging to put a
+          <b>hook</b> on it &mdash; it breaks late, right before the pocket.</div></div>
+        <div class="howrow"><div class="hownum">4</div>
+          <div class="howtxt">Ten frames &mdash; a strike scores the next two balls, a spare the next one.</div></div>
       </div>
       </div>
 
@@ -411,6 +622,13 @@
         </div>
       </div>
 
+      <div class="pickRow" id="pickBall"><div class="slbl">Ball</div>
+        <div class="pickVal"><span id="pickBallName">Basic Ball</span><span class="arrow">&#9654;</span></div>
+      </div>
+      <div class="pickRow" id="pickLane"><div class="slbl">Lane</div>
+        <div class="pickVal"><span id="pickLaneName">Classic</span><span class="arrow">&#9654;</span></div>
+      </div>
+
       <button id="playBtn" class="fun">Play</button>
       <div id="startFoot">Keyboard &middot; Space to charge and release &middot; Arrows to fine-tune aim</div>
       </div>
@@ -420,9 +638,32 @@
 
   <div id="msgWrap">
     <div id="msgBox">
+      <div id="msgCombo" class="fun"></div>
       <div id="msgTitle" class="fun"></div>
+      <div id="msgXp" class="fun"></div>
+      <div id="msgCoins"></div>
       <div id="msgSub"></div>
       <button id="msgBtn">PLAY AGAIN</button><button id="menuBtn">MENU</button>
+    </div>
+  </div>
+
+  <div id="panelWrap">
+    <div id="panelCard">
+      <div id="panelHead">
+        <div id="panelTitle" class="fun"></div>
+        <div id="panelClose">&#10005;</div>
+      </div>
+      <div class="srule2"></div>
+      <div id="panelBody"></div>
+    </div>
+  </div>
+
+  <div id="dailyWrap">
+    <div id="dailyCard">
+      <div id="dailyTitle" class="fun">&#127873; DAILY REWARD</div>
+      <div id="dailySub">Come back tomorrow for more</div>
+      <div id="dayRow"></div>
+      <button id="dailyClaim" class="fun">Claim</button>
     </div>
   </div>
 </div>
@@ -446,6 +687,251 @@ const C = { laneHalf:1.0, ballR:0.16, startZ:3.2, pinFrontZ:-10.0, endZ:-12.2, s
 
 const CHARGE_MS=1100, MINP=7.5, MAXP=16.5;
 const PLAYER_HEX=['#ffb63d','#7fd4ff'];
+
+// ===================================================================
+// ===== progression: XP/levels, coins, league, cosmetics, dailies =====
+// ===================================================================
+// Everything here is cosmetic and client-side only — no pay-to-win, nothing that
+// touches the physics. It persists in localStorage under one JSON blob, the same
+// pattern the game already uses for "bowl.vol" / "bowl.muted" / "bowl.music".
+const PROFILE_KEY='bowl.profile.v1';
+
+function defaultProfile(){
+  return {
+    xp:0, coins:0,
+    gamesPlayed:0, bestScore:0, totalStrikes:0, totalSpares:0, totalScoreSum:0, bestStreak:0,
+    leaguePoints:0,
+    ownedBalls:['basic'], selectedBall:'basic',
+    ownedLanes:['classic'], selectedLane:'classic',
+    dailyRewardStreak:0, lastRewardDate:null,
+    challengeDate:null, challenges:[],
+  };
+}
+let PROFILE=defaultProfile();
+function loadProfile(){
+  try{
+    const raw=localStorage.getItem(PROFILE_KEY);
+    if(raw) PROFILE=Object.assign(defaultProfile(),JSON.parse(raw));
+  }catch(e){}
+  return PROFILE;
+}
+function saveProfile(){
+  try{ localStorage.setItem(PROFILE_KEY,JSON.stringify(PROFILE)); }catch(e){}
+}
+
+// ---- levels: Rookie -> Pro -> Star -> Champion -> Bowling Legend ----
+// cost to go from level n to n+1 — cheap at first, then a slow, steady climb
+function levelXpCost(n){ return Math.round(80+n*42+Math.pow(n,1.5)*5); }
+function levelName(level){
+  if(level>=50) return 'Bowling Legend';
+  if(level>=20) return 'Champion';
+  if(level>=10) return 'Star';
+  if(level>=5) return 'Pro';
+  return 'Rookie';
+}
+function levelInfo(totalXp){
+  let level=1, xp=Math.max(0,totalXp||0), need=levelXpCost(1);
+  while(xp>=need && level<200){ xp-=need; level++; need=levelXpCost(level); }
+  return {level,name:levelName(level),into:Math.round(xp),need,totalXp:totalXp||0};
+}
+
+// ---- leagues: a season-long ladder built from career "league points",
+// earned from personal performance every game so even a loss moves you up ----
+const LEAGUES=[
+  {name:'Bronze League',emoji:'\u{1F949}',min:0},
+  {name:'Silver League',emoji:'\u{1F948}',min:600},
+  {name:'Gold League',emoji:'\u{1F947}',min:1800},
+  {name:'Diamond League',emoji:'\u{1F48E}',min:4000},
+  {name:'Legend League',emoji:'\u{1F451}',min:8000},
+];
+function leagueInfo(points){
+  points=points||0;
+  let idx=0;
+  for(let i=0;i<LEAGUES.length;i++){ if(points>=LEAGUES[i].min) idx=i; }
+  const cur=LEAGUES[idx], next=LEAGUES[idx+1]||null;
+  return {idx,name:cur.name,emoji:cur.emoji,points,min:cur.min,next};
+}
+
+// ---- cosmetics: different style, never different power — see craft.md's stance
+// against pay-to-win. Balls change look + trail; lanes change the room around you. ----
+const BALL_SKINS={
+  basic: {name:'Basic Ball', emoji:'⚫', cost:0,   color:0x1b4fd8, emissive:0x03163a, trail:null},
+  ice:   {name:'Ice Ball',   emoji:'\u{1F535}', cost:150, color:0x9fe7ff, emissive:0x123844, trail:'ice'},
+  fire:  {name:'Fire Ball',  emoji:'\u{1F534}', cost:150, color:0xff5a3c, emissive:0x481200, trail:'fire'},
+  galaxy:{name:'Galaxy Ball',emoji:'\u{1F7E3}', cost:250, color:0x8a4fe0, emissive:0x230c4a, trail:'galaxy'},
+  gold:  {name:'Gold Ball',  emoji:'\u{1F7E1}', cost:400, color:0xffd24a, emissive:0x4a3400, trail:'gold'},
+};
+const BALL_ORDER=['basic','ice','fire','galaxy','gold'];
+const LANE_THEMES={
+  classic:{name:'Classic', emoji:'\u{1F3B3}', cost:0,   desc:'The house lane.'},
+  neon:   {name:'Neon',    emoji:'\u{1F303}', cost:200, desc:'Neon night club.'},
+  space:  {name:'Space',   emoji:'\u{1F680}', cost:300, desc:'Cosmic arena.'},
+  volcano:{name:'Volcano', emoji:'\u{1F30B}', cost:300, desc:'Volcanic arena.'},
+  ice:    {name:'Ice',     emoji:'❄️', cost:250, desc:'Frozen arena.'},
+};
+const LANE_ORDER=['classic','neon','space','volcano','ice'];
+
+// same room, same physics — a theme only ever repaints background/fog/lights/rails/arches,
+// which applyLaneTheme() below does directly on the live materials (no rebuild, no reload)
+const LANE_THEME_COLORS={
+  classic:{bg:0x2b1c14,fog:0x2b1c14,ambient:0xffe6c4,hemiSky:0xffe9c9,hemiGround:0x2a1810,dir:0xfff2d8,rail:0xc0392b,arch:0x2fa88a,sign:0x0d5f7a},
+  neon:   {bg:0x140a1e,fog:0x140a1e,ambient:0xff2fd0,hemiSky:0x6a2bff,hemiGround:0x1a0630,dir:0x8a3bff,rail:0xff2fd0,arch:0x2be8ff,sign:0x5a0a8a},
+  space:  {bg:0x05070f,fog:0x05070f,ambient:0x3a4bff,hemiSky:0x2233aa,hemiGround:0x05030f,dir:0x8fa8ff,rail:0x3a4bff,arch:0x8a4fe0,sign:0x0a0f2a},
+  volcano:{bg:0x1a0805,fog:0x1a0805,ambient:0xff6a2c,hemiSky:0xff8a3c,hemiGround:0x2a0800,dir:0xffb347,rail:0x8a1a0a,arch:0xff5a1a,sign:0x2a0a02},
+  ice:    {bg:0x0c1b26,fog:0x0c1b26,ambient:0xbfe9ff,hemiSky:0xcdf1ff,hemiGround:0x102530,dir:0xdff6ff,rail:0x2a7fae,arch:0x7fe0ff,sign:0x0a2a36},
+};
+function applyLaneTheme(key){
+  const t=LANE_THEME_COLORS[key]||LANE_THEME_COLORS.classic;
+  const refs=G.themeRefs, Color=T().Color;
+  if(!refs||!refs.scene||!Color) return;    // called before the scene exists yet — initGame re-applies it once built
+  refs.scene.background=new Color(t.bg);
+  if(refs.scene.fog) refs.scene.fog.color=new Color(t.fog);
+  if(refs.ambient) refs.ambient.color=new Color(t.ambient);
+  if(refs.hemi){ refs.hemi.color=new Color(t.hemiSky); refs.hemi.groundColor=new Color(t.hemiGround); }
+  if(refs.dir) refs.dir.color=new Color(t.dir);
+  (refs.rails||[]).forEach(m=>{ m.color=new Color(t.rail); });
+  (refs.arches||[]).forEach(m=>{ m.color=new Color(t.arch); });
+  (refs.signs||[]).forEach(m=>{ m.emissive=new Color(t.sign); });
+}
+
+// different style, never different power (see craft.md's stance on pay-to-win): every
+// skin is the same size/weight/roll, only the paint job and the trail it leaves change
+function applyBallSkin(key){
+  const sk=BALL_SKINS[key]||BALL_SKINS.basic, Color=T().Color;
+  if(G.ballMat && Color){ G.ballMat.color=new Color(sk.color); G.ballMat.emissive=new Color(sk.emissive); }
+  G.ballSkin=key;
+}
+const TRAIL_COLORS={ice:[0xbdf3ff,0xffffff],fire:[0xff6a2c,0xffd24a],galaxy:[0xb98cff,0xff9de2],gold:[0xffe08a,0xfff6cf]};
+// a small recycled-particle trail behind a rolling ball — nothing is allocated per frame,
+// the pool built once in initGame is just faded in and out
+function updateTrail(dt){
+  const tr=G.trail; if(!tr) return;
+  tr.pool.forEach(p=>{
+    if(p.life<=0) return;
+    p.life-=dt;
+    const f=Math.max(0,p.life/p.maxLife);
+    p.mesh.material.opacity=f*0.75;
+    p.mesh.scale.setScalar(0.4+0.6*f);
+    p.mesh.position.y+=dt*(p.rise||0);
+    if(p.life<=0) p.mesh.visible=false;
+  });
+  const skin=BALL_SKINS[G.ballSkin||PROFILE.selectedBall];
+  if(!skin||!skin.trail||G.phase!=='roll'||!G.ball||!G.ball.rolling) return;
+  tr.timer-=dt;
+  if(tr.timer>0) return;
+  tr.timer=0.028;
+  const colors=TRAIL_COLORS[skin.trail]||[0xffffff];
+  const p=tr.pool[tr.next]; tr.next=(tr.next+1)%tr.pool.length;
+  p.life=p.maxLife=0.45+Math.random()*0.25;
+  p.rise=skin.trail==='fire'?0.25:(skin.trail==='ice'?0.05:0.12);
+  p.mesh.visible=true;
+  p.mesh.material.color.setHex(colors[Math.floor(Math.random()*colors.length)]);
+  p.mesh.material.opacity=0.75;
+  p.mesh.scale.setScalar(1);
+  const j=()=>(Math.random()-0.5)*0.05;
+  const by=G.ball.mesh?G.ball.mesh.position.y:C.ballR;
+  p.mesh.position.set(G.ball.x+j(),by+j(),G.ball.z+j());
+}
+
+// ---- daily challenges: three picked deterministically from the date, so a reload
+// mid-day never reshuffles them, and they reset for free at local midnight ----
+const CHALLENGE_POOL=[
+  {id:'strikes3', desc:'Bowl 3 Strikes',              type:'strikes',  target:3,   xp:300, coins:100},
+  {id:'spare1',   desc:'Bowl a Spare',                type:'spares',   target:1,   xp:200, coins:80},
+  {id:'score150', desc:'Score 150+ in one game',      type:'score',    target:150, xp:400, coins:120},
+  {id:'streak2',  desc:'2 Strikes in a row',          type:'streak',   target:2,   xp:350, coins:100},
+  {id:'score200', desc:'Score 200+ in one game',      type:'score',    target:200, xp:600, coins:200},
+  {id:'spares2',  desc:'Bowl 2 Spares',               type:'spares',   target:2,   xp:350, coins:100},
+  {id:'strikes5', desc:'Bowl 5 Strikes',              type:'strikes',  target:5,   xp:500, coins:150},
+  {id:'bigball',  desc:'Knock down 8+ pins on one throw without a strike', type:'bigthrow', target:8, xp:250, coins:80},
+  {id:'win2p',    desc:'Win a 2-Player match',        type:'win',      target:1,   xp:400, coins:150},
+];
+function todayStr(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function seedFromDate(s){ let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0; return h>>>0; }
+function mulberry32(a){
+  return function(){
+    a|=0; a=a+0x6D2B79F5|0;
+    let t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;
+  };
+}
+function ensureDailyChallenges(){
+  const today=todayStr();
+  if(PROFILE.challengeDate===today && Array.isArray(PROFILE.challenges) && PROFILE.challenges.length===3) return;
+  const rnd=mulberry32(seedFromDate(today));
+  const pool=CHALLENGE_POOL.slice(), picked=[];
+  while(picked.length<3 && pool.length) picked.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]);
+  PROFILE.challengeDate=today;
+  PROFILE.challenges=picked.map(c=>Object.assign({},c,{progress:0,done:false}));
+  saveProfile();
+}
+// checks every active challenge against one event (a throw or a game ending) and
+// hands back the ones that just completed, so the caller can toast + reward them
+function evaluateChallenges(evt){
+  if(!Array.isArray(PROFILE.challenges)) return [];
+  let changed=false; const completedNow=[];
+  PROFILE.challenges.forEach(c=>{
+    if(c.done) return;
+    let val=c.progress;
+    if(c.type==='strikes' && evt.strike) val=Math.min(c.target,val+1);
+    else if(c.type==='spares' && evt.spare) val=Math.min(c.target,val+1);
+    else if(c.type==='bigthrow' && evt.knocked!=null && evt.knocked>=c.target) val=c.target;
+    else if(c.type==='streak' && evt.streak!=null) val=Math.max(val,Math.min(c.target,evt.streak));
+    else if(c.type==='score' && evt.score!=null) val=Math.max(val,Math.min(c.target,evt.score));
+    else if(c.type==='win' && evt.win) val=c.target;
+    if(val!==c.progress){ c.progress=val; changed=true; }
+    if(!c.done && c.progress>=c.target){ c.done=true; changed=true; completedNow.push(c); }
+  });
+  if(completedNow.length){
+    completedNow.forEach(c=>{ PROFILE.xp+=c.xp; PROFILE.coins+=c.coins; addSessionGain(c.xp,c.coins); });
+  }
+  if(changed) saveProfile();
+  completedNow.forEach(c=>{
+    queueToast({title:'CHALLENGE COMPLETE',sub:c.desc,xp:c.xp,coins:c.coins});
+  });
+  return completedNow;
+}
+function addSessionGain(xp,coins){
+  if(!G.session) return;
+  G.session.xpGained=(G.session.xpGained||0)+(xp||0);
+  G.session.coinsGained=(G.session.coinsGained||0)+(coins||0);
+}
+
+// ---- daily login reward: a simple 5-day cycle, streak keeps counting past it ----
+const DAILY_PLAN=[
+  {kind:'xp',   amount:100, label:'+100 XP',   icon:'⭐'},
+  {kind:'coins',amount:80,  label:'+80',        icon:'\u{1FA99}'},
+  {kind:'xp',   amount:150, label:'+150 XP',   icon:'⭐'},
+  {kind:'coins',amount:120, label:'+120',       icon:'\u{1FA99}'},
+  {kind:'ball', amount:'galaxy', label:'Ball',  icon:'\u{1F7E3}'},
+];
+function pendingDailyReward(){
+  const today=todayStr();
+  if(PROFILE.lastRewardDate===today) return null;   // already claimed today
+  let streak=PROFILE.dailyRewardStreak||0;
+  if(PROFILE.lastRewardDate){
+    const prev=new Date(PROFILE.lastRewardDate+'T00:00:00');
+    const cur=new Date(today+'T00:00:00');
+    const gapDays=Math.round((cur-prev)/86400000);
+    streak=(gapDays===1)?streak+1:1;               // missed a day (or first ever) -> restart the streak
+  }else streak=1;
+  const dayIdx=(streak-1)%DAILY_PLAN.length;
+  return {streak,dayIdx,plan:DAILY_PLAN[dayIdx]};
+}
+function claimDailyReward(pending){
+  const p=pending.plan;
+  if(p.kind==='xp'){ PROFILE.xp+=p.amount; }
+  else if(p.kind==='coins'){ PROFILE.coins+=p.amount; }
+  else if(p.kind==='ball' && PROFILE.ownedBalls.indexOf(p.amount)===-1){ PROFILE.ownedBalls.push(p.amount); }
+  else if(p.kind==='ball'){ PROFILE.coins+=200; }   // already own it: a coin refund instead
+  PROFILE.dailyRewardStreak=pending.streak;
+  PROFILE.lastRewardDate=todayStr();
+  saveProfile();
+}
 
 const G = {
   scene:null, camera:null, renderer:null, mountEl:null,
@@ -546,6 +1032,9 @@ function initGame(){
   scene.background=new THREE.Color(0x2b1c14);
   scene.fog=new THREE.Fog(0x2b1c14,16,42);
   G.scene=scene;
+  // material/light refs a lane theme recolors in place — filled in as the scene is built,
+  // consumed by applyLaneTheme() so switching lanes never rebuilds any geometry
+  G.themeRefs={rails:[],arches:[],signs:[],scene:scene};
 
   const camera=new THREE.PerspectiveCamera(52,w/h,0.1,120);
   camera.position.set(0,1.15,5.35); camera.lookAt(0,0.55,-6);
@@ -561,13 +1050,14 @@ function initGame(){
   G.mountEl.appendChild(renderer.domElement);
 
   // ---- warm alley lighting ----
-  scene.add(new THREE.AmbientLight(0xffe6c4,0.38));
-  scene.add(new THREE.HemisphereLight(0xffe9c9,0x2a1810,0.3));
+  const ambientLight=new THREE.AmbientLight(0xffe6c4,0.38); scene.add(ambientLight);
+  const hemiLight=new THREE.HemisphereLight(0xffe9c9,0x2a1810,0.3); scene.add(hemiLight);
   const dir=new THREE.DirectionalLight(0xfff2d8,0.72);
   dir.position.set(3.5,9,5); dir.castShadow=true;
   dir.shadow.mapSize.set(1024,1024);
   const sc=dir.shadow.camera; sc.left=-5;sc.right=5;sc.top=6;sc.bottom=-16;sc.near=1;sc.far=32;
   scene.add(dir);
+  Object.assign(G.themeRefs,{ambient:ambientLight,hemi:hemiLight,dir:dir});
   [[0,3.4,-2],[0,3.4,-8],[0,3.4,2.5]].forEach(p=>{
     const l=new THREE.PointLight(0xffd9a0,0.22,16,2); l.position.set(p[0],p[1],p[2]); scene.add(l);
   });
@@ -607,6 +1097,7 @@ function initGame(){
     const rail=new THREE.Mesh(new THREE.BoxGeometry(0.36,0.5,18),
       new THREE.MeshStandardMaterial({color:0xc0392b,roughness:0.45}));
     rail.position.set(s*(C.laneHalf+0.52),0.02,-5); rail.receiveShadow=true; scene.add(rail);
+    G.themeRefs.rails.push(rail.material);
     const cap=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.09,18),
       new THREE.MeshStandardMaterial({color:0xf6e3bd,roughness:0.5}));
     cap.position.set(s*(C.laneHalf+0.52),0.29,-5); scene.add(cap);
@@ -634,6 +1125,7 @@ function initGame(){
       const rail=new THREE.Mesh(new THREE.BoxGeometry(0.36,0.5,18),
         new THREE.MeshStandardMaterial({color:0xa8302a,roughness:0.5}));
       rail.position.set(off+k*(C.laneHalf+0.52),0.02,-5); scene.add(rail);
+      G.themeRefs.rails.push(rail.material);
       // cream cap on top, so every rail on every lane is finished the same way
       const ncap=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.09,18),
         new THREE.MeshStandardMaterial({color:0xf6e3bd,roughness:0.5}));
@@ -734,6 +1226,7 @@ function initGame(){
       new THREE.MeshStandardMaterial({color:0x101a2e,roughness:0.5,
         emissive:0x0d5f7a,emissiveIntensity:0.9}));
     sign.position.set(off,1.75,C.pinFrontZ-1.45); scene.add(sign);
+    (G.themeRefs.signs=G.themeRefs.signs||[]).push(sign.material);
     const signTex=makeTex(256,64,(x,w,h)=>{
       x.fillStyle='#0d1526'; x.fillRect(0,0,w,h);
       x.font='bold 34px sans-serif'; x.textAlign='center'; x.textBaseline='middle';
@@ -749,6 +1242,7 @@ function initGame(){
     const arch=new THREE.Mesh(new THREE.BoxGeometry(1.5,0.7,0.1),
       new THREE.MeshBasicMaterial({color:0x2fa88a}));
     arch.position.set(off,2.55,C.pinFrontZ-1.45); scene.add(arch);
+    G.themeRefs.arches.push(arch.material);
   });
 
   // ceiling
@@ -771,9 +1265,10 @@ function initGame(){
       knocked:false, active:true, moving:false, sound:0};
   });
 
-  // ---- glossy blue ball ----
-  const ball=new THREE.Mesh(new THREE.SphereGeometry(C.ballR,32,24),
-    new THREE.MeshStandardMaterial({color:0x1b4fd8,roughness:0.08,metalness:0.35}));
+  // ---- ball (recoloured per the selected skin, see applyBallSkin) ----
+  const ballMat=new THREE.MeshStandardMaterial({color:0x1b4fd8,roughness:0.08,metalness:0.35,
+    emissive:0x03163a,emissiveIntensity:0.5});
+  const ball=new THREE.Mesh(new THREE.SphereGeometry(C.ballR,32,24),ballMat);
   ball.castShadow=true; scene.add(ball);
   // finger holes
   [[0,0.5,0.86],[0.28,0.62,0.73],[-0.28,0.62,0.73]].forEach(v=>{
@@ -785,8 +1280,20 @@ function initGame(){
     ball.add(hole);
   });
   G.ball={mesh:ball,x:0,z:C.startZ,vx:0,vz:0,rolling:false,gutter:false};
+  G.ballMat=ballMat;
+
+  // ---- trail particle pool, reused every throw so a skin never allocates mid-roll ----
+  G.trail={pool:[],next:0,timer:0};
+  for(let i=0;i<26;i++){
+    const m=new THREE.Mesh(new THREE.SphereGeometry(0.028,6,5),
+      new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0}));
+    m.visible=false; scene.add(m);
+    G.trail.pool.push({mesh:m,life:0,maxLife:1});
+  }
 
   buildGuide();
+  applyBallSkin(PROFILE.selectedBall);
+  applyLaneTheme(PROFILE.selectedLane);
 
   addEventListener('resize',onResize);
   applyFraming();
@@ -885,9 +1392,11 @@ function initPlayers(n){
   // bumping the generation invalidates any pending end-of-ball callback, so starting a
   // new game mid-resolve cannot have the old ball finish itself into the fresh one
   G.gen=(G.gen||0)+1;
-  G.players=Array.from({length:n},()=>({frames:Array.from({length:10},()=>({rolls:[]}))}));
+  G.players=Array.from({length:n},()=>({frames:Array.from({length:10},()=>({rolls:[]})),streak:0}));
   G.framesData=G.players[0].frames;
   G.gameOver=false; G.msg=null;
+  // per-game progression tally, shown on the GAME COMPLETE screen and folded into PROFILE
+  G.session={strikes:0,spares:0,bestStreak:0,xpGained:0,coinsGained:0};
 }
 function nextPlayerIndex(){
   for(let k=1;k<=G.numPlayers;k++){
@@ -1360,6 +1869,9 @@ function playChime(strike){
 function startCharge(){
   if(G.phase!=='aim'||G.charging) return;
   G.charging=true; G.chargeStart=performance.now();
+  // your line is committed here — any further aim change while charging becomes hook,
+  // not a new straight-line direction (see releaseThrow / the hook note in step())
+  G.aimAtChargeStart=G.aimAngle;
   document.getElementById('powerWrap').classList.add('on');
 }
 function releaseThrow(){
@@ -1368,7 +1880,9 @@ function releaseThrow(){
   const f=Math.max(0,Math.min(1,(performance.now()-G.chargeStart)/CHARGE_MS));
   document.getElementById('powerWrap').classList.remove('on');
   document.getElementById('powerFill').style.width='0%';
-  throwBall(MINP+(MAXP-MINP)*f);
+  const base=(G.aimAtChargeStart!=null)?G.aimAtChargeStart:G.aimAngle;
+  const hook=Math.max(-0.09,Math.min(0.09,(G.aimAngle-base)*1.6));
+  throwBall(MINP+(MAXP-MINP)*f,hook);
 }
 
 // ===== input =====
@@ -1398,13 +1912,17 @@ function onPointerUp(){
   if(G.charging) releaseThrow();
 }
 
-function throwBall(power){
+function throwBall(power,hook){
   if(G.phase!=='aim') return;
   const drift=(Math.random()-0.5)*0.036;
-  const a=G.aimAngle+drift, sp=power||C.speed;
+  // the release direction is where you were aiming when charging STARTED — see
+  // startCharge()/releaseThrow(); anything you drag after that is hook, not a new line
+  const base=(G.aimAtChargeStart!=null)?G.aimAtChargeStart:G.aimAngle;
+  const a=base+drift, sp=power||C.speed;
   G.standingBefore=G.pins.filter(p=>p.active&&!p.knocked).length;
   _crashArmed=true; _crash=null;
   G.ball.vx=Math.sin(a)*sp; G.ball.vz=-Math.cos(a)*sp;
+  G.ball.hook=hook||0;
   G.ball.rolling=true; G.ball.gutter=false;
   G.phase='roll'; G.rollTime=0; G.settleTime=0;
   document.getElementById('hint').style.opacity='0';
@@ -1636,6 +2154,13 @@ function step(dt){
     const sdt=dt/sub;
     for(let i=0;i<sub;i++){
       b.x+=b.vx*sdt; b.z+=b.vz*sdt;
+      // hook: aim adjusted WHILE charging (see releaseThrow) curves the ball late down the
+      // lane instead of on release, like a real hook breaking toward the pocket
+      if(b.hook && !b.gutter && !b.inPit && G.phase==='roll'){
+        const travel=Math.max(0,Math.min(1,(C.startZ-b.z)/(C.startZ-C.pinFrontZ)));
+        const ramp=travel>0.32?(travel-0.32)/0.68:0;
+        b.vx+=b.hook*ramp*sdt*3.4;
+      }
       // the lip is the back edge of the deck/channel: past that there is nothing under it
       if(b.z<C.pitFront) b.inPit=true;
       if(b.z<C.pitBack+C.ballR){ b.z=C.pitBack+C.ballR; b.vz=0; }   // rests against the wall
@@ -1697,6 +2222,9 @@ function step(dt){
 
   // wait for the rack to actually stop moving, so a long tumble is never cut short
   if(G.phase==='settle' && (G.settleTime>3.0 || (G.settleTime>0.9 && pinsAtRest()))) onSettled();
+
+  if(G.camPunch>0) G.camPunch=Math.max(0,G.camPunch-dt*1.35);
+  updateTrail(dt);
 }
 
 // Hitting a pin below its centre of mass, with the foot gripping the deck, makes it
@@ -1893,6 +2421,9 @@ function updateCamera(dt){
   if(G.phase==='roll'||G.phase==='settle'){
     pz=Math.max(b.z+(F.camZ-2.75),-1.0); py=F.camY+0.1; px=b.x*0.3;
     tx=b.x*0.45; ty=F.lookY-0.15; tz=b.z-4.5;
+  }else if(G.camPunch>0){
+    // the strike "show": a brief push toward the deck, eased back out by the decay below
+    pz-=1.15*G.camPunch; ty-=0.05*G.camPunch; tz+=0.6*G.camPunch;
   }
   const k=Math.min(1,dt*2.2);
   cam.position.x+=(px-cam.position.x)*k;
@@ -1900,6 +2431,20 @@ function updateCamera(dt){
   cam.position.z+=(pz-cam.position.z)*k;
   G._tx+=(tx-G._tx)*k; G._ty+=(ty-G._ty)*k; G._tz+=(tz-G._tz)*k;
   cam.lookAt(G._tx,G._ty,G._tz);
+}
+
+// combo tiers: STRIKE -> STRIKE -> STRIKE reads as one escalating show, not three
+// identical popups — the label and glow both step up with the streak
+function comboText(streak){
+  if(streak>=5) return {text:'\u{1F4A5} UNSTOPPABLE!',color:'#ff5240'};
+  if(streak>=4) return {text:'\u{1F525}\u{1F525} ON FIRE!',color:'#ffb63d'};
+  if(streak>=3) return {text:'\u{1F525} '+streak+'X STRIKE STREAK!',color:'#ffb63d'};
+  return null;
+}
+// the score plate's own running total (bonus balls not yet thrown stay excluded,
+// same as the HUD) — used to check "score 150+" challenges live, throw by throw
+function currentRunningTotal(){
+  const scores=computeScores(G.framesData); let t=0; scores.forEach(s=>{if(s!=null) t=s;}); return t;
 }
 
 function onSettled(){
@@ -1911,6 +2456,30 @@ function onSettled(){
   const fr=G.players[G.cur].frames;
   const wasIndex=currentFrameIndex(fr);
   fr[wasIndex].rolls.push(knocked);
+
+  // ---- progression: XP, coins, combo streak, live challenge progress ----
+  // Only the human seat (player 0) banks career progress; a 2P hot-seat guest has
+  // no save file of their own, so they play for bragging rights only.
+  let comboInfo=null, gainedXp=0, gainedCoins=0;
+  if(G.cur===0){
+    const pl=G.players[0];
+    if(strike){
+      pl.streak=(pl.streak||0)+1;
+      G.session.strikes++; G.session.bestStreak=Math.max(G.session.bestStreak,pl.streak);
+      const bonus=pl.streak>=3?50*(pl.streak-2):0;
+      gainedXp=100+bonus; gainedCoins=20;
+      comboInfo=comboText(pl.streak);
+    }else{
+      pl.streak=0;
+      if(spare){ G.session.spares++; gainedXp=50; gainedCoins=10; }
+      else if(knocked>0){ gainedXp=knocked*3; gainedCoins=Math.floor(knocked/3); }
+    }
+    if(gainedXp||gainedCoins){
+      PROFILE.xp+=gainedXp; PROFILE.coins+=gainedCoins; addSessionGain(gainedXp,gainedCoins);
+      saveProfile(); refreshProfileUI();
+    }
+    evaluateChallenges({strike,spare,knocked,streak:pl.streak,score:currentRunningTotal()});
+  }
 
   const newIndex=currentFrameIndex(fr);
   const tenthDone=(wasIndex===9 && frameComplete(fr,9));
@@ -1949,8 +2518,16 @@ function onSettled(){
     }
   };
   if(strike||spare){
-    G.msg=strike?{title:'STRIKE!',sub:'',color:'#ffb63d',btn:false}
-                :{title:'SPARE!',sub:'',color:'#7fd4ff',btn:false};
+    const xpText=gainedXp?('+'+gainedXp+' XP'):'', coinsText=gainedCoins?('+'+gainedCoins+' Coins'):'';
+    G.msg=strike?{title:'STRIKE!',sub:'',color:'#ffb63d',btn:false,xpText,coinsText,
+                   combo:comboInfo?comboInfo.text:'',comboColor:comboInfo?comboInfo.color:'#ffb63d'}
+                :{title:'SPARE!',sub:'',color:'#7fd4ff',btn:false,xpText,coinsText};
+    if(strike&&G.cur===0){
+      // a brief camera punch + flash on strike — the "small shoW" without slowing the game down
+      G.camPunch=1;
+      const fl=document.getElementById('strikeFlash');
+      if(fl){ fl.classList.remove('pulse'); void fl.offsetWidth; fl.classList.add('pulse'); }
+    }
     updateHUD();
     setTimeout(()=>{if(gen!==G.gen) return; G.msg=null; finish();},1150);
   }else{
@@ -1968,13 +2545,34 @@ function playerTotal(i){
 }
 function endGame(){
   G.gameOver=true; G.phase='over';
+  const score=playerTotal(0);
+  const isNewBest=score>PROFILE.bestScore;
+  const win2p=(G.numPlayers===2 && score>playerTotal(1));
+  const bonusXp=isNewBest?100:0;
+
+  // ---- fold this game into career progression: stats, league points, bonuses ----
+  PROFILE.gamesPlayed++;
+  PROFILE.totalScoreSum+=score;
+  PROFILE.bestScore=Math.max(PROFILE.bestScore,score);
+  PROFILE.bestStreak=Math.max(PROFILE.bestStreak,G.session.bestStreak||0);
+  // league points reward the performance itself, not just the win — a good game
+  // still climbs the ladder even in a loss
+  PROFILE.leaguePoints+=Math.round(score/5)+G.session.strikes*5+G.session.spares*2;
+  PROFILE.coins+=100; PROFILE.xp+=20+bonusXp;               // flat participation + a personal-best kicker
+  addSessionGain(20+bonusXp,100);
+  evaluateChallenges({score,win:win2p});
+  saveProfile(); refreshProfileUI();
+
+  const gx=G.session.xpGained||0, gc=G.session.coinsGained||0;
+  const gainLine=(gx||gc)?('+'+gx+' XP'+(gc?('   +'+gc+' Coins'):'')):'';
   if(G.numPlayers===1){
-    const total=playerTotal(0);
-    G.msg={title:total>=270?'AWESOME!':'GAME OVER',sub:'Final score '+total,btn:true};
+    G.msg={title:score>=270?'AWESOME!':'GAME OVER',
+      sub:(isNewBest?'NEW PERSONAL BEST!  ':'')+'Final score '+score,
+      btn:true, xpText:gainLine};
   }else{
-    const a=playerTotal(0), b=playerTotal(1);
-    if(a===b) G.msg={title:'TIE GAME',sub:a+' — '+b,btn:true};
-    else G.msg={title:'PLAYER '+(a>b?1:2)+' WINS',sub:a+' — '+b,btn:true};
+    const a=score, b=playerTotal(1);
+    if(a===b) G.msg={title:'TIE GAME',sub:a+' — '+b,btn:true,xpText:gainLine};
+    else G.msg={title:'PLAYER '+(a>b?1:2)+' WINS',sub:a+' — '+b,btn:true,xpText:gainLine};
   }
   updateHUD();
 }
@@ -2080,6 +2678,7 @@ function updateHUD(){
   document.getElementById('boardWho').textContent=G.numPlayers>1?('PLAYER '+(G.cur+1)):'';
 
   const tb=document.getElementById('turnBar');
+  document.getElementById('app').classList.toggle('p2',G.numPlayers>1);
   if(G.numPlayers>1){
     tb.style.display='flex';
     tb.innerHTML=G.players.map((p,i)=>{
@@ -2101,6 +2700,13 @@ function updateHUD(){
     document.getElementById('msgSub').textContent=m.sub;
     document.getElementById('msgBtn').style.display=m.btn?'inline-block':'none';
     document.getElementById('menuBtn').style.display=m.btn?'inline-block':'none';
+    const comboEl=document.getElementById('msgCombo');
+    comboEl.textContent=m.combo||''; comboEl.style.display=m.combo?'block':'none';
+    comboEl.style.color=m.comboColor||'#ffb63d';
+    const xpEl=document.getElementById('msgXp');
+    xpEl.textContent=m.xpText||''; xpEl.style.display=m.xpText?'block':'none';
+    const coinsEl=document.getElementById('msgCoins');
+    coinsEl.textContent=m.coinsText||''; coinsEl.style.display=m.coinsText?'block':'none';
   }else wrap.style.display='none';
 }
 
@@ -2156,7 +2762,172 @@ function finishLoad(){
   setTimeout(()=>{
     el.classList.add('gone');
     if(typeof window.onGameLoaded==='function') window.onGameLoaded();
+    maybeShowDailyReward();
   },1080);
+}
+
+// ===== progression UI: toasts, HUD pill, panels (league/challenges/shop/stats) =====
+function hex(n){ return '#'+('000000'+n.toString(16)).slice(-6); }
+
+function queueToast(t){
+  const host=document.getElementById('toastHost');
+  if(!host) return;
+  const el=document.createElement('div');
+  el.className='toast';
+  const xpBit=t.xp?('+'+t.xp+' XP'):'';
+  const coinBit=t.coins?('+'+t.coins+' \u{1FA99}'):'';
+  el.innerHTML='<div class="toastTitle fun">'+(t.title||'')+'</div>'+
+    (t.sub?'<div class="toastSub">'+t.sub+'</div>':'')+
+    ((xpBit||coinBit)?'<div class="toastXp">'+xpBit+(xpBit&&coinBit?'  ·  ':'')+coinBit+'</div>':'');
+  host.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),400); },3400);
+  while(host.children.length>3) host.removeChild(host.firstChild);
+}
+
+function refreshProfileUI(){
+  const li=levelInfo(PROFILE.xp);
+  const pct=Math.max(2,Math.min(100,Math.round((li.into/li.need)*100)));
+  const n1=document.getElementById('pbLvlNum'); if(n1) n1.textContent=li.level;
+  const n2=document.getElementById('menuLvlNum'); if(n2) n2.textContent=li.level;
+  const nm1=document.getElementById('pbLvlName'); if(nm1) nm1.textContent=li.name;
+  const nm2=document.getElementById('menuLvlName'); if(nm2) nm2.textContent=li.name;
+  const mx=document.getElementById('menuXpTxt'); if(mx) mx.textContent=li.into+' / '+li.need+' XP';
+  const f1=document.getElementById('pbXpFill'); if(f1) f1.style.width=pct+'%';
+  const f2=document.getElementById('menuXpFill'); if(f2) f2.style.width=pct+'%';
+  const pc=document.getElementById('pbCoins'); if(pc) pc.textContent=PROFILE.coins.toLocaleString();
+  const bn=document.getElementById('pickBallName'); if(bn) bn.textContent=BALL_SKINS[PROFILE.selectedBall].name;
+  const ln=document.getElementById('pickLaneName'); if(ln) ln.textContent=LANE_THEMES[PROFILE.selectedLane].name;
+}
+
+function openPanel(kind){
+  const wrap=document.getElementById('panelWrap');
+  const title=document.getElementById('panelTitle');
+  const body=document.getElementById('panelBody');
+  wrap.classList.add('show');
+  if(kind==='league') buildLeaguePanel(title,body);
+  else if(kind==='challenges') buildChallengesPanel(title,body);
+  else if(kind==='shop') buildShopPanel(title,body,G._shopTab||'balls');
+  else if(kind==='stats') buildStatsPanel(title,body);
+}
+function closePanel(){ document.getElementById('panelWrap').classList.remove('show'); }
+
+function buildLeaguePanel(title,body){
+  title.textContent='League';
+  const li=leagueInfo(PROFILE.leaguePoints);
+  let html='';
+  LEAGUES.forEach((t,i)=>{
+    const cur=(i===li.idx);
+    html+='<div class="leagueTier'+(cur?' cur':'')+'">'+
+      '<div class="leagueEmoji">'+t.emoji+'</div>'+
+      '<div style="flex:1"><div class="leagueName">'+t.name+'</div>'+
+      '<div class="leagueNeed">'+t.min.toLocaleString()+'+ league points'+(cur?' — you are here':'')+'</div></div>'+
+      '</div>';
+  });
+  const next=li.next;
+  let barPct=100, barTxt='Top league reached';
+  if(next){
+    barPct=Math.max(2,Math.min(100,Math.round(((li.points-li.min)/(next.min-li.min))*100)));
+    barTxt=Math.max(0,next.min-li.points)+' points to '+next.name;
+  }
+  html+='<div style="margin-top:10px;"><div class="leagueNeed" style="text-align:center;">'+barTxt+'</div>'+
+    '<div id="leagueBarTrack"><div id="leagueBarFill" style="width:'+barPct+'%"></div></div></div>';
+  body.innerHTML=html;
+}
+
+function buildChallengesPanel(title,body){
+  ensureDailyChallenges();
+  title.textContent="Today's Challenges";
+  body.innerHTML=PROFILE.challenges.map(c=>{
+    const pct=Math.max(0,Math.min(100,Math.round((c.progress/c.target)*100)));
+    return '<div class="chItem'+(c.done?' done':'')+'">'+
+      '<div class="chTop"><div class="chDesc">'+c.desc+(c.done?' <span class="chCheck">✓</span>':'')+'</div>'+
+      '<div class="chReward">+'+c.xp+' XP</div></div>'+
+      '<div class="chBarTrack"><div class="chBarFill" style="width:'+pct+'%"></div></div>'+
+      '<div class="chProgTxt">'+c.progress+' / '+c.target+'</div></div>';
+  }).join('');
+}
+
+function buildStatsPanel(title,body){
+  title.textContent='My Stats';
+  const avg=PROFILE.gamesPlayed?Math.round(PROFILE.totalScoreSum/PROFILE.gamesPlayed):0;
+  const stat=(l,v)=>'<div class="statItem"><div class="statVal fun">'+v+'</div><div class="statLbl">'+l+'</div></div>';
+  body.innerHTML='<div class="statGrid">'+
+    stat('Games',PROFILE.gamesPlayed)+stat('Strikes',PROFILE.totalStrikes)+
+    stat('Spares',PROFILE.totalSpares)+stat('Average',avg)+
+    stat('Best Streak',PROFILE.bestStreak)+stat('Coins',PROFILE.coins)+
+    '<div class="statBest"><div class="statVal fun">'+PROFILE.bestScore+'</div>'+
+    '<div class="statLbl">\u{1F3C6} Personal Best</div></div></div>';
+}
+
+function buildShopPanel(title,body,tab){
+  title.textContent='Shop';
+  G._shopTab=tab;
+  let html='<div id="shopBalance"><span>\u{1FA99}</span><span>'+PROFILE.coins.toLocaleString()+'</span></div>';
+  html+='<div class="tabRow"><div class="tabBtn'+(tab==='balls'?' on':'')+'" id="shopTabBalls">BALLS</div>'+
+    '<div class="tabBtn'+(tab==='lanes'?' on':'')+'" id="shopTabLanes">LANES</div></div>';
+  html+='<div class="shopGrid" id="shopGrid"></div>';
+  body.innerHTML=html;
+  document.getElementById('shopTabBalls').addEventListener('click',()=>buildShopPanel(title,body,'balls'));
+  document.getElementById('shopTabLanes').addEventListener('click',()=>buildShopPanel(title,body,'lanes'));
+  const grid=document.getElementById('shopGrid');
+  const order=tab==='balls'?BALL_ORDER:LANE_ORDER;
+  const catalog=tab==='balls'?BALL_SKINS:LANE_THEMES;
+  const owned=tab==='balls'?PROFILE.ownedBalls:PROFILE.ownedLanes;
+  const selected=tab==='balls'?PROFILE.selectedBall:PROFILE.selectedLane;
+  grid.innerHTML=order.map(key=>{
+    const it=catalog[key], isOwned=owned.indexOf(key)>=0, isSel=selected===key;
+    const swatch=tab==='balls'
+      ?'<div class="shopSwatch" style="background:radial-gradient(circle at 33% 27%,#ffffffaa,'+hex(it.color)+' 55%,#000 130%)"></div>'
+      :'<div class="laneSwatch" style="background:linear-gradient(135deg,'+hex(it.color||0x333333)+',#0b0f14)"></div>';
+    let btn;
+    if(isSel) btn='<button class="shopBtn on" disabled>SELECTED</button>';
+    else if(isOwned) btn='<button class="shopBtn" data-act="select" data-key="'+key+'">SELECT</button>';
+    else btn='<button class="shopBtn buy" data-act="buy" data-key="'+key+'" '+(PROFILE.coins<it.cost?'disabled':'')+'>BUY \u{1FA99}'+it.cost+'</button>';
+    return '<div class="shopItem'+(isSel?' selected':'')+'">'+swatch+
+      '<div class="shopName">'+it.emoji+' '+it.name+'</div>'+
+      '<div class="shopSub">'+(isOwned?(isSel?'Equipped':'Owned'):(it.cost+' coins'))+'</div>'+btn+'</div>';
+  }).join('');
+  grid.querySelectorAll('button[data-act]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const key=b.getAttribute('data-key'), act=b.getAttribute('data-act');
+      if(act==='buy'){
+        const it=catalog[key];
+        if(PROFILE.coins<it.cost) return;
+        PROFILE.coins-=it.cost; owned.push(key);
+        if(tab==='balls') PROFILE.selectedBall=key; else PROFILE.selectedLane=key;
+      }else if(act==='select'){
+        if(tab==='balls') PROFILE.selectedBall=key; else PROFILE.selectedLane=key;
+      }
+      saveProfile();
+      if(tab==='balls') applyBallSkin(key); else applyLaneTheme(key);
+      refreshProfileUI();
+      buildShopPanel(title,body,tab);
+    });
+  });
+}
+
+function maybeShowDailyReward(){
+  const pending=pendingDailyReward();
+  if(!pending) return;
+  const wrap=document.getElementById('dailyWrap');
+  const row=document.getElementById('dayRow');
+  row.innerHTML=DAILY_PLAN.map((p,i)=>{
+    const state=(i<pending.dayIdx)?'done':(i===pending.dayIdx?'cur':'');
+    return '<div class="dayChip '+state+'"><div class="dayNum">DAY '+(i+1)+'</div><div class="dayIco">'+p.icon+'</div></div>';
+  }).join('');
+  document.getElementById('dailySub').textContent='Day '+pending.streak+' streak';
+  const claimBtn=document.getElementById('dailyClaim');
+  claimBtn.textContent='Claim '+pending.plan.label;
+  claimBtn.onclick=()=>{
+    claimDailyReward(pending);
+    wrap.classList.remove('show');
+    refreshProfileUI();
+    queueToast({title:'DAILY REWARD',sub:'Day '+pending.streak+' streak',
+      xp:pending.plan.kind==='xp'?pending.plan.amount:0,
+      coins:pending.plan.kind==='coins'?pending.plan.amount:0});
+  };
+  wrap.classList.add('show');
 }
 
 // ===== start screen =====
@@ -2197,6 +2968,18 @@ window.addEventListener('DOMContentLoaded',()=>{
     const v=parseFloat(localStorage.getItem('bowl.vol'));
     if(isFinite(v)) _vol=Math.max(0,Math.min(1,v));
   }catch(e){}
+
+  loadProfile();
+  ensureDailyChallenges();
+  refreshProfileUI();
+  document.getElementById('navLeague').addEventListener('click',()=>openPanel('league'));
+  document.getElementById('navChallenges').addEventListener('click',()=>openPanel('challenges'));
+  document.getElementById('navShop').addEventListener('click',()=>{ G._shopTab='balls'; openPanel('shop'); });
+  document.getElementById('navStats').addEventListener('click',()=>openPanel('stats'));
+  document.getElementById('pickBall').addEventListener('click',()=>{ G._shopTab='balls'; openPanel('shop'); });
+  document.getElementById('pickLane').addEventListener('click',()=>{ G._shopTab='lanes'; openPanel('shop'); });
+  document.getElementById('panelClose').addEventListener('click',closePanel);
+  document.getElementById('panelWrap').addEventListener('click',e=>{ if(e.target.id==='panelWrap') closePanel(); });
 
   document.getElementById('p1Btn').addEventListener('click',()=>{ setPlayers(1); syncMenu(); });
   document.getElementById('p2Btn').addEventListener('click',()=>{ setPlayers(2); syncMenu(); });

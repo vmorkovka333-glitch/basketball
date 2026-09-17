@@ -36,9 +36,28 @@ GAMEPLAY
 
 CONTROLS
   Desktop  move the pointer left/right to aim, hold to charge, release to bowl.
-           SPACE = charge/release, LEFT/RIGHT arrows = fine aim.
+           SPACE = charge/release, LEFT/RIGHT arrows = fine aim. Nudging the
+           aim WHILE charging puts a hook on the ball instead of changing its
+           line outright - it breaks late, right before the pocket.
   Mobile   drag to aim, hold to charge, lift to bowl. Portrait and landscape.
   Buttons  MUS = music on/off, note = sound on/off, 1P/2P = player count.
+
+PROGRESSION (client-side, cosmetic only - never pay to win)
+  Levels    Rookie -> Pro (5) -> Star (10) -> Champion (20) -> Bowling Legend (50).
+            XP for strikes, spares, pins knocked down and a growing strike combo
+            ("3X STRIKE STREAK" -> "ON FIRE" -> "UNSTOPPABLE"), shown on the
+            strike/spare card and on the level pill during play.
+  League    A five-tier ladder (Bronze/Silver/Gold/Diamond/Legend) driven by
+            career "league points" earned from every game's performance, win
+            or lose.
+  Challenges  Three picked deterministically from the date (reset free at local
+            midnight), tracked live during play, paid out in XP + coins.
+  Shop      Five ball skins (Basic/Ice/Fire/Galaxy/Gold - different colour and
+            particle trail only, identical physics) and five lane themes
+            (Classic/Neon/Space/Volcano/Ice - relight the room, pins and
+            physics unchanged), bought with coins earned from play.
+  Daily reward  A 5-day login cycle (XP, coins, a ball unlock) on first play
+            of a new calendar day; the streak resets if a day is missed.
 
 AUDIO
   Web Audio, unlocked on the first tap. Recorded rack crash with a synthetic
@@ -46,8 +65,11 @@ AUDIO
   (132/112/100/138/88 bpm) that duck under the crash. No background ambience.
 
 STORAGE
-  localStorage keys "bowl.muted" and "bowl.music" remember the audio toggles.
-  Nothing else is stored; no cookies, no analytics, no tracking.
+  localStorage keys "bowl.muted", "bowl.music" and "bowl.vol" remember the audio
+  toggles, and "bowl.profile.v1" holds the progression save (XP, coins, league
+  points, lifetime stats, owned/selected cosmetics, today's challenges, the
+  daily-reward streak) as a single JSON blob. All of it is local to the device;
+  no cookies, no analytics, no tracking, nothing sent anywhere.
 
 LOADING
   Three.js and the portal SDK are both deferred, so the first paint is never blocked:
@@ -67,7 +89,3 @@ EMBEDDING
 
 RUN LOCALLY
   Serve the folder over HTTP:  python3 -m http.server   ->  http://localhost:8000/
-
-TECH
-  Three.js r128 (classic script -> ./three.min.js), plain DOM/CSS HUD, Web Audio API.
-  Bungee + Oswald embedded as woff2 data URIs (latin subset).
