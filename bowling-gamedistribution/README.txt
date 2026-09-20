@@ -4,7 +4,7 @@
 HTML5 game (Three.js r128). Three.js and both fonts are bundled locally; the
 only external request is the GameDistribution SDK. Ready to upload as is.
 
-  gameId: dc8df03639974dc6925f17ff2d8d85bf   (already set in index.html)
+  gameId: 270c1f0c47c8419793e747d780dcb2ae   (already set in index.html)
 
 FILES
   index.html     the game, with the GD SDK loader and event wiring
