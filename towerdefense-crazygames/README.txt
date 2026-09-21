@@ -24,24 +24,40 @@ CRAZYGAMES SDK - ALREADY INTEGRATED
 GAMEPLAY
   Classic tower defense on a floating low-poly island. Enemies walk the road
   from the portal to the castle; flyers cut across the island instead. Build
-  towers on any free tile, upgrade them twice, sell for 70%. Survive 30 waves
-  to win a map and unlock the next one; keep playing in endless mode after.
+  towers on any free tile, upgrade them, sell for 70%. Survive 30 waves to
+  win a map and unlock the next one; keep playing in endless mode after.
 
-  Maps      Green Valley, Dusty Canyon, Frostpeak - each with its own road,
-            flight lane and difficulty. Stars (1-3) depend on lives left.
-  Towers    Archer (fast, hits air), Cannon (splash, ground only), Frost
-            (slows), Tesla (chain lightning), Sniper (long range, ignores
-            armor). Three levels each, sell value 70% of what was spent.
-  Enemies   Grunt, Runner, Brute (armored, costs 2 lives), Flyer (air lane),
-            Knight (heavy armor), Boss every 10th wave (costs 5 lives).
+  Maps      Green Valley, Dusty Canyon (sandstorms cut tower range), Frostpeak
+            (faster enemies), Volcano (lava pools erupt on the road), Deep
+            Space (low gravity: slow walkers, fast and frequent flyers). Each
+            has its own boss. Stars (1-3) depend on lives lost.
+  Towers    Archer, Cannon, Frost, Tesla, Sniper, Laser (unlocks at player
+            level 8). Two straight upgrades, then level 3 is a choice between
+            two specializations per tower (e.g. Rapid Fire / Longbow, Big
+            Blast / Fire Shells, Deep Chill / Freeze, Storm / Overcharge,
+            Headshot / Assassin, Focus / Prism).
+  Abilities Meteor, Freeze and Mega Chain on cooldowns, unlocked at player
+            levels 2 / 4 / 6.
+  Enemies   Grunt, Runner, Brute, Flyer, Shieldman (shield soaks damage;
+            snipers and lightning pass through), Gold Thief (steals gold at
+            the castle), Knight (heavy armor), Ghost (arrows and shells pass
+            through it), Healer, Mini Boss mid-wave, and a Boss every 10th
+            wave with three phases: enrages at 50%, summons at 25%, shields
+            at 10%.
   Economy   Gold per kill and per wave; sending the next wave early pays a
             bonus for every second left on the timer.
+  Progress  XP and coins after every game (win or lose). Player level unlocks
+            abilities, the Laser, extra starting gold and lives. 12 challenges
+            pay coins + XP. Six cosmetic tower skins bought with coins - no
+            pay to win, skins only change colours.
+  Feel      Damage numbers, hit flashes, camera shake, particles, lightning,
+            boss banner and darker boss music.
 
 CONTROLS
   Mouse    click a tower card, then a free tile to build; click a tower to
            upgrade or sell it; hover shows range.
-  Keys     1-5 pick a tower, Space/Enter send the next wave, U upgrade,
-           X sell, Q cycle speed, P pause, Esc cancel.
+  Keys     1-6 pick a tower, Space/Enter send the next wave, U upgrade,
+           X sell, Q cycle speed, Z/C/V abilities, P pause, Esc cancel.
   Touch    tap a card, tap a tile; tap a tower for its panel. Portrait and
            landscape both work - the island rotates to fit.
   Speed    1x / 2x / 3x buttons in the HUD.
@@ -51,8 +67,8 @@ AUDIO
   and an ambient chord loop (music toggle in the menu). No audio files.
 
 STORAGE
-  localStorage key "td.save.v1": stars and best wave per map, volume, sound
-  and music toggles. Local to the device; no cookies, no analytics.
+  localStorage key "td.save.v2": stars and best wave per map, XP, coins,
+  skins, challenge progress, settings. Local to the device; no cookies, no analytics.
 
 LOADING
   Three.js is deferred so the loading screen paints first; the bar tracks real
