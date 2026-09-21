@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="google" content="notranslate">
+<title>Tower Defense 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- ===== portal block ===== -->
+<script>
+  // scroll guard: some portals scroll the iframe's body when it gains focus
+  addEventListener('scroll', function(){ if(document.body.scrollTop||document.documentElement.scrollTop){ document.body.scrollTop=0; document.documentElement.scrollTop=0; } }, true);
+</script>
+<!-- ===== /portal block ===== -->
+<script defer src="three.min.js"></script>
+<script defer src="js/data.js"></script>
+<script defer src="js/world.js"></script>
+<script defer src="js/game.js"></script>
+<style>
+  :root{ --ink:#f4f7fc; --dim:rgba(244,247,252,.55); --glass:rgba(10,14,22,.82); --line:rgba(255,255,255,.12);
+    --gold:#ffc857; --blue:#7fd4ff; --red:#ff5252; --green:#52e07a; --purple:#b07cff; }
+  html,body{ margin:0; padding:0; height:100%; background:#0b1018; overflow:hidden; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{ font-family:'Figtree',system-ui,sans-serif; color:var(--ink); -webkit-user-select:none; user-select:none; touch-action:none; }
+  #app{ position:fixed; inset:0; }
+  #mount{ position:absolute; inset:0; z-index:0; touch-action:none; cursor:crosshair; }
+  #mount canvas{ display:block; }
+  .fun{ font-family:'Caprasimo','Figtree',system-ui,sans-serif; font-weight:400; letter-spacing:.01em; }
+  button{ font-family:inherit; color:inherit; }
+
+  /* ---- HUD ---- */
+  #hud{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 10px); left:12px; right:12px; z-index:5; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; pointer-events:none; }
+  #hud > *{ pointer-events:auto; }
+  .pills{ display:flex; gap:8px; flex-wrap:wrap; }
+  .pill{ display:flex; align-items:center; gap:7px; padding:7px 13px 7px 10px; border-radius:99px; background:var(--glass); border:1px solid var(--line);
+    box-shadow:0 8px 24px rgba(0,0,0,.35); font-weight:800; font-size:15px; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); white-space:nowrap; }
+  .pill .ic{ font-size:15px; }
+  .pill.gold{ color:var(--gold); } .pill.lives{ color:#ff8a94; } .pill.lives.low{ animation:pulse 1s infinite; color:var(--red); }
+  .pill.wave{ color:var(--blue); } .pill .lbl{ font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); font-weight:700; }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 8px 24px rgba(0,0,0,.35); } 50%{ box-shadow:0 0 0 4px rgba(255,82,82,.35); } }
+  .rbtns{ display:flex; gap:6px; }
+  .rbtn{ width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--glass); cursor:pointer; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 8px 24px rgba(0,0,0,.35); transition:background .15s, border-color .15s, transform .1s; }
+  .rbtn:hover{ border-color:rgba(255,255,255,.3); } .rbtn:active{ transform:scale(.94); }
+  .rbtn.spd{ width:38px; font-size:12px; } .rbtn.spd.on{ background:var(--blue); color:#08131c; border-color:var(--blue); }
+  .rbtn.off{ opacity:.5; text-decoration:line-through; }
+
+  /* ---- build bar ---- */
+  #buildWrap{ position:absolute; left:0; right:0; bottom:0; z-index:5; display:flex; flex-direction:column; align-items:center; gap:6px; padding:0 10px calc(env(safe-area-inset-bottom,0px) + 10px); pointer-events:none; }
+  #buildHint{ font-size:12px; color:var(--ink); background:var(--glass); border:1px solid var(--line); border-radius:99px; padding:5px 13px; max-width:92vw; text-align:center; opacity:.95; min-height:0; }
+  #buildHint:empty{ display:none; }
+  #buildBar{ display:flex; gap:8px; pointer-events:auto; }
+  .tcard{ position:relative; width:86px; padding:8px 4px 7px; border-radius:14px; background:var(--glass); border:1px solid var(--line); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); transition:transform .1s, border-color .15s, background .15s; }
+  .tcard:hover{ border-color:rgba(127,212,255,.5); } .tcard:active{ transform:scale(.96); }
+  .tcard.on{ background:rgba(127,212,255,.18); border-color:var(--blue); box-shadow:0 0 0 2px rgba(127,212,255,.35), 0 8px 24px rgba(0,0,0,.35); }
+  .tcard.poor{ opacity:.55; } .tcard.poor .tcost{ color:var(--red); }
+  .ticon{ font-size:24px; line-height:1; } .tname{ font-size:11.5px; font-weight:700; } .tcost{ font-size:12px; font-weight:800; color:var(--gold); }
+  .tcost::before{ content:'💰 '; font-size:10px; }
+  .tkey{ position:absolute; top:5px; left:7px; font-size:9px; font-weight:800; color:var(--dim); }
+
+  /* ---- tower panel ---- */
+  #panel{ position:absolute; left:12px; bottom:118px; z-index:6; width:218px; padding:12px 14px 12px; border-radius:16px; background:var(--glass); border:1px solid var(--line);
+    box-shadow:0 12px 34px rgba(0,0,0,.45); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); display:none; }
+  #panel.show{ display:block; animation:pop .2s ease-out; }
+  @keyframes pop{ from{ transform:scale(.94); opacity:0; } to{ transform:none; opacity:1; } }
+  #pHead{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  #pName{ font-size:17px; } #pLvl{ font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:800; }
+  #pClose{ position:absolute; top:8px; right:8px; width:24px; height:24px; border-radius:50%; border:none; background:rgba(255,255,255,.08); cursor:pointer; font-size:12px; }
+  #pStats{ margin-top:8px; display:flex; flex-direction:column; gap:3px; }
+  .prow{ display:flex; justify-content:space-between; font-size:12px; color:var(--dim); } .prow b{ color:var(--ink); font-weight:700; } .prow i{ font-style:normal; color:var(--green); font-size:11px; }
+  #pBtns{ display:flex; gap:6px; margin-top:10px; }
+  .pbtn{ flex:1; padding:9px 4px; border-radius:10px; border:1px solid var(--line); background:rgba(255,255,255,.06); cursor:pointer; font-weight:800; font-size:12px; letter-spacing:.03em; transition:transform .1s; }
+  .pbtn:active{ transform:scale(.96); }
+  #pUp{ background:var(--gold); color:#1a1200; border-color:var(--gold); } #pUp:disabled{ opacity:.45; cursor:default; }
+  #pSell{ color:#ffb0b0; }
+
+  /* ---- wave button ---- */
+  #waveBtn{ position:absolute; right:12px; bottom:118px; z-index:6; width:230px; padding:11px 14px 10px; border-radius:16px; text-align:left; cursor:pointer;
+    background:linear-gradient(135deg, rgba(255,200,87,.95), rgba(255,150,60,.95)); color:#1a1200; border:none; box-shadow:0 12px 34px rgba(0,0,0,.45), 0 0 30px rgba(255,200,87,.25); display:none; transition:transform .1s; }
+  #waveBtn.show{ display:block; animation:pop .2s ease-out; } #waveBtn:active{ transform:scale(.97); }
+  #wbTitle{ font-size:18px; line-height:1; } #wbSub{ font-size:11px; font-weight:700; opacity:.8; margin-top:5px; line-height:1.3; }
+  #wbTimer{ font-size:11px; font-weight:800; margin-top:5px; padding-top:5px; border-top:1px solid rgba(0,0,0,.15); }
+
+  /* ---- toasts ---- */
+  #toasts{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 62px); left:50%; transform:translateX(-50%); z-index:7; display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none; width:min(360px, 90%); }
+  .toast{ padding:8px 16px; border-radius:99px; background:var(--glass); border:1px solid var(--line); font-size:13px; font-weight:700; text-align:center; opacity:0; transform:translateY(-8px); transition:opacity .25s, transform .25s; box-shadow:0 8px 24px rgba(0,0,0,.4); }
+  .toast.show{ opacity:1; transform:none; } .toast.good{ color:var(--gold); } .toast.bad{ color:#ff8a94; } .toast.tip{ color:var(--blue); }
+
+  /* ---- overlays ---- */
+  .ov{ position:absolute; inset:0; z-index:9; display:none; align-items:center; justify-content:center; padding:16px; background:radial-gradient(70% 55% at 50% 46%, rgba(4,7,11,.6), rgba(4,7,11,.9)); }
+  .ov.show{ display:flex; }
+  .card{ width:min(440px,100%); max-height:96%; overflow-y:auto; text-align:center; padding:22px 24px 22px; border-radius:20px; background:var(--glass); border:1px solid var(--line);
+    box-shadow:0 26px 70px rgba(0,0,0,.65); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); animation:pop .3s cubic-bezier(.2,1.3,.4,1); }
+  .card h1{ margin:0; font-size:36px; line-height:1; color:var(--gold); text-shadow:0 0 30px rgba(255,200,87,.45); }
+  .card .sub{ margin-top:6px; font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim); font-weight:700; }
+  .bigbtn{ display:block; width:100%; margin-top:14px; padding:13px 18px; border-radius:99px; border:none; background:var(--blue); color:#08131c; font-size:16px; cursor:pointer; box-shadow:0 0 26px rgba(127,212,255,.35); transition:transform .1s; }
+  .bigbtn:active{ transform:scale(.97); }
+  .btnrow{ display:flex; gap:8px; margin-top:12px; }
+  .btnrow button{ flex:1; padding:10px 6px; border-radius:99px; border:1px solid var(--line); background:rgba(255,255,255,.06); font-weight:800; font-size:12px; cursor:pointer; }
+  .btnrow button.pri{ background:var(--gold); color:#1a1200; border-color:var(--gold); }
+
+  /* menu */
+  #menu .card{ width:min(520px,100%); }
+  #mapCards{ display:flex; gap:8px; margin-top:14px; }
+  .mapCard{ flex:1; position:relative; padding:12px 8px 10px; border-radius:14px; border:1px solid var(--line); background:rgba(255,255,255,.05); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; overflow:hidden; text-align:center; transition:border-color .15s, background .15s; }
+  .mapCard::before{ content:''; position:absolute; inset:0; height:5px; }
+  .mapCard.theme-grass::before{ background:linear-gradient(90deg,#4f9a3c,#b98b52); } .mapCard.theme-sand::before{ background:linear-gradient(90deg,#d3b06a,#9c7444); } .mapCard.theme-snow::before{ background:linear-gradient(90deg,#e6eef5,#8d98a6); }
+  .mapCard.on{ border-color:var(--blue); background:rgba(127,212,255,.12); box-shadow:0 0 0 2px rgba(127,212,255,.3); }
+  .mapCard.locked{ opacity:.45; cursor:default; }
+  .mcName{ font-family:'Caprasimo',serif; font-size:14px; margin-top:4px; } .mcSub{ font-size:10.5px; color:var(--dim); font-weight:700; }
+  .mcStars i{ font-style:normal; color:rgba(255,255,255,.18); font-size:15px; } .mcStars i.on{ color:var(--gold); text-shadow:0 0 10px rgba(255,200,87,.6); }
+  .mcLock{ font-size:9.5px; color:var(--dim); }
+  #howto{ margin-top:14px; text-align:left; display:flex; flex-direction:column; gap:7px; }
+  .how{ display:flex; gap:10px; align-items:center; font-size:12.5px; color:rgba(244,247,252,.85); line-height:1.35; }
+  .how i{ flex:none; width:22px; height:22px; border-radius:50%; background:var(--blue); color:#08131c; font-style:normal; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center; }
+  .how b{ color:var(--blue); font-weight:700; }
+  #settings{ display:flex; align-items:center; gap:10px; margin-top:14px; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--dim); }
+  #settings input[type=range]{ flex:1; accent-color:var(--blue); }
+  #settings .rbtn{ width:36px; height:36px; font-size:12px; box-shadow:none; }
+  #menuFoot{ margin-top:10px; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); font-weight:700; }
+
+  /* result */
+  #resStars{ margin-top:10px; font-size:34px; line-height:1; } #resStars span{ color:rgba(255,255,255,.15); } #resStars span.on{ color:var(--gold); text-shadow:0 0 18px rgba(255,200,87,.6); }
+  #resStats{ display:flex; gap:8px; margin-top:14px; } #resStats div{ flex:1; padding:9px 4px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid var(--line); }
+  #resStats b{ display:block; font-family:'Caprasimo',serif; font-size:19px; color:var(--blue); } #resStats span{ font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--dim); font-weight:700; }
+  #result.lose h1{ color:#ff7a7a; text-shadow:0 0 30px rgba(255,82,82,.4); }
+
+  /* loading */
+  #loadWrap{ position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; background:radial-gradient(80% 60% at 50% 40%, #1a2436, #0b1018); transition:opacity .5s; }
+  #loadWrap.gone{ opacity:0; pointer-events:none; }
+  #loadCard{ text-align:center; width:min(340px, 80%); }
+  #loadTitle{ font-size:clamp(26px, 9vw, 40px); white-space:nowrap; color:var(--gold); text-shadow:0 0 30px rgba(255,200,87,.45); line-height:1; }
+  #loadSub{ margin-top:8px; font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:var(--dim); font-weight:700; }
+  #loadTrack{ margin:18px auto 0; height:8px; border-radius:99px; background:rgba(255,255,255,.1); overflow:hidden; }
+  #loadFill{ height:100%; width:0; border-radius:99px; background:linear-gradient(90deg, var(--blue), var(--gold)); transition:width .1s linear; }
+  #loadPct{ margin-top:8px; font-size:13px; color:var(--blue); }
+
+  /* menu hides the HUD */
+  #app.menu #hud, #app.menu #buildWrap, #app.menu #panel, #app.menu #waveBtn, #app.menu #toasts{ display:none; }
+  #menu.hide{ display:none; }
+
+  /* ---- phones ---- */
+  @media (max-width:600px){
+    .pill{ padding:6px 10px 6px 8px; font-size:13px; } .pill .lbl{ display:none; }
+    .rbtn{ width:34px; height:34px; font-size:12px; } .rbtn.spd{ width:32px; font-size:11px; }
+    .tcard{ width:62px; padding:7px 2px 6px; border-radius:12px; } .ticon{ font-size:20px; } .tname{ font-size:9.5px; } .tcost{ font-size:10.5px; } .tkey{ display:none; }
+    #buildBar{ gap:5px; } #buildHint{ font-size:10.5px; }
+    #panel{ width:186px; bottom:104px; padding:10px 12px 10px; } #pName{ font-size:15px; } .prow{ font-size:11px; }
+    #waveBtn{ width:190px; bottom:104px; padding:9px 12px 8px; } #wbTitle{ font-size:16px; } #wbSub{ font-size:10px; }
+    .card{ padding:18px 16px 18px; } .card h1{ font-size:30px; }
+  }
+  @media (max-aspect-ratio:1/1) and (max-width:600px){
+    /* portrait phone: the wave button moves under the HUD so it never fights the tower panel */
+    #waveBtn{ right:auto; left:50%; transform:translateX(-50%); bottom:auto; top:calc(env(safe-area-inset-top,0px) + 58px); width:min(300px, 88vw); }
+    #waveBtn:active{ transform:translateX(-50%) scale(.97); }
+    #toasts{ top:calc(env(safe-area-inset-top,0px) + 150px); }
+    #mapCards{ flex-direction:column; }
+  }
+  @media (max-height:480px){
+    .card{ padding:12px 16px 12px; } .card h1{ font-size:26px; } #howto{ margin-top:8px; gap:4px; } .how{ font-size:11.5px; } .bigbtn{ margin-top:8px; padding:10px; } #mapCards{ margin-top:8px; }
+    #settings{ margin-top:8px; }
+  }
+</style>
+</head>
+<body>
+<div id="app" class="menu">
+  <div id="mount"></div>
+
+  <div id="hud">
+    <div class="pills">
+      <div class="pill gold"><span class="ic">💰</span><span id="hGold">0</span></div>
+      <div class="pill lives"><span class="ic">❤️</span><span id="hLives">20</span></div>
+      <div class="pill wave"><span class="lbl">Wave</span><span id="hWave">1 / 30</span></div>
+    </div>
+    <div class="rbtns">
+      <button class="rbtn spd on" data-s="1">1×</button>
+      <button class="rbtn spd" data-s="2">2×</button>
+      <button class="rbtn spd" data-s="3">3×</button>
+      <button class="rbtn" id="sndBtn" title="Sound">♪</button>
+      <button class="rbtn" id="pauseBtn" title="Pause">II</button>
+      <button class="rbtn" id="menuBtn" title="Menu">☰</button>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+
+  <button id="waveBtn"><div id="wbTitle" class="fun">START WAVE 1</div><div id="wbSub"></div><div id="wbTimer"></div></button>
+
+  <div id="panel">
+    <button id="pClose">✕</button>
+    <div id="pHead"><div id="pName" class="fun">Archer</div><div id="pLvl">Level 1</div></div>
+    <div id="pStats"></div>
+    <div id="pBtns"><button class="pbtn" id="pUp">UPGRADE</button><button class="pbtn" id="pSell">SELL</button></div>
+  </div>
+
+  <div id="buildWrap">
+    <div id="buildHint"></div>
+    <div id="buildBar"></div>
+  </div>
+
+  <div id="pauseWrap" class="ov">
+    <div class="card">
+      <h1 class="fun">PAUSED</h1>
+      <div class="sub">Take a breath</div>
+      <button class="bigbtn fun" id="resumeBtn">RESUME</button>
+      <div class="btnrow"><button id="pMenuBtn">MAIN MENU</button></div>
+    </div>
+  </div>
+
+  <div id="result" class="ov">
+    <div class="card">
+      <h1 class="fun" id="resTitle">VICTORY!</h1>
+      <div class="sub" id="resSub"></div>
+      <div id="resStars"></div>
+      <div id="resStats"></div>
+      <button class="bigbtn fun" id="resNext">NEXT MAP →</button>
+      <div class="btnrow"><button class="pri" id="resEndless">ENDLESS MODE</button><button id="resRetry">PLAY AGAIN</button><button id="resMenu">MENU</button></div>
+    </div>
+  </div>
+
+  <div id="menu">
+    <div class="ov show">
+      <div class="card">
+        <h1 class="fun">Tower Defense 3D</h1>
+        <div class="sub">Hold the road · Save the castle</div>
+        <div id="mapCards"></div>
+        <div id="howto">
+          <div class="how"><i>1</i><div>Pick a tower below, then <b>tap a free tile</b> next to the road to build it.</div></div>
+          <div class="how"><i>2</i><div>Tap a tower to <b>upgrade</b> or sell it. Three levels each.</div></div>
+          <div class="how"><i>3</i><div><b>Send the next wave early</b> for bonus gold. Cannons can't hit flyers — Archers and Teslas can.</div></div>
+          <div class="how"><i>4</i><div>Survive <b>30 waves</b> to win the map and unlock the next one. Keys: 1–5 build, Space send, U upgrade, X sell, Q speed.</div></div>
+        </div>
+        <div id="settings">
+          <span>Volume</span><input id="mVol" type="range" min="0" max="100" value="60"><span id="mVolVal">60%</span>
+          <button class="rbtn" id="mSound" title="Sound">♪</button><button class="rbtn" id="mMusic" title="Music">♫</button>
+        </div>
+        <button class="bigbtn fun" id="playBtn">PLAY</button>
+        <div id="menuFoot">Mouse or touch · Portrait and landscape</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loadWrap"><div id="loadCard"><div id="loadTitle" class="fun">Tower Defense 3D</div><div id="loadSub">Loading</div><div id="loadTrack"><div id="loadFill"></div></div><div id="loadPct" class="fun">0%</div></div></div>
+</div>
+<!-- ===== ad integration =====
+No ad SDK is embedded and the game makes no external network calls apart from Google Fonts.
+window.gameShowAd  = function(){ ... }   called only between matches (retry / next map / menu)
+window.gamePauseForAd(true|false)         freezes the world and audio around an ad
+window.gameIsPaused()                      reports the current state
+===== -->
+</body>
+</html>
