@@ -120,7 +120,15 @@ TD.MAPS = [
     path:[[7,0],[7,2],[2,2],[2,6],[6,6],[6,4],[11,4],[11,8],[13,8]],
     air:[[7,0],[6,5],[13,8]], boss:'Void Wraith', effect:'lowgrav', effectText:'Low gravity: walkers drift 15% slower, flyers 30% faster and far more common.',
     tip:'The sky is the threat here — Archers, Teslas and Lasers.' },
+  // the tiered map: every win raises its tier, and with it health, speed and rewards
+  { id:'gauntlet', name:'The Gauntlet', theme:'dusk', w:14, h:10, waves:30, gold:180, lives:20, diff:1.3, tiered:true,
+    path:[[0,0],[5,0],[5,3],[1,3],[1,6],[6,6],[6,9],[10,9],[10,2],[13,2]],
+    air:[[0,0],[7,5],[13,2]], boss:'Gauntlet Warden', effect:'gauntlet', effectText:'Every win raises the tier: +30% enemy health, +3% speed and bigger rewards each tier.',
+    tip:'Tier up, gear up. The Gauntlet never stays beaten.' },
 ];
+TD.tierMul = t => 1 + 0.3*Math.max(0, t-1);          // health multiplier per tier
+TD.tierSpeed = t => 1 + 0.03*Math.max(0, t-1);
+TD.tierReward = t => 1 + 0.25*Math.max(0, t-1);
 
 TD.THEMES = {
   grass: { ground:'#4f9a3c', ground2:'#5cae46', path:'#b98b52', edge:'#8c6636', rim:'#3c7a2f', side:'#5b3d22',
@@ -131,6 +139,8 @@ TD.THEMES = {
            tree:0x2f6f4f, trunk:0x4d3a2a, rock:0x9aa5b1, sky:0xcfe3ff, hemi:0xeaf4ff, sun:0xfff2d8 },
   lava:  { ground:'#3d3234', ground2:'#4a3c3d', path:'#6e4a3c', edge:'#2a1f20', rim:'#33292a', side:'#1e1718',
            tree:0x2b2426, trunk:0x3a2e2c, rock:0x5a4a48, sky:0x3a1a1e, hemi:0xffb090, sun:0xffc9a0, glow:0xff5a1a },
+  dusk:  { ground:'#4a3f5c', ground2:'#5a4d70', path:'#8a4a5a', edge:'#5a2a3a', rim:'#3f3550', side:'#2a2238',
+           tree:0x6a3f7a, trunk:0x3a2a40, rock:0x7a7088, sky:0x3a2a4a, hemi:0xd8c8ff, sun:0xffc8a0 },
   space: { ground:'#2b2a4a', ground2:'#35345c', path:'#5a5482', edge:'#1f1d3a', rim:'#26244a', side:'#14122a',
            tree:0x8a6cff, trunk:0x4a3a8a, rock:0x6a6a9a, sky:0x0b0a1e, hemi:0xb0a8ff, sun:0xdcd6ff, stars:true },
 };
@@ -149,7 +159,7 @@ TD.genWave = function(mapIdx, n){
   const rnd = () => { seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff; };
   const pool = Object.keys(TD.ENEMIES).map(k=>Object.assign({id:k},TD.ENEMIES[k])).filter(e=>e.w>0 && n>=e.from)
     .map(e=>{ if(map.effect==='lowgrav' && e.id==='flyer') e.w *= 2.5; return e; });
-  let budget = 6 + n*3.0 + Math.floor(n/5)*3;
+  let budget = (6 + n*3.0 + Math.floor(n/5)*3) * (map.tiered ? 1 + 0.08*Math.max(0,(map.curTier||1)-1) : 1);
   const groups = [];
   let guard = 0;
   while(budget > 0 && guard++ < 20){

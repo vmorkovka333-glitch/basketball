@@ -20,8 +20,11 @@ GAMEPLAY
 
   Maps      Green Valley, Dusty Canyon (sandstorms cut tower range), Frostpeak
             (faster enemies), Volcano (lava pools erupt on the road), Deep
-            Space (low gravity: slow walkers, fast and frequent flyers). Each
-            has its own boss. Stars (1-3) depend on lives lost.
+            Space (low gravity: slow walkers, fast and frequent flyers), and
+            The Gauntlet - a tiered map: every win raises its tier (+30%
+            enemy health, +3% speed, +8% more enemies and +25% rewards per
+            tier), so it never stays beaten. Each map has its own boss.
+            Stars (1-3) depend on lives lost.
   Towers    Archer, Cannon, Frost, Tesla, Sniper, Laser (unlocks at player
             level 8). Two straight upgrades, then level 3 is a choice between
             two specializations per tower (e.g. Rapid Fire / Longbow, Big

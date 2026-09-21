@@ -30,7 +30,9 @@ function loadSave(){
 }
 function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} }
 function mapSave(id){ return SAVE.maps[id] || (SAVE.maps[id] = { stars:0, best:0 }); }
-function unlocked(i){ return i===0 || (mapSave(TD.MAPS[i-1].id).stars > 0); }
+function unlocked(i){ const m = TD.MAPS[i]; if(m.tiered) return mapSave(TD.MAPS[0].id).stars > 0; return i===0 || (mapSave(TD.MAPS[i-1].id).stars > 0); }
+function tierOf(m){ return m.tiered ? (mapSave(m.id).tier || 1) : 1; }
+function mapDiff(m){ return m.diff * (m.tiered ? TD.tierMul(tierOf(m)) : 1); }
 function plevel(){ return TD.levelOf(SAVE.xp).level; }
 function skinFor(type){ const id = SAVE.skins.sel[type]; return id ? TD.SKINS.find(s=>s.id===id) : null; }
 function towerUnlocked(type){ const u = TOWERS[type].unlock; return !u || plevel() >= u; }
@@ -191,7 +193,7 @@ function chCheck(){
 
 // ---- match setup -----------------------------------------------------
 function startMap(idx, endless){
-  G.mapIdx = idx; G.map = TD.MAPS[idx];
+  G.mapIdx = idx; G.map = TD.MAPS[idx]; G.map.curTier = tierOf(G.map);
   W.buildMap(G.map);
   G.towers.forEach(t=>{ W.remove(t.mesh); if(t.beams) t.beams.forEach(b=>W.remove(b)); }); G.enemies.forEach(e=>W.remove(e.mesh)); G.projs.forEach(p=>W.freeProj(p.kind,p.mesh));
   G.towers = []; G.grid = new Map(); G.enemies = []; G.projs = []; G.queue = []; W.fxReset(); W.hideRing(); W.hideGhost(); W.hideMarker(); numsClear();
@@ -206,6 +208,7 @@ function startMap(idx, endless){
   if(typeof window.onGameplayStart==='function') window.onGameplayStart();
   renderHud(); renderBuildBar(); renderPanel(); renderWaveBtn(); renderAbilities(); syncSpeed();
   toast(G.map.tip, 'tip');
+  if(G.map.tiered) setTimeout(()=>toast('🔥 The Gauntlet — Tier '+G.map.curTier+'  ·  +'+Math.round((TD.tierMul(G.map.curTier)-1)*100)+'% health', 'bad'), 1200);
 }
 
 // ---- towers ----------------------------------------------------------
@@ -271,11 +274,13 @@ function callWave(){
   renderHud(); renderWaveBtn();
 }
 function spawn(type, at, seg){
-  const d = ENEMIES[type], mul = (type==='boss'||type==='miniboss') ? TD.bossMul(G.wave, G.map.diff) : TD.hpMul(G.wave, G.map.diff);
+  const diff = mapDiff(G.map);
+  const d = ENEMIES[type], mul = (type==='boss'||type==='miniboss') ? TD.bossMul(G.wave, diff) : TD.hpMul(G.wave, diff);
   const route = d.air ? G.map.airRoute : G.map.route;
   let speed = d.speed;
   if(G.map.effect==='ice') speed *= 1.12;
   if(G.map.effect==='lowgrav') speed *= d.air ? 1.3 : 0.85;
+  if(G.map.tiered) speed *= TD.tierSpeed(G.map.curTier);
   const e = { type, d, hp: Math.round(d.hp*mul), maxHp: Math.round(d.hp*mul), speed, armor:d.armor, gold: Math.round(d.gold*TD.goldMul(G.wave)),
     air:!!d.air, ghost:!!d.ghost, mesh:W.makeEnemy(type), route, seg:seg||0, dist:0, slow:0, slowT:0, frozen:0, stun:0, burn:0, burnDps:0, healT:0,
     dead:false, flash:0, pos: (at ? at.clone() : route[0].clone()), lives:d.lives, shield: d.shield ? Math.round(d.shield*mul) : 0, shieldMax: d.shield ? Math.round(d.shield*mul) : 0,
@@ -437,7 +442,7 @@ function useAbility(id){
 function castAbility(id, at){
   const a = TD.ABILITIES.find(x=>x.id===id);
   G.cd[id] = a.cd; SAVE.stats.abilities++; chCheck(); G.targetMode = null; W.hideMarker(); renderAbilities();
-  const mul = TD.hpMul(Math.max(1,G.wave), G.map.diff);
+  const mul = TD.hpMul(Math.max(1,G.wave), mapDiff(G.map));
   if(id==='meteor'){
     const mesh = W.projMesh('meteor'); const from = at.clone(); from.y = 11; from.x -= 2.5; mesh.position.copy(from);
     G.projs.push({ kind:'meteor', mesh, from, to:at.clone(), t:0, dur:0.75, dmg:Math.round(150*mul), splash:1.9 });
@@ -604,20 +609,23 @@ function finish(won){
   if(won && G.livesLost===0) chMark('flawless');
   // xp, coins, level
   const lvBefore = plevel();
-  const xp = TD.gameXp(wavesDone, G.kills, won, stars), coins = TD.gameCoins(wavesDone, won, stars);
+  const tr = G.map.tiered ? TD.tierReward(G.map.curTier) : 1;
+  const xp = Math.round(TD.gameXp(wavesDone, G.kills, won, stars)*tr), coins = Math.round(TD.gameCoins(wavesDone, won, stars)*tr);
+  let tierLine = '';
+  if(G.map.tiered){ if(won && !G.endless){ ms.tier = (ms.tier||1)+1; tierLine = 'Tier '+G.map.curTier+' cleared → Tier '+ms.tier+' unlocked'; } else tierLine = 'Tier '+G.map.curTier; }
   SAVE.xp += xp; SAVE.coins += coins; persist(); chCheck();
   const lvAfter = plevel();
   if(typeof window.onGameplayStop==='function') window.onGameplayStop();
   sfx(won?'win':'lose');
   const r = $('result'); r.className = 'ov '+(won?'win':'lose');
   $('resTitle').textContent = won ? (G.endless ? 'ENDLESS RUN OVER' : 'VICTORY!') : (G.endless ? 'ENDLESS RUN OVER' : 'DEFEAT');
-  $('resSub').textContent = won ? G.map.name+' defended' : (G.endless ? 'You held '+G.map.name+' for '+wavesDone+' waves' : 'The castle fell on wave '+G.wave);
+  $('resSub').textContent = (won ? G.map.name+' defended' : (G.endless ? 'You held '+G.map.name+' for '+wavesDone+' waves' : 'The castle fell on wave '+G.wave)) + (tierLine ? ' · '+tierLine : '');
   $('resStars').innerHTML = won ? [1,2,3].map(i=>'<span class="'+(i<=stars?'on':'')+'">★</span>').join('') : '';
   $('resStats').innerHTML = [['Waves', wavesDone],['Kills', G.kills],['Gold', G.earned],['XP', '+'+xp],['Coins', '+'+coins]].map(([l,v])=>'<div><b>'+v+'</b><span>'+l+'</span></div>').join('');
   const lu = $('resLevel');
   if(lvAfter > lvBefore){ const un = TD.UNLOCKS.filter(u=>u.level>lvBefore && u.level<=lvAfter).map(u=>u.text); lu.innerHTML = '<b>LEVEL UP → '+lvAfter+'</b>'+(un.length?'<span>Unlocked: '+un.join(', ')+'</span>':''); lu.style.display=''; setTimeout(()=>sfx('level'), 600); }
   else { const li = TD.levelOf(SAVE.xp); lu.innerHTML = '<span>Level '+li.level+' · '+li.into+' / '+li.need+' XP</span>'; lu.style.display=''; }
-  const next = G.mapIdx+1 < TD.MAPS.length;
+  const next = G.mapIdx+1 < TD.MAPS.length && !G.map.tiered;
   $('resNext').style.display = (won && next && !G.endless) ? '' : 'none';
   $('resEndless').style.display = (won && !G.endless) ? '' : 'none';
   $('resRetry').textContent = won ? 'PLAY AGAIN' : 'TRY AGAIN';
@@ -627,7 +635,7 @@ function finish(won){
 // ---- in-game UI ------------------------------------------------------
 function renderHud(){
   $('hGold').textContent = G.gold; $('hLives').textContent = G.lives;
-  $('hWave').textContent = (G.phase==='build' ? Math.min(G.wave+1, G.endless?999:G.map.waves) : G.wave) + (G.endless ? '' : ' / '+G.map.waves);
+  $('hWave').textContent = (G.phase==='build' ? Math.min(G.wave+1, G.endless?999:G.map.waves) : G.wave) + (G.endless ? '' : ' / '+G.map.waves) + (G.map.tiered ? '  ·  T'+G.map.curTier : '');
   $('hLives').parentElement.classList.toggle('low', G.lives <= 5);
 }
 function renderBuildBar(){
@@ -708,7 +716,7 @@ function renderMaps(){
   host.innerHTML = TD.MAPS.map((m,i)=>{
     const s = mapSave(m.id), open = unlocked(i);
     return '<button class="mapCard theme-'+m.theme+(open?'':' locked')+(i===G.mapIdx?' on':'')+'" data-i="'+i+'">'+
-      '<span class="mcName">'+m.name+'</span><span class="mcSub">'+m.waves+' waves · boss: '+m.boss+(s.best?' · best '+s.best:'')+'</span>'+
+      '<span class="mcName">'+m.name+(m.tiered?' <em class="tier">Tier '+tierOf(m)+'</em>':'')+'</span><span class="mcSub">'+m.waves+' waves · boss: '+m.boss+(s.best?' · best '+s.best:'')+'</span>'+
       '<span class="mcEff">'+m.effectText+'</span>'+
       '<span class="mcStars">'+[1,2,3].map(k=>'<i class="'+(k<=s.stars?'on':'')+'">★</i>').join('')+'</span>'+
       (open?'':'<span class="mcLock">🔒 Win the previous map</span>')+'</button>';
