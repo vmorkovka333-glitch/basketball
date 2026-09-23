@@ -826,7 +826,10 @@ window.GD_OPTIONS = {
   gameId: "c870d2c80d8e4890a2f936fd99059c53",
   onEvent: function (e) {
     switch (e.name) {
-      case "SDK_GAME_START": if (window.gamePauseForAd) window.gamePauseForAd(false); break;
+      case "SDK_READY":
+              try { window.gdsdk.preloadAd(window.gdsdk.AdType ? window.gdsdk.AdType.Interstitial : undefined); } catch (e) {}
+              break;
+      case "SDK_GAME_START": if (window.gamePauseForAd) window.gamePauseForAd(false); if (window.__gdAdFinished) window.__gdAdFinished(); break;
       case "SDK_GAME_PAUSE": if (window.gamePauseForAd) window.gamePauseForAd(true); break;
       default: break;
     }
@@ -839,6 +842,38 @@ window.GD_OPTIONS = {
   js.src = "https://html5.api.gamedistribution.com/main.min.js";
   fjs.parentNode.insertBefore(js, fjs);
 })(document, "script", "gamedistribution-jssdk");
+/* ===== GameDistribution ads ===== */
+/* preroll: the game calls this the moment the player presses Play/Race and waits
+   for the callback, so no gameplay runs behind the ad.
+   midgame: fired from non-gameplay buttons only (Replay / Next / Menu).
+   The SDK's SDK_GAME_PAUSE / SDK_GAME_START events drive gamePauseForAd(), and
+   SDK_GAME_START also releases whatever the game is waiting on. */
+(function () {
+  var lastAd = 0, pending = null;
+  window.__gdAdFinished = function () { var f = pending; pending = null; if (f) f(); };
+  window.gameShowAd = function (kind, done) {
+    var over = false;
+    function end() {
+      if (over) return; over = true; if (pending === end) pending = null;
+      if (window.gamePauseForAd) window.gamePauseForAd(false);
+      if (typeof done === 'function') { try { done(); } catch (e) {} }
+    }
+    try {
+      var now = Date.now();
+      // GD caps ad frequency itself; this only stops one click from asking twice
+      if (pending || !window.gdsdk || typeof window.gdsdk.showAd !== 'function' ||
+          (kind !== 'preroll' && now - lastAd < 20000)) { end(); return; }
+      lastAd = now; pending = end;
+      var type = window.gdsdk.AdType ? window.gdsdk.AdType.Interstitial : null;
+      var p = type ? window.gdsdk.showAd(type) : window.gdsdk.showAd();
+      if (p && typeof p.then === 'function') p.then(end, end);
+      setTimeout(end, 30000);            // safety net: never leave the game waiting
+    } catch (e) { end(); }
+  };
+})();
+/* ===== /GameDistribution ads ===== */
+
+
 </script>
 </body>
 </html>

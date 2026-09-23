@@ -853,7 +853,7 @@ function boot(){
   renderBuildBar(); renderAbilities(); showPanel('home');
   // menu navigation
   document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click', ()=>{ unlockAudio(); sfx('click'); showPanel(b.dataset.panel); }));
-  $('playBtn').addEventListener('click', ()=>{ unlockAudio(); startMap(G.mapIdx, false); });
+  $('playBtn').addEventListener('click', ()=>{ unlockAudio(); const go = ()=>startMap(G.mapIdx, false); if(window.gameAdBreak) window.gameAdBreak('preroll', go); else go(); });
   $('sVol').addEventListener('input', e=>{ unlockAudio(); setVolume(e.target.value/100); $('sVolVal').textContent = e.target.value+'%'; });
   $('sSound').addEventListener('click', ()=>{ unlockAudio(); setMuted(!SAVE.muted); });
   $('sMusic').addEventListener('click', ()=>{ unlockAudio(); setMusic(!SAVE.music); });
@@ -864,17 +864,17 @@ function boot(){
   $('sndBtn').addEventListener('click', ()=>{ unlockAudio(); setMuted(!SAVE.muted); });
   $('pauseBtn').addEventListener('click', ()=>setPaused(!G.paused));
   $('resumeBtn').addEventListener('click', ()=>setPaused(false));
-  $('pMenuBtn').addEventListener('click', ()=>{ window.gameAdBreak && window.gameAdBreak(); openMenu(); });
+  $('pMenuBtn').addEventListener('click', ()=>{ window.gameAdBreak ? window.gameAdBreak('midgame', openMenu) : openMenu(); });
   $('menuBtn').addEventListener('click', ()=>setPaused(true));
   document.querySelectorAll('.spd').forEach(b=>b.addEventListener('click', ()=>{ G.speed = +b.dataset.s; syncSpeed(); sfx('click'); }));
   $('waveBtn').addEventListener('click', ()=>{ unlockAudio(); callWave(); });
   $('pUp').addEventListener('click', ()=>upgrade(G.sel));
   $('pSell').addEventListener('click', ()=>sell(G.sel));
   $('pClose').addEventListener('click', deselect);
-  $('resRetry').addEventListener('click', ()=>{ window.gameAdBreak && window.gameAdBreak(); startMap(G.mapIdx, false); });
-  $('resNext').addEventListener('click', ()=>{ window.gameAdBreak && window.gameAdBreak(); startMap(G.mapIdx+1, false); });
+  $('resRetry').addEventListener('click', ()=>{ const go = ()=>startMap(G.mapIdx, false); window.gameAdBreak ? window.gameAdBreak('midgame', go) : go(); });
+  $('resNext').addEventListener('click', ()=>{ const go = ()=>startMap(G.mapIdx+1, false); window.gameAdBreak ? window.gameAdBreak('midgame', go) : go(); });
   $('resEndless').addEventListener('click', ()=>{ G.over = false; G.won = false; G.endless = true; G.phase = 'build'; G.buildTimer = TD.BUILD_TIME; $('result').classList.remove('show'); renderHud(); renderWaveBtn(); if(typeof window.onGameplayStart==='function') window.onGameplayStart(); });
-  $('resMenu').addEventListener('click', ()=>{ window.gameAdBreak && window.gameAdBreak(); openMenu(); });
+  $('resMenu').addEventListener('click', ()=>{ window.gameAdBreak ? window.gameAdBreak('midgame', openMenu) : openMenu(); });
   const mount = $('mount');
   mount.addEventListener('pointerdown', onPointerDown);
   addEventListener('pointerup', onPointerUp);
@@ -912,5 +912,16 @@ window.gamePauseForAd = function(on){
 };
 window.gameIsPaused = function(){ return G.adPaused; };
 window.gameShowAd = window.gameShowAd || null;
-window.gameAdBreak = function(){ if(typeof window.gameShowAd==='function'){ try{ window.gameShowAd(); }catch(e){} } };
+// kind: 'preroll' right after PLAY, 'midgame' on RETRY / NEXT MAP / MENU.
+// A publisher hook taking (kind, done) plays the ad first and calls done when it ends.
+window.gameAdBreak = function(kind, done){
+  var fn = window.gameShowAd;
+  if(typeof fn === 'function'){
+    try{
+      if(fn.length >= 2){ fn(kind || 'midgame', done || function(){}); return; }
+      fn(kind || 'midgame');
+    }catch(e){}
+  }
+  if(typeof done === 'function') done();
+};
 })();

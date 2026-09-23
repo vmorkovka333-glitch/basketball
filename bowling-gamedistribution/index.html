@@ -16,8 +16,11 @@
     gameId: "270c1f0c47c8419793e747d780dcb2ae",   // from the GameDistribution dashboard
     onEvent: function(event){
       switch(event.name){
+        case "SDK_READY":
+                try { window.gdsdk.preloadAd(window.gdsdk.AdType ? window.gdsdk.AdType.Interstitial : undefined); } catch (e) {}
+                break;
         case "SDK_GAME_PAUSE": if(window.gamePauseForAd) window.gamePauseForAd(true);  break;
-        case "SDK_GAME_START": if(window.gamePauseForAd) window.gamePauseForAd(false); break;
+        case "SDK_GAME_START": if (window.gamePauseForAd) window.gamePauseForAd(false); if (window.__gdAdFinished) window.__gdAdFinished(); break;
       }
     }
   };
@@ -3427,6 +3430,7 @@ function syncMenu(){
   if(lab) lab.textContent=Math.round(_vol*100)+'%';
 }
 function openMenu(){
+  if(G.started && window.gameAdBreak) window.gameAdBreak('midgame');   // leaving a game: natural break
   G.started=false; G.cpuAct=null; hideResults();
   setTimeout(maybeShowDailyReward,300);
   if(typeof window.onGameplayStop==='function') window.onGameplayStop();
@@ -3438,9 +3442,13 @@ function openMenu(){
 }
 function startFromMenu(){
   unlockAudio();
+  // the portal's pre-roll plays first; the game only starts once it is over
+  if(window.gameAdBreak) window.gameAdBreak('preroll', startNow); else startNow();
+}
+function startNow(){
   if(typeof window.onGameplayStart==='function') window.onGameplayStart();
   setVolume(_vol);
-  if(G.needsReset){ G.needsReset=false; restart(); }
+  if(G.needsReset){ G.needsReset=false; G.msg=null; (window.__bowlRestart||restart)(); }   // fresh game without a second ad
   document.getElementById('startWrap').classList.add('hide');
   document.getElementById('app').classList.remove('menu');
   G.started=true;
@@ -3551,10 +3559,17 @@ window.addEventListener('DOMContentLoaded',()=>{
 
   // Called at natural breaks only — never mid-throw.
   window.gameShowAd = window.gameShowAd || null;
-  window.gameAdBreak = function(){
-    if(typeof window.gameShowAd === 'function'){
-      try{ window.gameShowAd(); }catch(e){}
+  // kind: 'preroll' right after PLAY, 'midgame' on PLAY AGAIN / MENU.
+  // A publisher hook taking (kind, done) plays the ad first and calls done when it ends.
+  window.gameAdBreak = function(kind, done){
+    var fn = window.gameShowAd;
+    if(typeof fn === 'function'){
+      try{
+        if(fn.length >= 2){ fn(kind || 'midgame', done || function(){}); return; }
+        fn(kind || 'midgame');
+      }catch(e){}
     }
+    if(typeof done === 'function') done();
   };
 
   // A game ends -> break. PLAY AGAIN -> break, then the fresh game starts.
@@ -3563,23 +3578,47 @@ window.addEventListener('DOMContentLoaded',()=>{
     _endGame.apply(this, arguments);
     if(typeof window.onGameplayStop === 'function') window.onGameplayStop();
   };
+  // PLAY AGAIN shows the break first, then starts the fresh game
   restart = function(){
-    window.gameAdBreak();
-    _restart.apply(this, arguments);
-    if(typeof window.onGameplayStart === 'function') window.onGameplayStart();
+    var args = arguments, self = this;
+    window.gameAdBreak('midgame', function(){
+      _restart.apply(self, args);
+      if(typeof window.onGameplayStart === 'function') window.onGameplayStart();
+    });
   };
+  window.__bowlRestart = _restart;    // PLAY already played its pre-roll
 })();
 
-// ===== GameDistribution =====
-// The SDK fires SDK_GAME_PAUSE / SDK_GAME_START around every ad; those are wired
-// to gamePauseForAd() in the header. Here we only ask for the interstitial.
-(function(){
-  window.gameShowAd = function(){
-    try{
-      if(window.gdsdk && typeof window.gdsdk.showAd === 'function') window.gdsdk.showAd();
-    }catch(e){}
+/* ===== GameDistribution ads ===== */
+/* preroll: the game calls this the moment the player presses Play/Race and waits
+   for the callback, so no gameplay runs behind the ad.
+   midgame: fired from non-gameplay buttons only (Replay / Next / Menu).
+   The SDK's SDK_GAME_PAUSE / SDK_GAME_START events drive gamePauseForAd(), and
+   SDK_GAME_START also releases whatever the game is waiting on. */
+(function () {
+  var lastAd = 0, pending = null;
+  window.__gdAdFinished = function () { var f = pending; pending = null; if (f) f(); };
+  window.gameShowAd = function (kind, done) {
+    var over = false;
+    function end() {
+      if (over) return; over = true; if (pending === end) pending = null;
+      if (window.gamePauseForAd) window.gamePauseForAd(false);
+      if (typeof done === 'function') { try { done(); } catch (e) {} }
+    }
+    try {
+      var now = Date.now();
+      // GD caps ad frequency itself; this only stops one click from asking twice
+      if (pending || !window.gdsdk || typeof window.gdsdk.showAd !== 'function' ||
+          (kind !== 'preroll' && now - lastAd < 20000)) { end(); return; }
+      lastAd = now; pending = end;
+      var type = window.gdsdk.AdType ? window.gdsdk.AdType.Interstitial : null;
+      var p = type ? window.gdsdk.showAd(type) : window.gdsdk.showAd();
+      if (p && typeof p.then === 'function') p.then(end, end);
+      setTimeout(end, 30000);            // safety net: never leave the game waiting
+    } catch (e) { end(); }
   };
 })();
+/* ===== /GameDistribution ads ===== */
 </script>
 </body>
 </html>

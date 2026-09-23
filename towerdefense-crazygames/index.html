@@ -383,8 +383,8 @@
   window.onGameplayStop  = function(){ if(ready && playing){ playing = false; safe(function(){ SDK.game.gameplayStop(); }); } };
 
   // Midgame interstitial, requested by the game between matches only.
-  window.gameShowAd = function(){
-    if(!ready) return;
+  window.gameShowAd = function(kind){
+    if(!ready || kind === 'preroll') return;   // CrazyGames wants midgame breaks only
     window.onGameplayStop();
     safe(function(){
       SDK.ad.requestAd('midgame', {

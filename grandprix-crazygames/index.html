@@ -827,8 +827,8 @@ addEventListener('scroll', function () {
 addEventListener('DOMContentLoaded', function () {
   var SDK = null, ready = false;
   function safe(fn) { try { fn(); } catch (e) { } }
-  window.gameShowAd = function () {
-    if (!ready) return;
+  window.gameShowAd = function (kind) {
+    if (!ready || kind === 'preroll') return;   // CrazyGames wants midgame breaks only
     safe(function () { SDK.game.gameplayStop(); });
     safe(function () {
       SDK.ad.requestAd('midgame', {

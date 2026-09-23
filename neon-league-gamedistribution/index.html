@@ -12,8 +12,9 @@
     onEvent: function (e) {
       switch (e.name) {
         case "SDK_READY":      window.__nlPrerollAds = true; break;
+        try { window.gdsdk.preloadAd(window.gdsdk.AdType ? window.gdsdk.AdType.Interstitial : undefined); } catch (e) {}
         case "SDK_GAME_PAUSE": if (window.gamePauseForAd) window.gamePauseForAd(true);  break;
-        case "SDK_GAME_START": if (window.gamePauseForAd) window.gamePauseForAd(false); break;
+        case "SDK_GAME_START": if (window.gamePauseForAd) window.gamePauseForAd(false); if (window.__gdAdFinished) window.__gdAdFinished(); break;
       }
     }
   };
@@ -6964,7 +6965,7 @@ let _adLastT = 0;
 window.__nlShowAd = function (kind) {              // внутренний вызов на паузе → делегирует хук издателя
   if (kind === 'preroll' && !window.__nlPrerollAds) return;   // пре-ролл включает интеграция портала
   const t = Date.now();
-  if (t - _adLastT < 55000) return;                           // не чаще одного ролика в ~55 с
+  if (kind !== 'preroll' && t - _adLastT < 55000) return;     // между матчами — не чаще одного ролика в ~55 с
   _adLastT = t;
   try { if (typeof window.gameShowAd === 'function') window.gameShowAd(kind || 'midgame'); } catch (e) {}
 };
@@ -7262,14 +7263,36 @@ window.__DBG = { scene, camera, teams, allPlayers, ball, showScreen };
 <script>
 /* ===== GameDistribution ads: preroll on match start + interstitials at natural breaks ===== */
 window.__nlPrerollAds = true;                 // портал ждёт ролик на входе в матч
-window.gameShowAd = function () {
-  try {
-    if (!window.gdsdk || !window.gdsdk.showAd) return;
-    var AT = window.gdsdk.AdType;
-    if (AT && AT.Interstitial) window.gdsdk.showAd(AT.Interstitial);
-    else window.gdsdk.showAd();
-  } catch (e) {}
-};
+/* ===== GameDistribution ads ===== */
+/* preroll: the game calls this the moment the player presses Play/Race and waits
+   for the callback, so no gameplay runs behind the ad.
+   midgame: fired from non-gameplay buttons only (Replay / Next / Menu).
+   The SDK's SDK_GAME_PAUSE / SDK_GAME_START events drive gamePauseForAd(), and
+   SDK_GAME_START also releases whatever the game is waiting on. */
+(function () {
+  var lastAd = 0, pending = null;
+  window.__gdAdFinished = function () { var f = pending; pending = null; if (f) f(); };
+  window.gameShowAd = function (kind, done) {
+    var over = false;
+    function end() {
+      if (over) return; over = true; if (pending === end) pending = null;
+      if (window.gamePauseForAd) window.gamePauseForAd(false);
+      if (typeof done === 'function') { try { done(); } catch (e) {} }
+    }
+    try {
+      var now = Date.now();
+      // GD caps ad frequency itself; this only stops one click from asking twice
+      if (pending || !window.gdsdk || typeof window.gdsdk.showAd !== 'function' ||
+          (kind !== 'preroll' && now - lastAd < 20000)) { end(); return; }
+      lastAd = now; pending = end;
+      var type = window.gdsdk.AdType ? window.gdsdk.AdType.Interstitial : null;
+      var p = type ? window.gdsdk.showAd(type) : window.gdsdk.showAd();
+      if (p && typeof p.then === 'function') p.then(end, end);
+      setTimeout(end, 30000);            // safety net: never leave the game waiting
+    } catch (e) { end(); }
+  };
+})();
+/* ===== /GameDistribution ads ===== */
 </script>
 </body>
 </html>

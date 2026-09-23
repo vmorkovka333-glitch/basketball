@@ -1377,8 +1377,12 @@
   }
 
   function goSession(withQuali) {
-    var def = currentTrack();
     unlockAudio();
+    // the portal's pre-roll plays first; the session only starts once it is over
+    adBreak('preroll', function () { goSessionNow(withQuali); });
+  }
+  function goSessionNow(withQuali) {
+    var def = currentTrack();
     if (typeof window.onGameplayStart === 'function') window.onGameplayStart();
     loadTrack(def);
     $('hud').classList.add('show');
@@ -1415,7 +1419,7 @@
     $('resultSub').textContent = currentTrack().gp + ' · your best ' + fmtTime(me.bestLap) +
       ' · the car can be changed in the garage before the next session';
     $('resultBtn').textContent = 'Back to the weekend';
-    $('resultBtn').onclick = function () { openSetup(S.trackIdx); };
+    $('resultBtn').onclick = function () { adBreak('midgame'); openSetup(S.trackIdx); };
     $('resultAlt').textContent = 'Garage';
     $('resultAlt').onclick = function () { openGarage(true); };
     showScreen('resultScreen');
@@ -1436,7 +1440,7 @@
     $('resultTitle').textContent = 'P' + (order.indexOf(G.player) + 1) + ' on the grid';
     $('resultSub').textContent = currentTrack().gp + ' · best lap ' + fmtTime(G.player.bestLap);
     $('resultBtn').textContent = 'Start race';
-    $('resultBtn').onclick = function () { showScreen(null); startRace(); G.player.tyre = S.startTyre || 'M'; };
+    $('resultBtn').onclick = function () { adBreak('midgame', function () { showScreen(null); startRace(); G.player.tyre = S.startTyre || 'M'; }); };
     $('resultAlt').textContent = 'Back to season';
     $('resultAlt').onclick = function () { openSeason(); };
     showScreen('resultScreen');
@@ -1464,12 +1468,12 @@
       ' · ' + me.stops + (me.stops === 1 ? ' stop' : ' stops') + (me.penalty ? ' · +' + me.penalty + 's penalty' : '');
     if (S.mode === 'season') {
       $('resultBtn').textContent = S.save.done ? 'Season finished' : 'Next round';
-      $('resultBtn').onclick = function () { adBreak(); openSeason(); };
+      $('resultBtn').onclick = function () { adBreak('midgame', openSeason); };
       $('resultAlt').textContent = 'Standings';
       $('resultAlt').onclick = function () { openSeason(); setTimeout(function () { renderStandings('drivers'); }, 0); };
     } else {
       $('resultBtn').textContent = 'Race again';
-      $('resultBtn').onclick = function () { adBreak(); showScreen(null); startRace(); };
+      $('resultBtn').onclick = function () { adBreak('midgame', function () { showScreen(null); startRace(); }); };
       $('resultAlt').textContent = 'Menu';
       $('resultAlt').onclick = openMenu;
     }
@@ -2140,7 +2144,7 @@
       G.camMode = (G.camMode + 1) % GP.CAM_MODES.length;
       flash(GP.CAM_MODES[G.camMode], '', 0.9);
     });
-    $('menuBtnHud').addEventListener('click', openMenu);
+    $('menuBtnHud').addEventListener('click', function () { adBreak('midgame'); openMenu(); });
 
     $('newBtn').addEventListener('click', function () { unlockAudio(); $('teamScreen').classList.add('show'); renderTeamPick(); });
     $('teamGo').addEventListener('click', function () { $('teamScreen').classList.remove('show'); newSeason(); });
@@ -2209,8 +2213,24 @@
     }
   };
   window.gameIsPaused = function () { return adPaused; };
-  window.gameShowAd = function () {
-    try { if (window.gdsdk && typeof window.gdsdk.showAd === 'function') window.gdsdk.showAd(); } catch (e) { }
-  };
-  function adBreak() { if (typeof window.gameShowAd === 'function') { try { window.gameShowAd(); } catch (e) { } } }
+  // index.html may already provide a richer hook (the GD layer with pre-roll + callback);
+  // this plain one is only the fallback for builds that ship without a portal block
+  if (typeof window.gameShowAd !== 'function') {
+    window.gameShowAd = function () {
+      try { if (window.gdsdk && typeof window.gdsdk.showAd === 'function') window.gdsdk.showAd(); } catch (e) { }
+    };
+  }
+  // kind: 'preroll' when the player presses Race/Quick race, 'midgame' on menu buttons.
+  // A publisher hook taking (kind, done) runs the ad first and calls done when it is over.
+  function adBreak(kind, done) {
+    var fn = window.gameShowAd;
+    if (typeof fn === 'function') {
+      try {
+        if (fn.length >= 2) { fn(kind || 'midgame', done || function () { }); return; }
+        fn(kind || 'midgame');
+      } catch (e) { }
+    }
+    if (typeof done === 'function') done();
+  }
+  window.gameAdBreak = adBreak;
 })();

@@ -3409,6 +3409,7 @@ function syncMenu(){
   if(lab) lab.textContent=Math.round(_vol*100)+'%';
 }
 function openMenu(){
+  if(G.started && window.gameAdBreak) window.gameAdBreak('midgame');   // leaving a game: natural break
   G.started=false; G.cpuAct=null; hideResults();
   setTimeout(maybeShowDailyReward,300);
   if(typeof window.onGameplayStop==='function') window.onGameplayStop();
@@ -3420,9 +3421,13 @@ function openMenu(){
 }
 function startFromMenu(){
   unlockAudio();
+  // the portal's pre-roll plays first; the game only starts once it is over
+  if(window.gameAdBreak) window.gameAdBreak('preroll', startNow); else startNow();
+}
+function startNow(){
   if(typeof window.onGameplayStart==='function') window.onGameplayStart();
   setVolume(_vol);
-  if(G.needsReset){ G.needsReset=false; restart(); }
+  if(G.needsReset){ G.needsReset=false; G.msg=null; (window.__bowlRestart||restart)(); }   // fresh game without a second ad
   document.getElementById('startWrap').classList.add('hide');
   document.getElementById('app').classList.remove('menu');
   G.started=true;
@@ -3533,10 +3538,17 @@ window.addEventListener('DOMContentLoaded',()=>{
 
   // Called at natural breaks only — never mid-throw.
   window.gameShowAd = window.gameShowAd || null;
-  window.gameAdBreak = function(){
-    if(typeof window.gameShowAd === 'function'){
-      try{ window.gameShowAd(); }catch(e){}
+  // kind: 'preroll' right after PLAY, 'midgame' on PLAY AGAIN / MENU.
+  // A publisher hook taking (kind, done) plays the ad first and calls done when it ends.
+  window.gameAdBreak = function(kind, done){
+    var fn = window.gameShowAd;
+    if(typeof fn === 'function'){
+      try{
+        if(fn.length >= 2){ fn(kind || 'midgame', done || function(){}); return; }
+        fn(kind || 'midgame');
+      }catch(e){}
     }
+    if(typeof done === 'function') done();
   };
 
   // A game ends -> break. PLAY AGAIN -> break, then the fresh game starts.
@@ -3545,11 +3557,15 @@ window.addEventListener('DOMContentLoaded',()=>{
     _endGame.apply(this, arguments);
     if(typeof window.onGameplayStop === 'function') window.onGameplayStop();
   };
+  // PLAY AGAIN shows the break first, then starts the fresh game
   restart = function(){
-    window.gameAdBreak();
-    _restart.apply(this, arguments);
-    if(typeof window.onGameplayStart === 'function') window.onGameplayStart();
+    var args = arguments, self = this;
+    window.gameAdBreak('midgame', function(){
+      _restart.apply(self, args);
+      if(typeof window.onGameplayStart === 'function') window.onGameplayStart();
+    });
   };
+  window.__bowlRestart = _restart;    // PLAY already played its pre-roll
 })();
 
 // ===== ad integration =====
