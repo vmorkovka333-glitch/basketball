@@ -13,45 +13,49 @@ no external requests of its own. Upload the folder contents as they are:
 %SDK%
 
 GAMEPLAY
-  Classic tower defense on a floating low-poly island. Enemies walk the road
-  from the portal to the castle; flyers cut across the island instead. Build
-  towers on any free tile, upgrade them, sell for 70%. Survive 30 waves to
-  win a map and unlock the next one; keep playing in endless mode after.
+  Classic tower defense on a floating low-poly island with neon lighting.
+  Enemies walk the road from the portal to the castle; flyers cut across.
+  Build towers on any free tile, upgrade them, sell for 70%.
 
-  Maps      Green Valley, Dusty Canyon (sandstorms cut tower range), Frostpeak
-            (faster enemies), Volcano (lava pools erupt on the road), Deep
-            Space (low gravity: slow walkers, fast and frequent flyers), and
-            The Gauntlet - a tiered map: every win raises its tier (+30%
-            enemy health, +3% speed, +8% more enemies and +25% rewards per
-            tier), so it never stays beaten. Each map has its own boss.
-            Stars (1-3) depend on lives lost.
-  Towers    Archer, Cannon, Frost, Tesla, Sniper, Laser (unlocks at player
-            level 8). Two straight upgrades, then level 3 is a choice between
-            two specializations per tower (e.g. Rapid Fire / Longbow, Big
-            Blast / Fire Shells, Deep Chill / Freeze, Storm / Overcharge,
-            Headshot / Assassin, Focus / Prism).
-  Abilities Meteor, Freeze and Mega Chain on cooldowns, unlocked at player
-            levels 2 / 4 / 6.
-  Enemies   Grunt, Runner, Brute, Flyer, Shieldman (shield soaks damage;
-            snipers and lightning pass through), Gold Thief (steals gold at
-            the castle), Knight (heavy armor), Ghost (arrows and shells pass
-            through it), Healer, Mini Boss mid-wave, and a Boss every 10th
-            wave with three phases: enrages at 50%, summons at 25%, shields
-            at 10%.
-  Economy   Gold per kill and per wave; sending the next wave early pays a
-            bonus for every second left on the timer.
-  Progress  XP and coins after every game (win or lose). Player level unlocks
-            abilities, the Laser, extra starting gold and lives. 12 challenges
-            pay coins + XP. Six cosmetic tower skins bought with coins - no
-            pay to win, skins only change colours.
-  Feel      Damage numbers, hit flashes, camera shake, particles, lightning,
-            boss banner and darker boss music.
+  Modes     Normal (30 waves, stars), Hard (health ramps up to +35%, +6% speed,
+            x1.6 rewards, crown on win), Endless, Challenge (20 waves with a
+            rule: No Tesla, Shoestring 100 gold, Glass Castle 5 lives, No Magic,
+            Swarm, Old School). First win of each rule pays 100 coins.
+  Maps      Green Valley, Dusty Canyon (sandstorms), Frostpeak (icy road),
+            Volcano (lava pools), Deep Space (low gravity), The Gauntlet
+            (tiers), Neon Rift (player level 20; power surges double crystal
+            bonuses). Every map has trees (clear for 25 gold), rocks
+            (blocked), an energy crystal (buffs adjacent Teslas) and an ice
+            crystal (buffs adjacent Frosts).
+  Towers    Each has a signature trait plus two level-3 specializations:
+            Archer crit shots; Cannon leaves burning ground; Frost chill
+            stacks until the enemy freezes solid; Tesla arcs can bounce back;
+            Sniper long-shot bonus; Laser heats up on one target.
+  Enemies   Grunt, Runner, Brute, Flyer, Shieldman, Gold Thief, War Drummer
+            (speeds up neighbours), Knight, Guardian (35% damage reduction
+            aura), Ghost, Shade (turns invisible), Healer (beams heals into
+            the strongest wounded ally), Saboteur (leaves the road to shut
+            down your most valuable tower), Mini Boss.
+  Bosses    Three phases (enrage 50%, summon 25%, shield 10%), a boss health
+            bar, and one signature move per map: Earthquake Stomp, Sandstorm,
+            Glacial Prison, Lava Rain, Void Portals, Warden's Wrath, Neon
+            Overload.
+  Abilities Meteor (Lv 2), Freeze (Lv 4), Mega Chain (Lv 6), Overdrive (Lv 15).
+  Progress  XP and coins after every game. Unlocks: Laser (8), Neon Archer
+            skin (10), +10% gold (12), Overdrive (15), +2 lives (17), Neon
+            Rift (20), legendary aura on max towers (25). The menu always
+            shows NEXT UNLOCK. 15 challenges, 3 daily challenges (same for
+            everyone on a date, local clock) plus a daily bonus.
+            Skins are cosmetic only - no pay to win, no real-money purchases.
+  Feel      Glow sprites, shock rings, low-poly debris, tower recoil, crit
+            pop-ups, boss death slow motion, hit/crit/heavy sounds.
 
 CONTROLS
   Mouse    click a tower card, then a free tile to build; click a tower to
            upgrade or sell it; hover shows range.
-  Keys     1-6 pick a tower, Space/Enter send the next wave, U upgrade,
-           X sell, Q cycle speed, Z/C/V abilities, P pause, Esc cancel.
+  Keys     1-6 pick a tower, Space/Enter send the next wave, U upgrade
+           (or clear a selected tree), X sell, Q cycle speed, Z/C/V/B
+           abilities, P pause, Esc cancel.
   Touch    tap a card, tap a tile; tap a tower for its panel. Portrait and
            landscape both work - the island rotates to fit.
   Speed    1x / 2x / 3x buttons in the HUD.
@@ -61,8 +65,8 @@ AUDIO
   and an ambient chord loop (music toggle in the menu). No audio files.
 
 STORAGE
-  localStorage key "td.save.v2": stars and best wave per map, XP, coins,
-  skins, challenge progress, settings. Local to the device; no cookies, no analytics.
+  localStorage key "td.save.v2": stars, crowns and best wave per map, XP,
+  coins, skins, challenge + daily progress, settings. Old saves carry over. Local to the device; no cookies, no analytics.
 
 LOADING
   Three.js is deferred so the loading screen paints first; the bar tracks real

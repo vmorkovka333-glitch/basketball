@@ -7,7 +7,7 @@ const W = {};
 TD.W = W;
 
 // three.min.js is a deferred script ahead of this one, so THREE exists at parse time
-let T = window.THREE, renderer, scene, camera, mount, sun, hemi, ground;
+let T = window.THREE, renderer, scene, camera, mount, sun, hemi, rim, ground;
 let mapGroup = null, theme = null, curMap = null;
 W.elev = 0.93; W.yaw = 0; W.shakeAmt = 0;
 
@@ -33,18 +33,20 @@ W.init = function(el, quality){
   renderer.shadowMap.enabled = quality !== 'low';
   renderer.shadowMap.type = T.PCFSoftShadowMap;
   renderer.outputEncoding = T.sRGBEncoding;
+  
   mount.appendChild(renderer.domElement);
   scene = new T.Scene();
   camera = new T.PerspectiveCamera(42, 1, 0.5, 200);
   hemi = new T.HemisphereLight(0xdfefff, 0x5a4a2a, 0.75); scene.add(hemi);
   sun = new T.DirectionalLight(0xfff2d8, 1.05);
+  rim = new T.DirectionalLight(0x9fd8ff, 0.35); rim.position.set(20, 8, -20); scene.add(rim);
   sun.castShadow = true;
   const sm = navigator.maxTouchPoints>0 ? 1024 : 2048;
   sun.shadow.mapSize.set(sm, sm);
   sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.02;
   scene.add(sun); scene.add(sun.target);
   W.renderer = renderer; W.scene = scene; W.camera = camera;
-  fxInit();
+  fxInit(); glowInit();
   W.resize();
 };
 W.setQuality = function(q){ renderer.shadowMap.enabled = q !== 'low'; renderer.shadowMap.needsUpdate = true;
@@ -125,9 +127,11 @@ W.buildMap = function(map){
   if(mapGroup){ scene.remove(mapGroup); disposeGroup(mapGroup); }
   curMap = map; theme = TD.THEMES[map.theme];
   mapGroup = new T.Group(); scene.add(mapGroup);
-  scene.background = new T.Color(theme.sky);
+  scene.background = skyTexture(theme);
   hemi.color.set(theme.hemi); sun.color.set(theme.sun);
-  hemi.intensity = map.theme==='space' ? 0.55 : (map.theme==='lava' ? 0.6 : 0.75);
+  hemi.intensity = map.theme==='space'||map.theme==='neon' ? 0.58 : (map.theme==='lava' ? 0.62 : 0.75);
+  W.light = map.theme==='grass'||map.theme==='sand'||map.theme==='snow';
+  rim.color.set(theme.rimLight || 0x9fd8ff); rim.intensity = theme.rimLight ? 0.6 : 0.35;
   sun.position.set(map.w/2 - 6, 14, map.h/2 + 5); sun.target.position.set(map.w/2, 0, map.h/2);
 
   const pathSet = new Set();
@@ -173,6 +177,13 @@ W.buildMap = function(map){
     for(let k=0;k<n;k++){ const t=k/n; const px=x0+(x1-x0)*t+(rnd()-0.5)*cs*0.5, py=y0+(y1-y0)*t+(rnd()-0.5)*cs*0.5; g.beginPath(); g.arc(px,py,2+rnd()*3,0,Math.PI*2); g.fill(); }
   }
   g.globalAlpha = 1;
+  if(map.theme==='neon'){ // glowing grid + path rails
+    g.globalAlpha = 1; g.strokeStyle = 'rgba(46,242,255,.28)'; g.lineWidth = 3;
+    for(let x=0;x<=map.w;x++){ g.beginPath(); g.moveTo((x+RIM)*cs, RIM*cs); g.lineTo((x+RIM)*cs, (map.h+RIM)*cs); g.stroke(); }
+    for(let z=0;z<=map.h;z++){ g.beginPath(); g.moveTo(RIM*cs, (z+RIM)*cs); g.lineTo((map.w+RIM)*cs, (z+RIM)*cs); g.stroke(); }
+    g.strokeStyle = 'rgba(255,60,240,.85)'; g.lineWidth = 4; g.lineJoin='round';
+    for(const off of [-1,1]){ g.beginPath(); rp.forEach((p,i)=>{ const q = rp[Math.min(i+1,rp.length-1)], o = rp[Math.max(i-1,0)]; const dx=q[0]-o[0], dy=q[1]-o[1], L=Math.hypot(dx,dy)||1; const nx=-dy/L*cs*0.36*off, ny=dx/L*cs*0.36*off; i?g.lineTo(p[0]+nx,p[1]+ny):g.moveTo(p[0]+nx,p[1]+ny); }); g.stroke(); }
+  }
   if(map.theme==='lava'){ // glowing cracks
     g.strokeStyle = 'rgba(255,90,26,.55)'; g.lineWidth = 3;
     for(let i=0;i<40;i++){ let x=rnd()*cv.width, y=rnd()*cv.height; g.beginPath(); g.moveTo(x,y); for(let k=0;k<5;k++){ x+=(rnd()-0.5)*60; y+=(rnd()-0.5)*60; g.lineTo(x,y); } g.stroke(); }
@@ -189,7 +200,7 @@ W.buildMap = function(map){
   // props on the rim
   const treeGeo = new T.ConeGeometry(0.34, 0.9, 7), trunkGeo = new T.CylinderGeometry(0.07,0.09,0.32,6);
   const rockGeo = new T.DodecahedronGeometry(0.28, 0);
-  const treeMat = map.theme==='space' ? emissive(theme.tree, 0.5) : mat(theme.tree), trunkMat = mat(theme.trunk), rockMat = mat(theme.rock), snowMat = mat(0xf4f8fc);
+  const treeMat = (map.theme==='space'||map.theme==='neon') ? emissive(theme.tree, 0.6) : mat(theme.tree), trunkMat = mat(theme.trunk), rockMat = mat(theme.rock), snowMat = mat(0xf4f8fc);
   const nearRoad = (x,z)=>route.some((v,i)=>{ if(i===route.length-1) return false; const a=route[i], b=route[i+1];
     const t=Math.max(0,Math.min(1,((x-a.x)*(b.x-a.x)+(z-a.z)*(b.z-a.z))/(a.distanceToSquared(b)||1)));
     return Math.hypot(x-(a.x+(b.x-a.x)*t), z-(a.z+(b.z-a.z)*t)) < 0.9; });
@@ -201,7 +212,7 @@ W.buildMap = function(map){
     if(nearRoad(px,pz)) continue;
     if(rnd() < 0.72){
       const s = 0.8+rnd()*0.7;
-      if(map.theme==='space'){ // crystals
+      if(map.theme==='space'||map.theme==='neon'){ // crystals
         const c = new T.Mesh(new T.OctahedronGeometry(0.28, 0), treeMat); c.position.set(px, 0.35*s, pz); c.scale.set(s*0.7, s*1.6, s*0.7); c.rotation.y = rnd()*3; c.castShadow = true; mapGroup.add(c);
       }else if(map.theme==='lava'){ // dead spikes
         const c = new T.Mesh(new T.ConeGeometry(0.2, 1.0, 5), treeMat); c.position.set(px, 0.5*s, pz); c.scale.setScalar(s); c.rotation.set((rnd()-0.5)*0.4, 0, (rnd()-0.5)*0.4); c.castShadow = true; mapGroup.add(c);
@@ -234,6 +245,20 @@ W.buildMap = function(map){
     const st = new T.Points(geo, new T.PointsMaterial({ color:0xffffff, size:0.35, sizeAttenuation:true })); mapGroup.add(st);
   }
 
+  // floating rocks and clouds below the island: sells the "sky island" look
+  map.floaters = [];
+  for(let i=0;i<9;i++){
+    const a = i/9*Math.PI*2 + rnd()*0.4, R = Math.max(map.w,map.h)*0.55 + 3 + rnd()*5;
+    const fx = map.w/2 + Math.cos(a)*R, fz = map.h/2 + Math.sin(a)*R*0.8, fy = -3.2 - rnd()*4;
+    const isCloud = !theme.stars && map.theme!=='lava' && rnd()<0.55;
+    let o;
+    if(isCloud){ o = new T.Group(); const cm = mat(0xffffff);
+      for(let k=0;k<4;k++){ const b = new T.Mesh(new T.DodecahedronGeometry(0.7+rnd()*0.6,0), cm); b.position.set(k*0.9-1.3, rnd()*0.3, rnd()*0.6); b.scale.y = 0.55; o.add(b); } }
+    else { o = new T.Group(); const r = new T.Mesh(new T.DodecahedronGeometry(0.8+rnd()*0.9,0), mat(theme.side)); r.scale.y = 1.3; o.add(r);
+      const top = new T.Mesh(new T.CylinderGeometry(0.9,0.5,0.3,7), mat(theme.rim)); top.position.y = 0.9; top.scale.setScalar(0.9+rnd()*0.4); o.add(top);
+      if(theme.stars||map.theme==='lava'){ const c = new T.Mesh(new T.OctahedronGeometry(0.25,0), emissive(theme.glow||theme.tree, 0.9)); c.position.y = 1.3; o.add(c); } }
+    o.position.set(fx, fy, fz); o.userData.y0 = fy; o.userData.ph = rnd()*6; mapGroup.add(o); map.floaters.push(o);
+  }
   // castle at the end of the road, portal at the start
   const last = P[P.length-1];
   const castle = makeCastle(); castle.position.set(last[0]+0.5, 0, last[1]+0.5);
@@ -242,6 +267,8 @@ W.buildMap = function(map){
   mapGroup.add(castle); map.castle = castle;
   const gate = makeGate(); gate.position.copy(route[1]).addScaledVector(new T.Vector3().subVectors(route[0],route[1]).normalize(), 1.15);
   gate.lookAt(route[1].clone().setY(0)); mapGroup.add(gate); map.gate = gate;
+  const gl = glowSprite(0xb07cff, 2.6, 0.75); gl.position.set(0, 0.5, 0); gate.add(gl); gate.userData.glow = gl;
+  if(map.lavaMeshes) for(const p of map.lavaMeshes){ const g2 = glowSprite(0xff6a1a, 1.8, 0.7); g2.position.set(p.position.x, 0.3, p.position.z); mapGroup.add(g2); p.userData.glow = g2; }
 
   W.frame();
 };
@@ -282,6 +309,9 @@ W.makeTower = function(type, level, skin, branch){
   const base = new T.Mesh(new T.CylinderGeometry(0.36, 0.42, 0.28, 12), stone); base.position.y = 0.14; base.castShadow = true; g.add(base);
   const step = new T.Mesh(new T.CylinderGeometry(0.44, 0.48, 0.08, 12), stoneD); step.position.y = 0.04; g.add(step);
   const head = new T.Group(); g.add(head); g.head = head; g.muzzle = new T.Vector3(0, 0.2, 0.32);
+  // neon rune on the ground under every tower
+  const rune = new T.Mesh(new T.RingGeometry(0.5, 0.57, 32), new T.MeshBasicMaterial({ color:accC, transparent:true, opacity:0.55, blending:T.AdditiveBlending, depthWrite:false }));
+  rune.rotation.x = -Math.PI/2; rune.position.y = 0.012; g.add(rune); g.rune = rune;
   const body = skin ? emissive(col, 0.25) : mat(col), acc = emissive(accC, 0.5);
   if(type==='archer'){
     const post = new T.Mesh(new T.CylinderGeometry(0.16,0.2,0.5,8), wood); post.position.y = 0.53; post.castShadow = true; g.add(post);
@@ -302,6 +332,7 @@ W.makeTower = function(type, level, skin, branch){
     const pil = new T.Mesh(new T.CylinderGeometry(0.14,0.18,0.42,8), mat(0x9fc8e0)); pil.position.y = 0.49; pil.castShadow = true; g.add(pil);
     head.position.y = 0.95;
     const crystal = new T.Mesh(new T.OctahedronGeometry(0.26, 0), emissive(col, 0.7)); crystal.castShadow = true; head.add(crystal); g.spin = crystal;
+    const fg = glowSprite(col, W.light?0.9:1.3, W.light?0.3:0.5); head.add(fg); g.glow = fg;
     for(let i=0;i<3;i++){ const s = new T.Mesh(new T.OctahedronGeometry(0.08,0), acc); s.position.set(Math.cos(i*2.1)*0.3, -0.15, Math.sin(i*2.1)*0.3); head.add(s); }
     g.muzzle.set(0,0,0.25);
   }else if(type==='tesla'){
@@ -309,6 +340,7 @@ W.makeTower = function(type, level, skin, branch){
     for(let i=0;i<3;i++){ const r = new T.Mesh(new T.TorusGeometry(0.19,0.025,6,14), skin?acc:mat(0xc9b8ff)); r.rotation.x = Math.PI/2; r.position.y = 0.4+i*0.16; g.add(r); }
     head.position.y = 1.0;
     const orb = new T.Mesh(new T.SphereGeometry(0.2, 12, 10), emissive(accC, 0.9)); head.add(orb); g.spin = orb;
+    const og = glowSprite(accC, W.light?1.0:1.5, W.light?0.35:0.6); head.add(og); g.glow = og;
     g.muzzle.set(0,0,0);
   }else if(type==='sniper'){
     const tower = new T.Mesh(new T.CylinderGeometry(0.15,0.22,0.9,8), skin?body:stoneD); tower.position.y = 0.73; tower.castShadow = true; g.add(tower);
@@ -321,10 +353,12 @@ W.makeTower = function(type, level, skin, branch){
     const pil = new T.Mesh(new T.CylinderGeometry(0.16,0.2,0.7,8), skin?body:mat(0x4a3a5a)); pil.position.y = 0.63; pil.castShadow = true; g.add(pil);
     head.position.y = 1.08;
     const lens = new T.Mesh(new T.SphereGeometry(0.17, 10, 8), emissive(accC, 0.9)); head.add(lens); g.spin = lens;
+    const lg = glowSprite(accC, W.light?0.9:1.2, W.light?0.3:0.5); head.add(lg); g.glow = lg;
     const housing = new T.Mesh(new T.TorusGeometry(0.2, 0.05, 8, 16), body); head.add(housing);
     for(const sx of [-1,1]){ const fin = new T.Mesh(new T.BoxGeometry(0.05,0.3,0.2), body); fin.position.set(sx*0.24, 0, -0.05); head.add(fin); }
     g.muzzle.set(0,0,0.2);
   }
+  head.userData.z0 = 0;
   if(level>=2){ const r = new T.Mesh(new T.TorusGeometry(0.4, 0.035, 6, 18), gold); r.rotation.x = Math.PI/2; r.position.y = 0.3; g.add(r); }
   if(level>=3){
     const r = new T.Mesh(new T.TorusGeometry(0.46, 0.04, 6, 18), gold); r.rotation.x = Math.PI/2; r.position.y = 0.09; g.add(r);
@@ -336,17 +370,18 @@ W.makeTower = function(type, level, skin, branch){
 };
 
 // ---- enemies ----
-W.makeEnemy = function(type){
+W.makeEnemy = function(type, tint){
   const d = TD.ENEMIES[type], g = new T.Group(), s = d.size*1.2;
+  const col = tint!=null ? tint : d.color;
   // each enemy owns its torso material so it can flash, tint and fade
-  const bodyM = new T.MeshLambertMaterial({ color:d.color, transparent: !!d.ghost, opacity: d.ghost ? 0.55 : 1 });
+  const bodyM = new T.MeshLambertMaterial({ color:col, transparent: !!(d.ghost||d.cloak), opacity: d.ghost ? 0.55 : 1 });
   const dark = mat(0x2a2430), skin = d.ghost ? bodyM : mat(0xf1c9a0);
   const torso = new T.Mesh(new T.SphereGeometry(s, 12, 10), bodyM); torso.scale.set(1,1.15,0.9); torso.position.y = s*1.35; torso.castShadow = !d.ghost; g.add(torso);
   const head = new T.Mesh(new T.SphereGeometry(s*0.62, 10, 8), type==='knight'?mat(0x6f7a8a):skin); head.position.y = s*2.65; head.castShadow = !d.ghost; g.add(head);
   for(const sx of [-1,1]){ const eye = new T.Mesh(new T.SphereGeometry(s*0.1, 6, 5), mat(type==='ghost'?0x2a1a5a:0x1a1620)); eye.position.set(sx*s*0.24, s*2.72, s*0.52); g.add(eye); }
   const legs = [];
   for(const sx of [-1,1]){ const l = new T.Mesh(new T.BoxGeometry(s*0.42, s*0.9, s*0.42), dark); l.position.set(sx*s*0.42, s*0.45, 0); g.add(l); legs.push(l); }
-  g.legs = legs; g.torso = torso; g.head = head; g.baseY = 0; g.bodyM = bodyM; g.baseColor = new T.Color(d.color);
+  g.legs = legs; g.torso = torso; g.head = head; g.baseY = 0; g.bodyM = bodyM; g.baseColor = new T.Color(col);
   if(type==='brute'){ const club = new T.Mesh(new T.CylinderGeometry(0.05,0.09,0.6,6), mat(0x5a3a1a)); club.position.set(s*1.1, s*1.6, 0.1); club.rotation.z = 0.5; g.add(club); }
   if(type==='knight'){ const helm = new T.Mesh(new T.ConeGeometry(s*0.5, s*0.6, 8), mat(0xb8c2d0)); helm.position.y = s*3.2; g.add(helm);
     const shield = new T.Mesh(new T.BoxGeometry(s*0.9, s*1.1, 0.05), mat(0x3b6fd6)); shield.position.set(-s*1.05, s*1.4, 0.05); g.add(shield); }
@@ -354,7 +389,22 @@ W.makeEnemy = function(type){
   if(type==='thief'){ const bag = new T.Mesh(new T.SphereGeometry(s*0.6, 8, 6), mat(0xd8b24a)); bag.position.set(-s*0.9, s*1.9, -s*0.2); g.add(bag);
     const mask = new T.Mesh(new T.BoxGeometry(s*1.1, s*0.3, s*0.2), dark); mask.position.set(0, s*2.72, s*0.5); g.add(mask); }
   if(type==='healer'){ const c1 = new T.Mesh(new T.BoxGeometry(s*0.9, s*0.25, s*0.2), emissive(0xffffff, 0.8)); c1.position.set(0, s*1.5, s*0.85); g.add(c1);
-    const c2 = new T.Mesh(new T.BoxGeometry(s*0.25, s*0.9, s*0.2), emissive(0xffffff, 0.8)); c2.position.set(0, s*1.5, s*0.85); g.add(c2); }
+    const c2 = new T.Mesh(new T.BoxGeometry(s*0.25, s*0.9, s*0.2), emissive(0xffffff, 0.8)); c2.position.set(0, s*1.5, s*0.85); g.add(c2);
+    const hg = glowSprite(0x52e07a, s*4, 0.45); hg.position.set(0, s*1.5, s*0.6); g.add(hg); }
+  const auraRing = (color, R)=>{ const r = new T.Mesh(new T.RingGeometry(R*0.9, R, 36), new T.MeshBasicMaterial({ color, transparent:true, opacity:0.4, blending:T.AdditiveBlending, depthWrite:false, side:T.DoubleSide })); r.rotation.x = -Math.PI/2; r.position.y = 0.05; g.add(r); g.aura = r; };
+  if(type==='guardian'){ const dome = new T.Mesh(new T.SphereGeometry(s*0.7, 10, 6, 0, Math.PI*2, 0, Math.PI/2), emissive(0x7fe8ff, 0.4)); dome.position.y = s*2.7; g.add(dome);
+    const sh = new T.Mesh(new T.CylinderGeometry(s*0.8, s*0.8, 0.06, 6), emissive(0x2ec4b6, 0.45)); sh.rotation.x = Math.PI/2; sh.position.set(0, s*1.45, s*0.8); g.add(sh); auraRing(0x5ff5e6, d.auraR); }
+  if(type==='drummer'){ const drum = new T.Mesh(new T.CylinderGeometry(s*0.6, s*0.6, s*0.6, 10), mat(0xc8502a)); drum.rotation.x = Math.PI/2; drum.position.set(0, s*1.25, s*0.85); g.add(drum);
+    const skinD = new T.Mesh(new T.CircleGeometry(s*0.58, 10), mat(0xf1e0c0)); skinD.position.set(0, s*1.25, s*1.16); g.add(skinD);
+    for(const sx of [-1,1]){ const st = new T.Mesh(new T.CylinderGeometry(0.015,0.015,s*1.2,4), mat(0x5a3a1a)); st.position.set(sx*s*0.5, s*1.9, s*0.9); st.rotation.x = 0.7; g.add(st); g.sticks = (g.sticks||[]).concat(st); }
+    auraRing(0xffa03c, d.auraR); }
+  if(type==='shade'){ const hood = new T.Mesh(new T.ConeGeometry(s*0.8, s*1.3, 7), bodyM); hood.position.y = s*3.0; g.add(hood);
+    for(const sx of [-1,1]){ const ey = new T.Mesh(new T.SphereGeometry(s*0.12, 6, 5), emissive(0xff4bd8, 1)); ey.position.set(sx*s*0.24, s*2.72, s*0.56); g.add(ey); } head.material = bodyM; }
+  if(type==='saboteur'){ head.geometry = new T.BoxGeometry(s*1.1, s*0.95, s*1.0); head.material = mat(0x8a94a6);
+    const ant = new T.Mesh(new T.CylinderGeometry(0.012,0.012,s*0.9,4), mat(0x2a2430)); ant.position.set(0, s*3.4, 0); g.add(ant);
+    const tip = new T.Mesh(new T.SphereGeometry(s*0.14, 6, 5), emissive(0xff3c6a, 1)); tip.position.set(0, s*3.85, 0); g.add(tip);
+    const tg = glowSprite(0xff3c6a, 0.6, 0.8); tg.position.copy(tip.position); g.add(tg); g.tip = tg;
+    const visor = new T.Mesh(new T.BoxGeometry(s*0.9, s*0.2, 0.03), emissive(0xff3c6a, 1)); visor.position.set(0, s*2.7, s*0.52); g.add(visor); }
   if(type==='runner'){ const band = new T.Mesh(new T.TorusGeometry(s*0.62, 0.03, 6, 12), mat(0xff4b5c)); band.position.y = s*2.75; band.rotation.x = Math.PI/2; g.add(band); }
   if(type==='flyer'){
     g.baseY = 0.95; const wings = [];
@@ -365,7 +415,11 @@ W.makeEnemy = function(type){
   if(type==='boss' || type==='miniboss'){
     for(const sx of [-1,1]){ const horn = new T.Mesh(new T.ConeGeometry(s*0.18, s*0.7, 6), mat(0xf4e3c0)); horn.position.set(sx*s*0.45, s*3.1, 0); horn.rotation.z = -sx*0.5; g.add(horn); }
     const eye = new T.Mesh(new T.SphereGeometry(s*0.12, 6, 6), emissive(0xffe14b, 1)); eye.position.set(0, s*2.7, s*0.55); g.add(eye);
-    bodyM.emissive = new T.Color(d.color); bodyM.emissiveIntensity = 0.25;
+    const eg = glowSprite(0xffe14b, s*2.2, 0.8); eg.position.copy(eye.position); g.add(eg);
+    bodyM.emissive = new T.Color(col); bodyM.emissiveIntensity = 0.25;
+    if(type==='boss'){ const aura = glowSprite(col, s*7, 0.35); aura.position.y = s*1.6; g.add(aura); g.bossGlow = aura;
+      for(const sx of [-1,1]){ const pad = new T.Mesh(new T.DodecahedronGeometry(s*0.42,0), mat(0x3a3440)); pad.position.set(sx*s*0.95, s*2.0, 0); g.add(pad);
+        const sp = new T.Mesh(new T.ConeGeometry(s*0.12, s*0.5, 5), emissive(col, 0.5)); sp.position.set(sx*s*0.95, s*2.45, 0); g.add(sp); } }
     if(type==='boss'){ const crown = new T.Mesh(new T.CylinderGeometry(s*0.5, s*0.42, s*0.3, 6, 1, true), emissive(0xffc857, 0.6)); crown.material.side = T.DoubleSide; crown.position.y = s*3.35; g.add(crown); }
   }
   // health bar: two thin boxes that always face the camera; the fill is anchored on the left
@@ -386,6 +440,9 @@ W.animateEnemy = function(g, t, moving){
   g.torso.position.y += Math.abs(Math.sin(t*12))*0.04*k;
   if(g.wings){ g.wings[0].rotation.z = Math.sin(t*22)*0.55; g.wings[1].rotation.z = -Math.sin(t*22)*0.55; g.position.y = g.baseY + Math.sin(t*3)*0.08; }
   if(g.baseY && !g.wings) g.position.y = g.baseY + Math.sin(t*2.5)*0.06;
+  if(g.aura){ g.aura.rotation.z = t*1.5; g.aura.material.opacity = 0.28 + Math.sin(t*6)*0.12; }
+  if(g.sticks){ g.sticks[0].rotation.x = 0.7 + Math.sin(t*16)*0.5; g.sticks[1].rotation.x = 0.7 - Math.sin(t*16)*0.5; }
+  if(g.tip) g.tip.material.opacity = 0.5 + Math.sin(t*10)*0.4;
   g.bar.quaternion.copy(camera.quaternion);
 };
 // boss shield bubble
@@ -404,6 +461,8 @@ function projMesh(kind){
   else if(kind==='shell') { m = new T.Mesh(new T.SphereGeometry(0.11, 8, 6), mat(0x23262c)); m.castShadow = true; }
   else if(kind==='meteor') { m = new T.Mesh(new T.DodecahedronGeometry(0.42, 0), emissive(0xff6a2c, 0.9)); }
   else m = new T.Mesh(new T.OctahedronGeometry(0.12, 0), emissive(0xbdf3ff, 0.9));
+  const gc = { arrow:[0xffe6a0,0.55,0.5], shell:[0xff8c42,0.7,0.45], meteor:[0xff6a2c,3.2,0.9] }[kind] || [0xbdf3ff,0.9,0.8];
+  const gl = glowSprite(gc[0], gc[1], gc[2]); m.add(gl); m.glow = gl;
   scene.add(m); return m;
 }
 W.projMesh = projMesh;
@@ -518,17 +577,151 @@ function fxTick(dt){
 }
 W.fxReset = function(){ FX.n = 0; FX.geo.setDrawRange(0,0); };
 
+
+// =================================================================
+// ---- neon juice: glow sprites, shock rings, debris, fire, statuses
+// =================================================================
+function skyTexture(th){
+  const c = document.createElement('canvas'); c.width = 4; c.height = 256; const g = c.getContext('2d');
+  const base = new T.Color(th.sky), top = base.clone().lerp(new T.Color(th.skyTop!=null?th.skyTop:0xffffff), th.skyTop!=null?1:0.25), bot = base.clone().lerp(new T.Color(th.skyBot!=null?th.skyBot:0x000000), th.skyBot!=null?1:0.35);
+  const gr = g.createLinearGradient(0,0,0,256); gr.addColorStop(0, '#'+top.getHexString()); gr.addColorStop(0.55, '#'+base.getHexString()); gr.addColorStop(1, '#'+bot.getHexString());
+  g.fillStyle = gr; g.fillRect(0,0,4,256);
+  const t = new T.CanvasTexture(c); t.encoding = T.sRGBEncoding; return t;
+}
+let glowTex = null;
+function getGlowTex(){
+  if(glowTex) return glowTex;
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32,32,0,32,32,32); gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(0.25,'rgba(255,255,255,.55)'); gr.addColorStop(0.6,'rgba(255,255,255,.12)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0,0,64,64); glowTex = new T.CanvasTexture(c); return glowTex;
+}
+function glowSprite(color, size, opacity){
+  const sp = new T.Sprite(new T.SpriteMaterial({ map:getGlowTex(), color, blending:T.AdditiveBlending, transparent:true, depthWrite:false, opacity: opacity==null?0.8:opacity }));
+  sp.scale.set(size,size,1); sp.renderOrder = 5; return sp;
+}
+W.glowSprite = glowSprite;
+const FL = [], RINGS = [], DEB = [], FIRES = [], PORT = [];
+let ringGeo = null, debGeo = null;
+function glowInit(){
+  for(let i=0;i<90;i++){ const sp = glowSprite(0xffffff, 1, 1); sp.visible = false; sp.userData = { life:0, max:1, size:1 }; scene.add(sp); FL.push(sp); }
+  ringGeo = new T.RingGeometry(0.82, 1, 40); debGeo = new T.TetrahedronGeometry(0.075, 0);
+}
+// a quick additive flash: muzzle flashes, impacts, explosions
+W.flash = function(x,y,z,color,size,life){
+  let sp = FL.find(f=>!f.visible); if(!sp){ sp = FL[Math.floor(Math.random()*FL.length)]; }
+  sp.visible = true; sp.position.set(x,y,z); sp.material.color.set(color); sp.material.opacity = W.light ? 0.5 : 1; size = (size||1)*(W.light?0.6:1);
+  sp.userData.life = sp.userData.max = life||0.18; sp.userData.size = size||1; sp.scale.set(size,size,1);
+};
+// expanding ground ring: explosions, stomps, freeze waves
+W.shock = function(x,z,color,radius,life,y){
+  let r = RINGS.find(o=>!o.visible);
+  if(!r){ if(RINGS.length < 40){ r = new T.Mesh(ringGeo, new T.MeshBasicMaterial({ color, transparent:true, depthWrite:false, blending:T.AdditiveBlending, side:T.DoubleSide })); r.rotation.x = -Math.PI/2; scene.add(r); RINGS.push(r); } else r = RINGS[0]; }
+  r.visible = true; r.position.set(x, y==null?0.06:y, z); r.material.color.set(color); r.material.opacity = 1; r.material.blending = W.light ? T.NormalBlending : T.AdditiveBlending;
+  r.userData = { life:life||0.45, max:life||0.45, R:radius||1.5 }; r.scale.setScalar(0.1);
+};
+// low-poly shards that tumble and bounce
+W.debris = function(x,y,z,color,n,speed){
+  for(let k=0;k<n;k++){
+    let d = DEB.find(o=>!o.visible);
+    if(!d){ if(DEB.length < 160){ d = new T.Mesh(debGeo, mat(0xffffff)); d.castShadow = false; scene.add(d); DEB.push(d); } else break; }
+    d.material = mat(color); d.visible = true; d.position.set(x,y,z);
+    const a = Math.random()*Math.PI*2, sp = (speed||2.5)*(0.5+Math.random()*0.8);
+    d.userData = { vx:Math.cos(a)*sp, vy:1.5+Math.random()*2.5*(speed||2.5)/2.5, vz:Math.sin(a)*sp, rx:(Math.random()-0.5)*14, rz:(Math.random()-0.5)*14, life:0.9+Math.random()*0.5 };
+    d.scale.setScalar(0.7+Math.random()*1.1);
+  }
+};
+// burning ground left by cannon shells
+W.firePatch = function(x,z,r){
+  let f = FIRES.find(o=>!o.visible);
+  if(!f){ f = new T.Group();
+    const disc = new T.Mesh(new T.CircleGeometry(1, 20), new T.MeshBasicMaterial({ color:0xff5a1a, transparent:true, opacity:0.55, depthWrite:false, blending:T.AdditiveBlending })); disc.rotation.x = -Math.PI/2; disc.position.y = 0.04; f.add(disc);
+    const gl = glowSprite(0xff7a2a, 2.2, 0.55); gl.position.y = 0.35; f.add(gl); f.userData.disc = disc; f.userData.gl = gl; scene.add(f); FIRES.push(f); }
+  f.visible = true; f.position.set(x, 0, z); f.scale.set(r, 1, r); f.userData.gl.scale.set(2.2*r, 2.2*r, 1); f.userData.t = Math.random()*6;
+  return f;
+};
+W.freeFire = function(f){ f.visible = false; };
+// tower status overlays: ice block, lava melt, EMP sparks, stunned
+W.towerStatus = function(g, kind){
+  if(g.status){ g.remove(g.status); g.status = null; }
+  if(!kind) return;
+  const o = new T.Group();
+  if(kind==='ice'){ const b = new T.Mesh(new T.BoxGeometry(0.85, 1.3, 0.85), new T.MeshLambertMaterial({ color:0xbdf3ff, emissive:0x7fd4ff, emissiveIntensity:0.35, transparent:true, opacity:0.55 })); b.position.y = 0.62; b.rotation.y = 0.4; o.add(b); }
+  else if(kind==='melt'){ const b = new T.Mesh(new T.CylinderGeometry(0.5, 0.55, 0.22, 10), emissive(0xff5a1a, 0.9)); b.position.y = 0.12; o.add(b); const gl = glowSprite(0xff5a1a, 1.8, 0.8); gl.position.y = 0.6; o.add(gl); }
+  else { const gl = glowSprite(kind==='emp'?0xff3c6a:0xffe14b, 1.4, 0.8); gl.position.y = 1.2; o.add(gl); o.userData.spark = gl;
+    const ring = new T.Mesh(new T.TorusGeometry(0.3, 0.03, 6, 16), emissive(kind==='emp'?0xff3c6a:0xffe14b, 1)); ring.rotation.x = Math.PI/2; ring.position.y = 1.35; o.add(ring); o.userData.ring = ring; }
+  g.add(o); g.status = o; g.statusKind = kind;
+};
+// max-level towers get a legendary halo at player level 25
+W.legend = function(g, on){
+  if(on && !g.halo){ const h = new T.Group();
+    const r = new T.Mesh(new T.TorusGeometry(0.55, 0.025, 6, 30), new T.MeshBasicMaterial({ color:0xffe27a, transparent:true, opacity:0.9, blending:T.AdditiveBlending, depthWrite:false })); r.rotation.x = Math.PI/2; h.add(r);
+    const gl = glowSprite(0xffd24a, 1.6, 0.35); gl.position.y = 0.2; h.add(gl); h.position.y = 0.08; g.add(h); g.halo = h; }
+  if(!on && g.halo){ g.remove(g.halo); g.halo = null; }
+};
+// portal flash (Void Wraith, bosses, spawns)
+W.portalFx = function(x,z,color){
+  color = color||0xb07cff;
+  W.shock(x,z,color,1.4,0.6,0.08); W.shock(x,z,0xffffff,0.8,0.35,0.1); W.flash(x,0.8,z,color,3.2,0.45);
+  let p = PORT.find(o=>!o.visible);
+  if(!p){ p = new T.Mesh(new T.TorusGeometry(0.55, 0.08, 8, 24), new T.MeshBasicMaterial({ color, transparent:true, blending:T.AdditiveBlending, depthWrite:false })); scene.add(p); PORT.push(p); }
+  p.visible = true; p.material.color.set(color); p.position.set(x, 0.7, z); p.userData = { life:1.2, max:1.2 }; p.lookAt(camera.position);
+};
+// short FOV punch for big hits
+W.punch = function(a){ W.punchAmt = Math.min(1, (W.punchAmt||0) + a); };
+// thin persistent link (crystal -> tower, healer -> patient)
+W.makeLink = function(color){ const m = new T.Mesh(new T.BoxGeometry(0.035, 0.035, 1), new T.MeshBasicMaterial({ color, transparent:true, opacity:0.65, blending:T.AdditiveBlending, depthWrite:false })); m.visible = false; scene.add(m); return m; };
+
+// ---- map objects: trees you can clear, rocks, power crystals ----
+W.makeObject = function(type){
+  const th = theme || TD.THEMES.grass, g = new T.Group();
+  if(type==='tree'){
+    const neonish = th.stars || curMap && curMap.theme==='neon';
+    if(neonish){ const c = new T.Mesh(new T.OctahedronGeometry(0.3,0), emissive(th.tree, 0.55)); c.scale.set(0.8,1.9,0.8); c.position.y = 0.55; c.castShadow = true; g.add(c);
+      const c2 = c.clone(); c2.scale.set(0.5,1.1,0.5); c2.position.set(0.22,0.35,0.12); g.add(c2); }
+    else { const tr = new T.Mesh(new T.CylinderGeometry(0.08,0.11,0.4,6), mat(th.trunk)); tr.position.y = 0.2; tr.castShadow = true; g.add(tr);
+      for(let i=0;i<3;i++){ const c = new T.Mesh(new T.ConeGeometry(0.42-i*0.09, 0.55, 7), mat(th.tree)); c.position.y = 0.55+i*0.28; c.castShadow = true; g.add(c); }
+      if(curMap && curMap.theme==='snow'){ const cap = new T.Mesh(new T.ConeGeometry(0.18,0.25,7), mat(0xf4f8fc)); cap.position.y = 1.2; g.add(cap); } }
+  }else if(type==='rock'){
+    const r = new T.Mesh(new T.DodecahedronGeometry(0.36,0), mat(th.rock)); r.position.y = 0.22; r.scale.set(1.1,0.8,1); r.rotation.set(0.3,0.7,0.1); r.castShadow = true; g.add(r);
+    const r2 = new T.Mesh(new T.DodecahedronGeometry(0.2,0), mat(th.rock)); r2.position.set(0.28,0.12,0.2); r2.castShadow = true; g.add(r2);
+  }else{
+    const col = type==='energy' ? 0xb07cff : 0x7fe8ff, col2 = type==='energy' ? 0x7fffe6 : 0xffffff;
+    const base = new T.Mesh(new T.CylinderGeometry(0.34,0.4,0.14,6), mat(0x4a4f5c)); base.position.y = 0.07; g.add(base);
+    const c = new T.Mesh(new T.OctahedronGeometry(0.26,0), emissive(col, 1.0)); c.scale.set(1,1.8,1); c.position.y = 0.72; c.castShadow = true; g.add(c); g.userData.spin = c;
+    for(let i=0;i<3;i++){ const s = new T.Mesh(new T.OctahedronGeometry(0.1,0), emissive(col2, 0.9)); s.position.set(Math.cos(i*2.1)*0.28, 0.3, Math.sin(i*2.1)*0.28); s.scale.y = 1.8; g.add(s); }
+    const gl = glowSprite(col, 2.0, 0.7); gl.position.y = 0.72; g.add(gl); g.userData.glow = gl;
+    const ring = new T.Mesh(new T.RingGeometry(1.25, 1.35, 4, 1), new T.MeshBasicMaterial({ color:col, transparent:true, opacity:0.35, depthWrite:false, blending:T.AdditiveBlending })); ring.rotation.x = -Math.PI/2; ring.rotation.z = Math.PI/4; ring.position.y = 0.035; ring.scale.setScalar(1.07); g.add(ring); g.userData.ring = ring;
+  }
+  scene.add(g); return g;
+};
+W.removeObject = function(g){ scene.remove(g); };
+
+function juiceTick(dt, t){
+  for(const sp of FL){ if(!sp.visible) continue; const u = sp.userData; u.life -= dt; if(u.life<=0){ sp.visible = false; continue; } const k = u.life/u.max; sp.material.opacity = k*(W.light?0.5:1); const s = u.size*(0.6+0.6*(1-k)); sp.scale.set(s,s,1); }
+  for(const r of RINGS){ if(!r.visible) continue; const u = r.userData; u.life -= dt; if(u.life<=0){ r.visible = false; continue; } const k = 1-u.life/u.max; r.scale.setScalar(0.1 + u.R*(1-Math.pow(1-k,3))); r.material.opacity = (1-k)*(W.light?0.75:1); }
+  for(const d of DEB){ if(!d.visible) continue; const u = d.userData; u.life -= dt; if(u.life<=0){ d.visible = false; continue; }
+    u.vy -= 9*dt; d.position.x += u.vx*dt; d.position.y += u.vy*dt; d.position.z += u.vz*dt; d.rotation.x += u.rx*dt; d.rotation.z += u.rz*dt;
+    if(d.position.y < 0.05){ d.position.y = 0.05; u.vy *= -0.35; u.vx *= 0.6; u.vz *= 0.6; u.rx *= 0.5; u.rz *= 0.5; }
+    if(u.life < 0.3) d.scale.multiplyScalar(0.9); }
+  for(const f of FIRES){ if(!f.visible) continue; f.userData.t += dt; f.userData.disc.material.opacity = 0.4 + Math.sin(f.userData.t*11)*0.12; f.userData.gl.material.opacity = 0.45 + Math.sin(f.userData.t*7)*0.15; }
+  for(const p of PORT){ if(!p.visible) continue; p.userData.life -= dt; if(p.userData.life<=0){ p.visible = false; continue; } const k = p.userData.life/p.userData.max; p.scale.setScalar(Math.sin(Math.min(1,(1-k)*4)*Math.PI/2) * (0.6+k*0.6)); p.material.opacity = Math.min(1, k*2); p.rotation.z += dt*6; }
+}
+
 // ---- per-frame ----
 W.tick = function(dt, t){
-  fxTick(dt); boltsTick(dt);
+  fxTick(dt); boltsTick(dt); juiceTick(dt, t);
   if(curMap){
+    if(curMap.floaters) for(const o of curMap.floaters){ o.position.y = o.userData.y0 + Math.sin(t*0.6+o.userData.ph)*0.25; o.rotation.y += dt*0.05; }
+    if(curMap.gate && curMap.gate.userData.glow) curMap.gate.userData.glow.material.opacity = 0.55+Math.sin(t*4)*0.2;
     if(curMap.castle) curMap.castle.userData.flag.rotation.y = Math.sin(t*4)*0.25;
     if(curMap.gate) curMap.gate.userData.disc.material.emissiveIntensity = 0.7+Math.sin(t*5)*0.25;
-    if(curMap.lavaMeshes) for(const p of curMap.lavaMeshes) p.material.emissiveIntensity = 0.55+Math.sin(t*3+p.position.x)*0.35;
+    if(curMap.lavaMeshes) for(const p of curMap.lavaMeshes){ p.material.emissiveIntensity = 0.55+Math.sin(t*3+p.position.x)*0.35; if(p.userData.glow) p.userData.glow.material.opacity = 0.45+Math.sin(t*3+p.position.x)*0.25; }
   }
   if(W.shakeAmt > 0){ W.shakeAmt = Math.max(0, W.shakeAmt - dt*1.6); }
 };
 W.render = function(){
+  if(W.punchAmt > 0){ W.punchAmt = Math.max(0, W.punchAmt - 0.05); camera.fov = 42 - W.punchAmt*2.2; camera.updateProjectionMatrix(); }
+  else if(camera.fov !== 42){ camera.fov = 42; camera.updateProjectionMatrix(); }
   if(W.shakeAmt > 0 && W.basePos){
     const a = W.shakeAmt*0.35;
     camera.position.copy(W.basePos).add(new T.Vector3((Math.random()-0.5)*a, (Math.random()-0.5)*a*0.6, (Math.random()-0.5)*a));
