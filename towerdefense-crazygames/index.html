@@ -215,7 +215,7 @@
   #loadFill{ height:100%; width:0; border-radius:99px; background:linear-gradient(90deg, var(--blue), var(--gold)); transition:width .1s linear; }
   #loadPct{ margin-top:8px; font-size:13px; color:var(--blue); }
 
-  #app.menu #hud, #app.menu #buildWrap, #app.menu #panel, #app.menu #waveBtn, #app.menu #toasts, #app.menu #abilBar, #app.menu #nums, #app.menu #bossBanner{ display:none; }
+  #app.menu #hud, #app.menu #buildWrap, #app.menu #chips, #app.menu #panel, #app.menu #waveBtn, #app.menu #toasts, #app.menu #abilBar, #app.menu #nums, #app.menu #bossBanner{ display:none; }
   #menu.hide{ display:none; }
 
   /* ---- phones ---- */
@@ -235,10 +235,11 @@
     #waveBtn:active{ transform:translateX(-50%) scale(.97); }
     #waveBtn.show{ animation:popC .2s ease-out; }
     #toasts{ top:calc(env(safe-area-inset-top,0px) + 150px); }
-    /* the panel used to cover two thirds of the island: keep it a compact strip
-       above the ability bar, with the stats in two columns */
+    /* the panel used to cover half the island: keep it a compact strip above the
+       ability bar, with the stats in two columns */
     #panel{ left:8px; right:8px; width:auto; bottom:152px; padding:9px 11px 10px; max-height:40vh; overflow-y:auto; }
     #panel #pStats{ display:grid; grid-template-columns:1fr 1fr; column-gap:14px; row-gap:1px; margin-top:6px; }
+    #panel #pStats > :not(.prow){ grid-column:1 / -1; }
     #panel .ptrait{ margin-top:5px; padding:5px 7px; font-size:10.5px; }
     #panel #pBtns{ margin-top:7px; } #panel #pBranch{ margin-top:7px; }
     #panel .brbtn{ padding:7px 9px; margin-bottom:5px; }
@@ -320,13 +321,98 @@
   #confirmWrap{ z-index:30; }
   #confirmWrap .card{ width:min(360px,100%); }
   #cfText{ margin-top:10px; font-size:13px; color:rgba(244,247,252,.9); line-height:1.4; }
-  @media (max-width:600px){ #modeRow{ gap:4px; } .modeBtn{ font-size:10px; } #ruleRow{ grid-template-columns:1fr; } #abilBar{ gap:5px; } }
+  @media (max-width:600px){ #modeRow{ gap:4px; } .modeBtn{ font-size:10px; } #ruleRow{ grid-template-columns:1fr 1fr; gap:4px; } .ruleBtn{ padding:5px 7px; } .ruleBtn b{ font-size:10.5px; } .ruleBtn span{ font-size:9px; } #abilBar{ gap:5px; } }
   @media (max-height:480px){ #mapCards{ max-height:26vh; }
     #panel{ top:calc(env(safe-area-inset-top,0px) + 56px); bottom:auto; max-height:calc(100% - 150px); overflow-y:auto; padding:8px 10px; }
     .prow{ font-size:10.5px; } .ptrait{ font-size:10px; margin-top:4px; padding:4px 6px; } #pStats{ margin-top:4px; gap:1px; }
     #bossBar{ top:calc(env(safe-area-inset-top,0px) + 50px); width:44vw; } #bbSkill{ display:none; }
     #app.bossOn #toasts{ top:calc(env(safe-area-inset-top,0px) + 96px); }
     #panel.show ~ #waveBtn{ top:calc(env(safe-area-inset-top,0px) + 56px); bottom:auto; right:auto; left:12px; width:210px; padding:8px 12px 7px; } }
+
+  /* ===== v4: world, roguelike, meta ===== */
+  #nightFx{ position:absolute; inset:0; z-index:1; pointer-events:none; opacity:0; background:radial-gradient(120% 100% at 50% 40%, rgba(20,24,70,.35), rgba(6,8,30,.85)); mix-blend-mode:multiply; transition:opacity .3s; }
+  #wxFx{ position:absolute; inset:0; z-index:2; pointer-events:none; opacity:0; transition:opacity 1.2s; }
+  #app.w-rain #wxFx{ opacity:.55; background-image:repeating-linear-gradient(105deg, rgba(200,220,255,0) 0 22px, rgba(200,220,255,.35) 22px 23px, rgba(200,220,255,0) 23px 46px); background-size:120px 120px; animation:rain .35s linear infinite; }
+  @keyframes rain{ from{ background-position:0 0; } to{ background-position:-30px 120px; } }
+  #app.w-snow #wxFx{ opacity:.8; background-image:radial-gradient(2px 2px at 20px 30px, #fff 50%, transparent 51%), radial-gradient(2.5px 2.5px at 80px 70px, #fff 50%, transparent 51%), radial-gradient(1.6px 1.6px at 140px 20px, #fff 50%, transparent 51%), radial-gradient(2px 2px at 110px 120px, #fff 50%, transparent 51%); background-size:180px 160px; animation:snow 6s linear infinite; }
+  @keyframes snow{ from{ background-position:0 0; } to{ background-position:60px 480px; } }
+  #app.w-heat #wxFx{ opacity:1; background:radial-gradient(120% 90% at 50% 30%, rgba(255,160,60,.0), rgba(255,120,40,.22)); animation:heat 2.4s ease-in-out infinite alternate; }
+  @keyframes heat{ from{ filter:blur(0); } to{ filter:blur(1px); } }
+  #app.w-fog #wxFx{ opacity:1; background:linear-gradient(180deg, rgba(220,226,236,.28), rgba(220,226,236,.12) 50%, rgba(220,226,236,.3)); }
+  #chips{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 56px); left:12px; z-index:5; display:flex; flex-wrap:wrap; align-items:flex-start; gap:5px; max-width:52vw; pointer-events:none; }
+  @media (max-aspect-ratio:1/1) and (max-width:600px){ #chips{ top:auto; bottom:152px; left:8px; max-width:80vw; } }
+  .chip{ pointer-events:auto; padding:4px 9px; border-radius:99px; background:var(--glass); border:1px solid var(--line); font-size:11px; font-weight:800; white-space:nowrap; color:rgba(244,247,252,.9); }
+  .chip.w{ color:#bfe3ff; } .chip.ev{ color:var(--gold); border-color:rgba(255,200,87,.45); } .chip.bad{ color:#ff9aa2; border-color:rgba(255,82,82,.45); } .chip.pk{ color:#e0ccff; border-color:rgba(176,124,255,.5); cursor:pointer; font-family:inherit; }
+  #app.menu #chips, #app.menu #wxFx, #app.menu #nightFx{ display:none; }
+  #evBanner{ position:absolute; top:22%; left:50%; z-index:8; transform:translate(-50%,-20px); opacity:0; pointer-events:none; text-align:center; transition:opacity .35s, transform .35s; }
+  #evBanner.show{ opacity:1; transform:translate(-50%,0); }
+  #evIcon{ font-size:44px; line-height:1; filter:drop-shadow(0 0 18px rgba(255,200,87,.7)); animation:evBob 1s ease-in-out infinite alternate; }
+  @keyframes evBob{ from{ transform:translateY(0) scale(1); } to{ transform:translateY(-6px) scale(1.08); } }
+  #evName{ margin-top:4px; font-size:clamp(22px,4.6vw,38px); color:var(--gold); text-shadow:0 0 22px rgba(255,200,87,.7), 0 3px 0 #4a3000; }
+  #evDesc{ margin-top:4px; font-size:13px; font-weight:800; color:#fff; text-shadow:0 1px 3px #000; }
+  #app.menu #evBanner{ display:none; }
+  .abtn.hero{ border-color:rgba(255,200,87,.5); } .abtn.hero.on{ box-shadow:0 0 0 2px var(--gold), 0 0 22px rgba(255,200,87,.5); }
+  .hhp{ position:absolute; left:6px; right:6px; bottom:5px; height:4px; border-radius:99px; background:rgba(0,0,0,.5); overflow:hidden; } .hhp i{ display:block; height:100%; width:100%; background:linear-gradient(90deg,#ffc857,#7dffa0); }
+  .abtn.stand{ border-color:rgba(255,82,82,.55); background:rgba(80,10,20,.75); } .abtn.stand.ready{ box-shadow:0 0 16px rgba(255,82,82,.45); }
+  .abtn.stand.flash{ animation:pulse 0.8s infinite; }
+  .tcard{ border-bottom:3px solid var(--rar, var(--line)); } .trar{ position:absolute; top:4px; right:6px; font-size:8px; color:var(--rar); letter-spacing:-.05em; }
+  .prar{ font-size:9px; letter-spacing:.06em; margin-left:4px; }
+  .ptrait.ult{ background:rgba(255,200,87,.12); border-color:rgba(255,200,87,.5); color:#ffe6a8; }
+  .ptrait.syn{ background:rgba(127,232,255,.08); border-color:rgba(127,232,255,.45); color:#cff6ff; }
+  .brbtn small{ display:block; margin-top:3px; font-size:9.5px; color:var(--gold); }
+  .brbtn.ult{ border-color:var(--gold); background:linear-gradient(135deg, rgba(255,200,87,.2), rgba(255,120,60,.14)); }
+  #perkWrap{ z-index:12; background:radial-gradient(70% 60% at 50% 45%, rgba(20,10,40,.7), rgba(4,6,14,.92)); }
+  #perkBox{ width:min(760px,100%); text-align:center; }
+  #perkBox h1{ margin:0; font-size:34px; color:#e0ccff; text-shadow:0 0 26px rgba(176,124,255,.7); }
+  #perkWave{ margin-top:4px; font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim); font-weight:700; }
+  #perkCards{ display:flex; gap:12px; justify-content:center; margin-top:18px; }
+  .perkCard{ position:relative; flex:1; max-width:220px; min-height:220px; padding:16px 12px 14px; border-radius:18px; border:2px solid #b8c2d0; background:linear-gradient(180deg, rgba(30,36,54,.95), rgba(12,16,26,.95)); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px;
+    box-shadow:0 18px 40px rgba(0,0,0,.5); animation:cardIn .45s cubic-bezier(.2,1.4,.4,1) both; transition:transform .15s, box-shadow .15s; }
+  .perkCard:hover{ transform:translateY(-6px) scale(1.03); } .perkCard:active{ transform:scale(.97); }
+  @keyframes cardIn{ from{ transform:translateY(40px) rotate(-6deg) scale(.8); opacity:0; } to{ transform:none; opacity:1; } }
+  .perkCard.r1{ border-color:#4fa8ff; box-shadow:0 0 26px rgba(79,168,255,.35), 0 18px 40px rgba(0,0,0,.5); } .perkCard.r2{ border-color:#b07cff; box-shadow:0 0 34px rgba(176,124,255,.5), 0 18px 40px rgba(0,0,0,.5); }
+  .pkRar{ font-size:9.5px; letter-spacing:.18em; text-transform:uppercase; font-weight:800; color:#b8c2d0; } .r1 .pkRar{ color:#4fa8ff; } .r2 .pkRar{ color:#c8a0ff; }
+  .pkIcon{ font-size:46px; line-height:1.1; margin-top:6px; filter:drop-shadow(0 0 12px rgba(255,255,255,.25)); }
+  .perkCard b{ font-family:'Caprasimo',serif; font-weight:400; font-size:17px; margin-top:4px; } .pkDesc{ font-size:12px; color:rgba(244,247,252,.85); line-height:1.35; }
+  .perkCard i{ font-style:normal; font-size:10px; color:var(--gold); font-weight:800; } .perkCard em{ position:absolute; top:8px; left:10px; font-style:normal; font-size:10px; color:var(--dim); font-weight:800; }
+  @media (max-width:600px){ #perkCards{ flex-direction:column; align-items:stretch; gap:8px; } .perkCard{ max-width:none; min-height:0; flex-direction:row; text-align:left; padding:10px 12px; gap:10px; } .pkIcon{ font-size:30px; margin:0; } .pkRar{ position:absolute; top:6px; right:10px; } .perkCard em{ display:none; } #perkBox h1{ font-size:26px; } }
+  #replayWrap{ z-index:13; } #replayWrap .card{ width:min(620px,100%); }
+  #rpCanvas{ display:block; width:100%; margin-top:12px; border-radius:12px; border:1px solid var(--line); background:#0b1018; }
+  #rpInfo{ margin-top:8px; font-size:12px; font-weight:800; color:var(--blue); }
+  #rpTrack{ margin-top:8px; height:6px; border-radius:99px; background:rgba(255,255,255,.1); overflow:hidden; } #rpBar{ height:100%; width:0; background:linear-gradient(90deg,var(--blue),var(--gold)); }
+  #prRight span#prRpRow{ color:#c8a0ff; }
+  #prBadge.pres{ background:linear-gradient(135deg,#e0ccff,#8a5cff); box-shadow:0 0 18px rgba(176,124,255,.7); }
+  #prStarsP{ position:absolute; bottom:-6px; right:-6px; font-size:9px; font-family:'Figtree',sans-serif; font-weight:800; color:#fff; background:#8a5cff; border-radius:99px; padding:1px 4px; }
+  #prBadge{ position:relative; }
+  #prPrestige{ margin-top:6px; padding:5px 10px; border-radius:99px; border:1px solid rgba(176,124,255,.6); background:rgba(176,124,255,.18); color:#e0ccff; font-weight:800; font-size:10.5px; cursor:pointer; animation:pulse 1.4s infinite; }
+  #modeRow{ grid-template-columns:repeat(3,1fr); }
+  .modeBtn small{ font-size:9px; color:var(--dim); } .modeBtn.locked{ opacity:.45; }
+  #loTitle{ margin-top:10px; font-size:10px; letter-spacing:.12em; text-transform:uppercase; font-weight:800; color:var(--dim); }
+  #loadoutRow{ display:grid; grid-template-columns:repeat(9,1fr); gap:4px; margin-top:6px; }
+  .loBtn{ position:relative; padding:6px 2px 5px; border-radius:10px; border:1px solid var(--line); border-bottom:3px solid var(--rar,var(--line)); background:rgba(255,255,255,.04); cursor:pointer; font-size:9px; font-weight:800; display:flex; flex-direction:column; align-items:center; gap:1px; opacity:.55; }
+  .loBtn span{ font-size:18px; } .loBtn.on{ opacity:1; background:rgba(127,212,255,.14); border-color:var(--blue); border-bottom-color:var(--rar,var(--blue)); } .loBtn.over{ opacity:.7; border-style:dashed; } .loBtn.locked{ opacity:.3; }
+  .loBtn em{ position:absolute; top:2px; right:4px; font-style:normal; font-size:9px; color:var(--gold); } .loBtn small{ font-size:8px; color:var(--dim); }
+  @media (max-width:600px){ #loadoutRow{ grid-template-columns:repeat(5,1fr); } }
+  .mBar{ position:relative; margin-top:6px; height:14px; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden; } .mBar i{ display:block; height:100%; background:var(--rar); opacity:.55; } .mBar span{ position:absolute; inset:0; font-size:9px; font-weight:800; line-height:14px; text-align:center; }
+  .tinfo{ border-left:3px solid var(--rar, var(--line)); } .rarTag{ font-style:normal; font-size:9.5px; font-weight:800; color:var(--rar); margin-left:4px; }
+  .tiBr small{ display:block; margin-top:4px; color:var(--gold); font-size:10px; } .tiLock{ margin-top:6px; font-size:10.5px; color:var(--dim); font-weight:700; }
+  .tiEnemies.syn{ background:rgba(127,232,255,.06); border-color:rgba(127,232,255,.3); } .tiEnemies.syn b{ color:#7fe8ff; }
+  #rsPoints{ margin-top:8px; font-size:11.5px; font-weight:800; color:#c8a0ff; text-align:center; }
+  #rsTree{ margin-top:10px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-height:54vh; overflow-y:auto; }
+  .rsCol h3{ margin:0 0 6px; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); text-align:center; }
+  .rsNode{ position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; width:100%; padding:9px 6px 8px; margin-bottom:6px; border-radius:12px; border:1px solid rgba(176,124,255,.35); background:rgba(176,124,255,.08); cursor:pointer; text-align:center; }
+  .rsNode:not(:disabled):hover{ background:rgba(176,124,255,.18); } .rsNode:disabled{ cursor:default; opacity:.6; } .rsNode.max{ opacity:1; border-color:rgba(82,224,122,.5); background:rgba(82,224,122,.08); }
+  .rsIc{ font-size:20px; } .rsNode b{ font-size:11.5px; } .rsNode span{ font-size:10px; color:var(--dim); } .rsNode em{ font-style:normal; font-size:10px; font-weight:800; color:#c8a0ff; }
+  .rsPips{ display:flex; gap:3px; margin-top:2px; } .rsPips u{ width:12px; height:4px; border-radius:2px; background:rgba(255,255,255,.15); } .rsPips u.on{ background:#b07cff; box-shadow:0 0 6px #b07cff; }
+  @media (max-width:600px){ #rsTree{ grid-template-columns:1fr; } }
+  .lbHead{ margin-top:12px; font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:800; color:var(--gold); }
+  .lbList{ margin-top:6px; display:flex; flex-direction:column; gap:5px; }
+  .lbRow{ display:grid; grid-template-columns:30px 80px 1fr; grid-template-rows:auto auto; column-gap:8px; align-items:center; padding:7px 10px; border-radius:11px; background:rgba(255,255,255,.05); border:1px solid var(--line); font-size:12px; }
+  .lbRow.top{ border-color:rgba(255,200,87,.4); } .lbPos{ grid-row:1 / 3; font-size:16px; text-align:center; font-weight:800; } .lbRow b{ color:var(--blue); } .lbRow small{ grid-column:2 / 4; font-size:10px; color:var(--dim); }
+  .lbEmpty{ padding:10px; font-size:12px; color:var(--dim); text-align:center; }
+  #lbNote{ margin-top:8px; font-size:10px; color:var(--dim); text-align:center; }
+  #resLevel b.rl{ font-size:12.5px; font-family:'Figtree',sans-serif; font-weight:800; margin-bottom:4px; }
+  #homeBtns{ grid-template-columns:1fr 1fr; }
 </style>
 </head>
 <body>
@@ -334,6 +420,8 @@
   <div id="mount"></div>
   <div id="stormFx"></div>
   <div id="freezeFx"></div>
+  <div id="nightFx"></div>
+  <div id="wxFx"></div>
   <div id="vignette"></div>
   <div id="odFx"></div>
   <div id="flashFx"></div>
@@ -357,6 +445,8 @@
   </div>
 
   <div id="toasts"></div>
+  <div id="chips"></div>
+  <div id="evBanner"><div id="evIcon">⚡</div><div id="evName" class="fun">EVENT</div><div id="evDesc"></div></div>
   <div id="bossBar"><div id="bbTop" class="fun"><span id="bbName">Boss</span><span id="bbHp">0</span></div>
     <div id="bbTrack"><div id="bbFill"></div><div id="bbShield"></div><i class="bbPh" id="bbPh1" style="left:50%"></i><i class="bbPh" id="bbPh2" style="left:25%"></i><i class="bbPh" id="bbPh3" style="left:10%"></i></div>
     <div id="bbSkill"></div></div>
@@ -395,6 +485,7 @@
       <div id="resLevel"></div>
       <button class="bigbtn fun" id="resNext">NEXT MAP →</button>
       <div class="btnrow"><button class="pri" id="resEndless">ENDLESS MODE</button><button id="resRetry">PLAY AGAIN</button><button id="resMenu">MENU</button></div>
+      <div class="btnrow"><button id="resReplay">🎞️ WATCH BUILD REPLAY</button></div>
     </div>
   </div>
 
@@ -404,9 +495,9 @@
         <h1 class="fun">Tower Defense 3D</h1>
         <div class="sub">Hold the road · Save the castle</div>
         <div id="profile">
-          <div id="prBadge"><span id="prLevel">1</span></div>
-          <div id="prMeta"><div id="prTop"><span>Commander</span><span id="prXp">0 / 190 XP</span></div><div id="prBar"><div id="prFill" style="width:2%"></div></div><div id="prNext"></div></div>
-          <div id="prRight"><span>💰 <b id="prCoins">0</b></span><span>★ <b id="prStars">0 / 15</b></span></div>
+          <div id="prBadge"><span id="prLevel">1</span><span id="prStarsP"></span></div>
+          <div id="prMeta"><div id="prTop"><span>Commander</span><span id="prXp">0 / 190 XP</span></div><div id="prBar"><div id="prFill" style="width:2%"></div></div><div id="prNext"></div><button id="prPrestige" style="display:none">⭐ PRESTIGE AVAILABLE</button></div>
+          <div id="prRight"><span>💰 <b id="prCoins">0</b></span><span>★ <b id="prStars">0 / 15</b></span><span id="prRpRow">🧠 <b id="prRp">0</b> RP</span></div>
         </div>
 
         <div class="mpanel show" id="mp-home">
@@ -415,7 +506,9 @@
             <button class="mbtn" data-panel="maps"><span class="mi">🗺️</span>MAPS</button>
             <button class="mbtn" data-panel="towers"><span class="mi">🏹</span>TOWERS</button>
             <button class="mbtn" data-panel="daily" id="mDaily"><span class="mi">📅</span>DAILY<span class="mbadge" id="mDayBadge">0/3</span></button>
-            <button class="mbtn" data-panel="challenges"><span class="mi">🏆</span>CHALLENGES<span class="mbadge" id="mChBadge">0/12</span></button>
+            <button class="mbtn" data-panel="challenges"><span class="mi">🏆</span>ACHIEVEMENTS<span class="mbadge" id="mChBadge">0/12</span></button>
+            <button class="mbtn" data-panel="research" id="mResearch"><span class="mi">🧠</span>RESEARCH<span class="mbadge" id="mRsBadge">0 RP</span></button>
+            <button class="mbtn" data-panel="records"><span class="mi">🏅</span>RECORDS</button>
             <button class="mbtn" data-panel="skins"><span class="mi">🎨</span>SKINS</button>
             <button class="mbtn" data-panel="settings"><span class="mi">⚙️</span>SETTINGS</button>
           </div>
@@ -425,7 +518,7 @@
             <div class="how"><i>3</i><div>Every tower has a <b>unique trait</b>. Build <b>Teslas next to ⚡ crystals</b> and <b>Frosts next to ❄️ crystals</b>; tap a 🌳 tree to clear it.</div></div>
             <div class="how"><i>4</i><div>Each <b>boss</b> has its own signature move. Try <b>Hard</b>, <b>Endless</b> and <b>Challenge</b> modes, and three new <b>daily challenges</b> every day.</div></div>
           </div>
-          <div id="menuFoot">Keys: 1–6 build · Space send · U upgrade · X sell · Q speed · Z/C/V/B abilities · P pause</div>
+          <div id="menuFoot">Keys: 1–6 build · Space send · U upgrade · X sell · Q speed · Z/C/V/B abilities · H hero · E last stand · P pause</div>
         </div>
 
         <div class="mpanel" id="mp-maps">
@@ -433,6 +526,8 @@
           <div id="modeRow"></div>
           <div id="modeDesc"></div>
           <div id="ruleRow" style="display:none"></div>
+          <div id="loTitle">Your towers</div>
+          <div id="loadoutRow"></div>
           <div id="mapCards"></div>
           <button class="bigbtn fun" id="playBtn">PLAY</button>
         </div>
@@ -443,8 +538,21 @@
         </div>
 
         <div class="mpanel" id="mp-challenges">
-          <div class="backrow"><h2 class="fun">Challenges</h2><button class="backbtn" data-panel="home">← BACK</button></div>
+          <div class="backrow"><h2 class="fun">Achievements</h2><button class="backbtn" data-panel="home">← BACK</button></div>
           <div id="chList"></div>
+        </div>
+
+        <div class="mpanel" id="mp-research">
+          <div class="backrow"><h2 class="fun">Research</h2><button class="backbtn" data-panel="home">← BACK</button></div>
+          <div id="rsPoints"></div>
+          <div id="rsTree"></div>
+        </div>
+
+        <div class="mpanel" id="mp-records">
+          <div class="backrow"><h2 class="fun">Records</h2><button class="backbtn" data-panel="home">← BACK</button></div>
+          <div class="lbHead">♾️ Endless — most waves</div><div class="lbList" id="lbEndless"></div>
+          <div class="lbHead">🏆 Best runs — all other modes</div><div class="lbList" id="lbOther"></div>
+          <div id="lbNote">Your personal leaderboard, saved on this device.</div>
         </div>
 
         <div class="mpanel" id="mp-daily">
@@ -469,6 +577,25 @@
           <button id="sReset">RESET ALL PROGRESS</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="perkWrap" class="ov">
+    <div id="perkBox">
+      <h1 class="fun">Choose a Perk</h1>
+      <div id="perkWave"></div>
+      <div id="perkCards"></div>
+    </div>
+  </div>
+
+  <div id="replayWrap" class="ov">
+    <div class="card">
+      <h1 class="fun">Build Replay</h1>
+      <div class="sub">How your defense grew, wave by wave</div>
+      <canvas id="rpCanvas"></canvas>
+      <div id="rpInfo"></div>
+      <div id="rpTrack"><div id="rpBar"></div></div>
+      <div class="btnrow"><button id="rpPlay" class="pri">▶</button><button id="rpSpeed">1×</button><button id="rpClose">CLOSE</button></div>
     </div>
   </div>
 

@@ -26,47 +26,53 @@ AD INTEGRATION (for the publisher)
 GAMEPLAY
   Classic tower defense on a floating low-poly island with neon lighting.
   Enemies walk the road from the portal to the castle; flyers cut across.
-  Build towers on any free tile, upgrade them, sell for 70%.
 
-  Modes     Normal (30 waves, stars), Hard (health ramps up to +35%, +6% speed,
-            x1.6 rewards, crown on win), Endless, Challenge (20 waves with a
-            rule: No Tesla, Shoestring 100 gold, Glass Castle 5 lives, No Magic,
-            Swarm, Old School). First win of each rule pays 100 coins.
-  Maps      Green Valley, Dusty Canyon (sandstorms), Frostpeak (icy road),
-            Volcano (lava pools), Deep Space (low gravity), The Gauntlet
-            (tiers), Neon Rift (player level 20; power surges double crystal
-            bonuses). Every map has trees (clear for 25 gold), rocks
-            (blocked), an energy crystal (buffs adjacent Teslas) and an ice
-            crystal (buffs adjacent Frosts).
-  Towers    Each has a signature trait plus two level-3 specializations:
-            Archer crit shots; Cannon leaves burning ground; Frost chill
-            stacks until the enemy freezes solid; Tesla arcs can bounce back;
-            Sniper long-shot bonus; Laser heats up on one target.
-  Enemies   Grunt, Runner, Brute, Flyer, Shieldman, Gold Thief, War Drummer
-            (speeds up neighbours), Knight, Guardian (35% damage reduction
-            aura), Ghost, Shade (turns invisible), Healer (beams heals into
-            the strongest wounded ally), Saboteur (leaves the road to shut
-            down your most valuable tower), Mini Boss.
-  Bosses    Three phases (enrage 50%, summon 25%, shield 10%), a boss health
-            bar, and one signature move per map: Earthquake Stomp, Sandstorm,
-            Glacial Prison, Lava Rain, Void Portals, Warden's Wrath, Neon
-            Overload.
-  Abilities Meteor (Lv 2), Freeze (Lv 4), Mega Chain (Lv 6), Overdrive (Lv 15).
-  Progress  XP and coins after every game. Unlocks: Laser (8), Neon Archer
-            skin (10), +10% gold (12), Overdrive (15), +2 lives (17), Neon
-            Rift (20), legendary aura on max towers (25). The menu always
-            shows NEXT UNLOCK. 15 challenges, 3 daily challenges (same for
-            everyone on a date, local clock) plus a daily bonus.
-            Skins are cosmetic only - no pay to win, no real-money purchases.
-  Feel      Glow sprites, shock rings, low-poly debris, tower recoil, crit
-            pop-ups, boss death slow motion, hit/crit/heavy sounds.
+  Modes     Normal (30 waves, stars) · Hard (health ramps up to +45%, crown)
+            · Endless · Challenge (20 waves + a rule: No Tesla, Shoestring,
+            Glass Castle, No Magic, Swarm, Old School, Build Mode (4 towers),
+            Lucky Three (3 random towers), Blitz (2x speed, 2x gold), Random)
+            · Roguelike (Lv 4: pick 1 of 3 random perks every 3 waves, random
+            waves every run) · Boss Rush (Lv 8: 10 bosses back to back).
+  Maps      7 maps. Dusty Canyon and Neon Rift have forking roads on some
+            waves; Frostpeak opens a new passage at wave 12; Volcano buries
+            its south road at wave 16. Each map has its own boss with a
+            signature move.
+  World     Day and night (waves 6-10, 16-20, 26-30 are night: Night
+            Stalkers appear, Lasers/Teslas see further, Archers/Snipers less).
+            Weather per wave: rain, snow, fog, heatwave - each changes towers.
+            Random events between waves: Power Surge, Gold Rush, Supply Drop,
+            Blood Moon, Tailwind, Repairs, Mana Spring. Trees and ruins can be
+            cleared; one of them and a sparkle spot hide secrets (a treasure
+            chest or an ancient rune tile that boosts a tower). Energy / ice
+            crystals boost Teslas / Frosts.
+  Towers    9 towers (Archer, Cannon, Frost, Tesla, Sniper, Laser, Venom,
+            Wind, Bank). Pick 6 as your loadout. Each has a trait, two
+            specializations and a level-4 Ultimate per specialization
+            (unlocked by tower mastery 2). 6 synergies between neighbouring
+            towers (e.g. Frost+Tesla Superconductor, Archer+Sniper Spotter).
+            Mastery: kills level each tower type up to 10 (+1% damage/level)
+            with Common / Rare / Epic / Legendary rarity visuals.
+  Enemies   Grunt, Runner, Brute, Flyer, Shieldman, Gold Thief, War Drummer,
+            Knight, Guardian, Ghost, Shade, Healer, Saboteur, Blinker
+            (teleports), Splitter (splits in 3), Mimic (copies abilities),
+            Shield Carrier (domes), Commander (buffs the whole army), Night
+            Stalker (dodges), Swarmlings (every 7th wave is a swarm).
+  Hero      Sir Aegis (Lv 3): move him with a tap, he fights on the road and
+            speeds up nearby towers; levels up during a match.
+  Abilities Last Stand (once per wave), Meteor, Freeze, Mega Chain, Overdrive.
+  Progress  XP, coins, research points. Research tree (9 permanent upgrades),
+            Prestige from level 30 (keeps unlocks, +10% XP / +5% gold per
+            star), 29 achievements, 3 daily challenges, local records (best
+            endless and other runs on this device), build replay after every
+            match. Skins are cosmetic only - no real-money purchases.
 
 CONTROLS
   Mouse    click a tower card, then a free tile to build; click a tower to
            upgrade or sell it; hover shows range.
-  Keys     1-6 pick a tower, Space/Enter send the next wave, U upgrade
-           (or clear a selected tree), X sell, Q cycle speed, Z/C/V/B
-           abilities, P pause, Esc cancel.
+  Keys     1-6 pick a tower from your loadout, Space/Enter send the next
+           wave, U upgrade (or clear a selected tree/ruin), X sell, Q speed,
+           Z/C/V/B abilities, H hero, E Last Stand, 1-3 pick a perk,
+           P pause, Esc cancel.
   Touch    tap a card, tap a tile; tap a tower for its panel. Portrait and
            landscape both work - the island rotates to fit.
   Speed    1x / 2x / 3x buttons in the HUD.
