@@ -879,25 +879,34 @@
 <script>
 // ===== CrazyGames SDK v3 =====
 // The SDK script is deferred so it cannot delay the loading screen's first paint,
-// which means it may appear after this code runs — hence the short poll.
+// which means it may appear after this code runs - hence the short poll.
 (function(){
-  var SDK=null, ready=false, loaded=false, playing=false;
+  var SDK=null, ready=false, loaded=false, playing=false, adBusy=false, wantStart=false;
   function safe(fn){ try{ fn(); }catch(e){} }
   function maybeStop(){ if(ready && loaded) safe(function(){ SDK.game.loadingStop(); }); }
 
   window.onGameLoaded = function(){ loaded = true; maybeStop(); };
-  window.onGameplayStart = function(){ if(ready && !playing){ playing = true; safe(function(){ SDK.game.gameplayStart(); }); } };
-  window.onGameplayStop  = function(){ if(ready && playing){ playing = false; safe(function(){ SDK.game.gameplayStop(); }); } };
+  // CrazyGames wants gameplayStart only when gameplay is really running, so a
+  // start that lands while an ad is on screen waits for the ad to finish.
+  window.onGameplayStart = function(){
+    if(adBusy){ wantStart = true; return; }
+    if(ready && !playing){ playing = true; safe(function(){ SDK.game.gameplayStart(); }); }
+  };
+  window.onGameplayStop  = function(){ wantStart = false; if(ready && playing){ playing = false; safe(function(){ SDK.game.gameplayStop(); }); } };
 
   // Midgame interstitial, requested by the game between matches only.
   window.gameShowAd = function(kind){
     if(!ready || kind === 'preroll') return;   // CrazyGames wants midgame breaks only
     window.onGameplayStop();
+    function done(){ if(!adBusy) return; adBusy = false; window.gamePauseForAd(false);
+      if(wantStart){ wantStart = false; window.onGameplayStart(); } }
+    adBusy = true; wantStart = false;
+    setTimeout(done, 30000);                   // safety net if the SDK never calls back
     safe(function(){
       SDK.ad.requestAd('midgame', {
         adStarted:  function(){ window.gamePauseForAd(true);  },
-        adFinished: function(){ window.gamePauseForAd(false); },
-        adError:    function(){ window.gamePauseForAd(false); }
+        adFinished: done,
+        adError:    done
       });
     });
   };

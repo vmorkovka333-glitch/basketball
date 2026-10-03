@@ -898,9 +898,9 @@
 </div>
 <script>
 /* ===== GameDistribution ads ===== */
-/* preroll: the game calls this the moment the player presses Play/Race and waits
-   for the callback, so no gameplay runs behind the ad.
-   midgame: fired from non-gameplay buttons only (Replay / Next / Menu).
+/* preroll: the game calls this the moment the player presses Play and waits for
+   the callback, so no gameplay runs behind the ad.
+   midgame: fired from non-gameplay buttons only (Retry / Next map / Menu).
    The SDK's SDK_GAME_PAUSE / SDK_GAME_START events drive gamePauseForAd(), and
    SDK_GAME_START also releases whatever the game is waiting on. */
 (function () {

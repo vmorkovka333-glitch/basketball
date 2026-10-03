@@ -879,10 +879,12 @@
 No ad SDK is embedded and the game makes NO external network calls (fonts and
 Three.js are bundled). To monetise, define window.gameShowAd before or after load:
 
-    window.gameShowAd = function(){ /* show your interstitial */ };
+    window.gameShowAd = function(kind, done){ /* show your interstitial */ };
 
-The game calls it only at natural breaks (retry / next map / back to menu),
-never during a wave. Wrap the ad with the pause helper so the world freezes:
+kind is 'preroll' (the player pressed PLAY) or 'midgame' (Retry / Next map /
+Menu). If your hook declares the second argument, the game waits and only starts
+once you call done(); otherwise it continues right away. It is NEVER called
+during a wave. Wrap the ad with the pause helper so the world freezes:
 
     window.gamePauseForAd(true);   // before the ad
     window.gamePauseForAd(false);  // after the ad

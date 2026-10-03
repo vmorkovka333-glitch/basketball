@@ -3583,10 +3583,14 @@ function loop(now){
     if(G.selObj && CLEAR_COST[G.selObj.type]){ $('pUp').disabled = G.gold < Math.round(CLEAR_COST[G.selObj.type]*costMul()); }
     if(G.evSurge > 0 || G.cmd) renderChips();
     // the branch and ascension buttons need the same gold refresh as the upgrade button
-    // ([data-lock] marks a button held shut by a rule or by missing mastery)
-    if(G.sel && G.sel.level<4){ const up=$('pUp'), c = towerCost(G.sel.type, G.sel.level+1, G.sel.branch);
-      if(up.style.display!=='none' && !up.dataset.lock) up.disabled = G.gold < c;
-      if(G.sel.level>=2) $('pBranch').querySelectorAll('.brbtn:not([data-lock])').forEach(b=>b.disabled = G.gold < c); }
+    // ([data-lock] marks a button held shut by a rule or by missing mastery; hybrids,
+    //  legendaries and anything without a next step have no price to check)
+    if(G.sel){ const sd = TOWERS[G.sel.type], lv = G.sel.level;
+      const step = lv < 4 && !sd.hybrid && !sd.legendary &&
+        (lv < 3 ? (sd.upg||[])[lv-1] != null : !!(sd.ult && sd.ult[G.sel.branch||0]));
+      if(step){ const up=$('pUp'), c = towerCost(G.sel.type, lv+1, G.sel.branch);
+        if(up.style.display!=='none' && !up.dataset.lock) up.disabled = G.gold < c;
+        if(lv>=2) $('pBranch').querySelectorAll('.brbtn:not([data-lock])').forEach(b=>b.disabled = G.gold < c); } }
     renderBuildBarPoor(); } }
   W.render();
 }

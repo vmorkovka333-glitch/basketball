@@ -14,7 +14,8 @@ CRAZYGAMES SDK - ALREADY INTEGRATED
   - Loads https://sdk.crazygames.com/crazygames-sdk-v3.js and calls SDK.init().
   - Loading events: game.loadingStart() before init, game.loadingStop() after.
   - Gameplay events: game.gameplayStart() when a match begins (and on resume),
-    game.gameplayStop() when a match ends, pauses or returns to the menu.
+    game.gameplayStop() when a match ends, pauses or returns to the menu. A
+    start that would land while an ad is on screen waits for the ad to end.
   - Midgame interstitials are requested only between matches (RETRY / NEXT MAP /
     MENU), never during a wave. While the ad runs the simulation is frozen and
     audio is muted, then both resume automatically.
