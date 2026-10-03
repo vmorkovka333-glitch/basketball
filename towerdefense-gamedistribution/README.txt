@@ -12,7 +12,7 @@ no external requests of its own. Upload the folder contents as they are:
 
 GAMEDISTRIBUTION SDK - ALREADY INTEGRATED
   - Loader for https://html5.api.gamedistribution.com/main.min.js in the header.
-  - gameId: REPLACE_WITH_YOUR_GAMEDISTRIBUTION_GAME_ID (set in index.html)
+  - gameId: 73a310ef81594a8da1d39a4485ffd403 (set in index.html)
   - SDK_GAME_PAUSE freezes the simulation and mutes audio; SDK_GAME_START resumes
     it. Both are wired through the game's own gamePauseForAd() helper.
   - Pre-roll: the moment the player presses PLAY the game asks for an
