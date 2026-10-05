@@ -615,10 +615,20 @@ function botShoot(b, tg){
 // ---- the player ---------------------------------------------------------------------------
 function updatePlayer(dt){
   const k = G.keys;
-  let ix = 0, iz = 0;
-  if(G.joy.on){ ix = G.joy.x; iz = -G.joy.y; }
-  if(k.KeyW || k.ArrowUp) iz += 1; if(k.KeyS || k.ArrowDown) iz -= 1; if(k.KeyA || k.ArrowLeft) ix -= 1; if(k.KeyD || k.ArrowRight) ix += 1;
-  if(G.autoMove){ ix = G.autoMove[0]; iz = G.autoMove[1]; }
+  let ix = 0, iz = 0, turn = 0;
+  // With buttons the stick and A/D steer: sideways turns the hero and the camera. While the
+  // right thumb aims (dragging the screen, holding FIRE or AIM) the stick strafes instead.
+  const steer = buttonsMode() && !G.lookDrag && !G.fireDrag && PL.adsT < 0.5;
+  if(G.joy.on){ iz = -G.joy.y; const jx = G.joy.x;
+    if(steer){ if(Math.abs(jx) > 0.15) turn = (jx - Math.sign(jx)*0.15)/0.85; } else ix = jx; }
+  const kx = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0);
+  if(buttonsMode()) turn += kx; else ix += kx;
+  turn += (k.ArrowRight || k.KeyL ? 1 : 0) - (k.ArrowLeft || k.KeyJ ? 1 : 0);
+  if(k.KeyW || k.ArrowUp) iz += 1; if(k.KeyS || k.ArrowDown) iz -= 1;
+  if(G.autoMove){ ix = G.autoMove[0]; iz = G.autoMove[1]; turn = 0; }
+  turn = clamp(turn, -1, 1);
+  if(turn && !PL.down){ PL.turnV = lerp(PL.turnV || 0, turn, 1 - Math.exp(-dt*10)); } else PL.turnV = lerp(PL.turnV || 0, 0, 1 - Math.exp(-dt*14));
+  if(Math.abs(PL.turnV) > 0.001) PL.yaw -= PL.turnV*(PL.adsT > 0.5 ? 1.3 : 2.7)*dt;
   const il = Math.hypot(ix, iz); if(il > 1){ ix /= il; iz /= il; }
   PL.moving = il > 0.12 && !PL.down;
   const wantAds = (G.adsHeld || G.adsToggle) && !PL.down;
@@ -644,6 +654,7 @@ function updatePlayer(dt){
   if(PL.down){ PL.bleed -= dt; if(PL.bleed <= 0) failMission('You bled out before help arrived'); }
   else { PL.hurtT += dt; if(PL.hurtT > ZD.PLAYER.regenDelay && PL.hp < PL.maxHp) PL.hp = Math.min(PL.maxHp, PL.hp + ZD.PLAYER.regen*dt); }
   if(buttonsMode() && SAVE.assist && (G.trigger || PL.adsT > 0.5) && !PL.down) aimAssist(dt);
+  if(buttonsMode() && PL.moving && !G.lookDrag && !G.fireDrag && !G.trigger) PL.pitch += (-0.08 - PL.pitch)*Math.min(1, dt*1.5);
   PL.rig.root.position.set(PL.x, 0, PL.z); PL.rig.root.rotation.y = PL.yaw;
   W.animSoldier(PL.rig, { moving:PL.moving, sprint:PL.sprint, back:iz < -0.2, pitch:PL.pitch, ads:PL.adsT > 0.5, reload:PL.reloadT, swap:PL.swapT, melee:PL.meleeT, recoil:PL.recoil, down:PL.down }, dt);
 }
@@ -693,9 +704,9 @@ function startMission(i){
   clearMission(); clearMenuZombies();
   const M = ZD.MISSIONS[i]; G.mi = i; G.mission = M;
   Object.assign(G, { phase:'play', paused:false, over:false, t:0, slow:1, step:-1, st:null, kills:0, botKills:0, heads:0, downs:0, horde:0, hordeT:0, spawnT:3,
-    interact:null, ap:null, autoMove:null, trigger:false, adsHeld:false, adsToggle:false, sprintBtn:false, useHeld:false });
+    interact:null, ap:null, autoMove:null, trigger:false, adsHeld:false, adsToggle:false, sprintBtn:false, useHeld:false, keys:{} });
   Object.assign(PL, { x:M.start.x, z:M.start.z, vx:0, vz:0, yaw:M.start.yaw, pitch:-0.08, hp:PL.maxHp, hurtT:99, weapons:[], cur:0, fireT:0, reloadT:0, swapT:0,
-    meleeT:0, meleeCool:0, adsT:0, kick:0, kickYaw:0, bloom:0, recoil:0, down:false, bleed:0, reviveT:0, nades:ZD.GRENADE.start, nadeCool:0 });
+    meleeT:0, meleeCool:0, adsT:0, kick:0, kickYaw:0, bloom:0, recoil:0, down:false, bleed:0, reviveT:0, nades:ZD.GRENADE.start, nadeCool:0, turnV:0 });
   PL.rig.root.visible = true; PL.rig.body.rotation.x = 0; PL.rig.body.position.y = 0;
   giveWeapon('pistol'); giveWeapon('rifle'); PL.swapT = 0;
   makeBots();
@@ -710,6 +721,8 @@ function startMission(i){
   updateHud(true); renderSquad();
   if(typeof window.onGameplayStart === 'function') window.onGameplayStart();
   if(!buttonsMode()) requestLock();
+  else if((SAVE.tips || 0) < 3){ SAVE.tips = (SAVE.tips || 0) + 1; persist();
+    setTimeout(()=>{ if(G.phase === 'play' && G.t < 12) toast(TOUCH ? 'Stick left / right turns you · drag the screen to look around' : 'A / D or ← / → turn you · drag the screen to look around', 4200); }, 4300); }
 }
 function nextStep(){
   const M = G.mission;
@@ -888,7 +901,7 @@ function banner(top, main, time, sub){
   b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); clearTimeout(bannerTimer); bannerTimer = setTimeout(()=>b.classList.remove('show'), (time || 2.5)*1000);
 }
 let toastT = 0;
-function toast(t){ const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove('show'), 2400); }
+function toast(t, ms){ const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove('show'), ms || 2400); }
 
 // ---- input ------------------------------------------------------------------------------------
 function requestLock(){
@@ -920,7 +933,7 @@ function bindInput(){
     if(e.code === 'KeyQ' || (e.code === 'Digit1' && PL.cur !== 0) || (e.code === 'Digit2' && PL.cur !== 1)) swapWeapon();
   });
   addEventListener('keyup', e=>{ G.keys[e.code] = false; if(e.code === 'KeyE') G.useHeld = false; if(e.code === 'Space') G.trigger = false; });
-  addEventListener('blur', ()=>{ G.keys = {}; G.trigger = false; G.adsHeld = false; G.useHeld = false; G.sprintBtn = false; });
+  addEventListener('blur', ()=>{ G.keys = {}; G.trigger = false; G.adsHeld = false; G.useHeld = false; G.sprintBtn = false; G.lookDrag = false; G.fireDrag = false; });
   // "mouse aim" mode: the cursor is locked, left button fires, right button aims
   c.addEventListener('mousedown', e=>{ unlockAudio(); if(buttonsMode() || !playing()) return;
     if(!document.pointerLockElement){ requestLock(); return; }
@@ -948,17 +961,18 @@ function bindButtons(){
   zone.addEventListener('pointermove', e=>{ if(e.pointerId !== stick.id) return; let dx = (e.clientX - stick.ox)/R, dy = (e.clientY - stick.oy)/R; const l = Math.hypot(dx, dy); if(l > 1){ dx /= l; dy /= l; }
     G.joy.x = dx; G.joy.y = dy; place(knob, stick.ox + dx*R, stick.oy + dy*R); });
   const stickEnd = e=>{ if(e.pointerId !== stick.id) return; stick.id = null; G.joy.on = false; G.joy.x = G.joy.y = 0; tc.classList.remove('stickOn'); };
-  zone.addEventListener('pointerup', stickEnd); zone.addEventListener('pointercancel', stickEnd);
-  lookZ.addEventListener('pointerdown', e=>{ e.preventDefault(); unlockAudio(); if(!playing() || lk.id !== null) return; lk.id = e.pointerId; lk.x = e.clientX; lk.y = e.clientY; try{ lookZ.setPointerCapture(e.pointerId); }catch(_){} });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t=>zone.addEventListener(t, stickEnd));
+  lookZ.addEventListener('pointerdown', e=>{ e.preventDefault(); unlockAudio(); if(!playing() || lk.id !== null) return; lk.id = e.pointerId; lk.x = e.clientX; lk.y = e.clientY; G.lookDrag = true; try{ lookZ.setPointerCapture(e.pointerId); }catch(_){} });
   lookZ.addEventListener('pointermove', e=>{ if(e.pointerId !== lk.id || !playing()) return; look(e.clientX - lk.x, e.clientY - lk.y, lookS()); lk.x = e.clientX; lk.y = e.clientY; });
-  const lookEnd = e=>{ if(e.pointerId === lk.id) lk.id = null; }; lookZ.addEventListener('pointerup', lookEnd); lookZ.addEventListener('pointercancel', lookEnd);
+  const lookEnd = e=>{ if(e.pointerId === lk.id){ lk.id = null; G.lookDrag = false; } };
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t=>lookZ.addEventListener(t, lookEnd));
   // FIRE: hold to shoot, slide the finger on it to steer the aim
   const bf = $('bFire');
   bf.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); unlockAudio(); if(!playing()) return; fp.id = e.pointerId; fp.x = e.clientX; fp.y = e.clientY;
-    try{ bf.setPointerCapture(e.pointerId); }catch(_){} G.trigger = true; G.triggerPressed = true; bf.classList.add('on'); });
+    try{ bf.setPointerCapture(e.pointerId); }catch(_){} G.trigger = true; G.triggerPressed = true; G.fireDrag = true; bf.classList.add('on'); });
   bf.addEventListener('pointermove', e=>{ if(e.pointerId !== fp.id || !playing()) return; look(e.clientX - fp.x, e.clientY - fp.y, lookS()); fp.x = e.clientX; fp.y = e.clientY; });
-  const fend = e=>{ if(e.pointerId !== fp.id) return; fp.id = null; G.trigger = false; bf.classList.remove('on'); };
-  bf.addEventListener('pointerup', fend); bf.addEventListener('pointercancel', fend);
+  const fend = e=>{ if(e.pointerId !== fp.id) return; fp.id = null; G.trigger = false; G.fireDrag = false; bf.classList.remove('on'); };
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t=>bf.addEventListener(t, fend));
   const btn = (id, down, up)=>{ const el = $(id);
     el.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); unlockAudio(); if(!playing()) return; el.classList.add('on'); down(); });
     const off = ()=>{ if(!el.classList.contains('on')) return; el.classList.remove('on'); if(up) up(); };
@@ -1099,8 +1113,8 @@ function bindMenus(){
   $('wMenu').addEventListener('click', ()=>adThen(openMenu));
   $('howText').innerHTML =
     '<p><b>Your squad.</b> ACE, DOC and TANK fight next to you. They pick up mission items, help at objectives, and run over to pull you up when you go down.</p>' +
-    '<p><b>Buttons.</b> The stick on the left moves you. Drag anywhere on the right to look. Hold <b>FIRE</b> to shoot, and slide on it to steer your aim. <b>AIM</b>, <b>GRENADE</b>, <b>RELOAD</b>, <b>SWAP</b>, <b>KNIFE</b>, <b>SPRINT</b> and <b>USE</b> sit around it.</p>' +
-    '<p><b>Keyboard.</b> WASD move · Shift sprint · Space fire · G grenade · R reload · Q swap · V knife · E use · P pause. For a locked mouse, pick “Mouse aim” in Settings.</p>' +
+    '<p><b>Buttons.</b> The stick on the left walks you; push it left or right to turn. Drag anywhere on the screen to look around. Hold <b>FIRE</b> to shoot, and slide on it to steer your aim. <b>AIM</b>, <b>GRENADE</b>, <b>RELOAD</b>, <b>SWAP</b>, <b>KNIFE</b>, <b>SPRINT</b> and <b>USE</b> sit around it.</p>' +
+    '<p><b>Keyboard.</b> W / S walk · A / D or ← / → turn · Shift sprint · Space fire · G grenade · R reload · Q swap · V knife · E use · P pause. For a locked mouse, pick “Mouse aim” in Settings.</p>' +
     '<p class="tip">Follow the marker to each objective. Stand in a yellow circle to switch something on; every teammate inside makes it faster. Blue crates refill ammo and grenades. When a teammate is down, hold USE next to them.</p>';
 }
 
