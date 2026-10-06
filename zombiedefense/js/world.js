@@ -288,6 +288,7 @@ const FLOOR = { asphalt:['asphalt', 6], dirt:['dirt', 6], grass:['grass', 6], sa
 W.clearMap = function(){
   for(const g of [W.mapGroup, W.dynGroup]){ if(!g) continue; scene.remove(g);
     g.traverse(o=>{ if(o.userData && o.userData.ownGeo && o.geometry) o.geometry.dispose(); if(o.userData && o.userData.ownMap && o.material.map) o.material.map.dispose();
+      if(o.isSprite && o.userData.tex){ o.userData.tex.dispose(); o.material.dispose(); }
       if(o.parent && o.parent.userData.merged && o.geometry) o.geometry.dispose(); }); }
   W.mapGroup = null; W.dynGroup = null; W.lampSprites = []; W.anims = [];
 };

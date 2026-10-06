@@ -599,7 +599,9 @@ function horrorTick(dt){
 MO.update = function(dt){
   if(G.mode === 'campaign') updateCampaign(dt); else if(G.mode === 'survival'){ updateSurvival(dt); updateBox(dt); }
   updateMystery(dt); horrorTick(dt);
-  const dark = W.envDark || G.blackout || horror.black > 0; W.flashlight(dark, dark ? 2.4 : 0);
+  const dark = W.envDark || G.blackout || horror.black > 0;
+  // the flashlight stutters during a flicker
+  W.flashlight(dark, dark ? (horror.flicker > 0 && Math.random() < 0.35 ? 0.2 : 2.4) : 0);
 };
 MO.autopilotExtra = function(){
   if(G.mode !== 'survival') return;
