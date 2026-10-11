@@ -232,12 +232,21 @@ const camBasis = C.camBasis = function(){
 const updateCamera = C.updateCamera = function(dt){
   const cam = W.camera, a = PL.adsT, B = camBasis(), w = curW(), adsFov = w && WEAP[w.id].ads ? WEAP[w.id].ads : 48;
   const side = lerp(CAM.side, 0.7, a), up = lerp(CAM.up, 0.25, a), back = lerp(CAM.back, adsFov < 40 ? 1.2 : 1.8, a);
-  const py = PL.down ? 1.0 : 1.62, ox = PL.x + B.rx*side*0.4, oz = PL.z + B.rz*side*0.4;
-  let dx = -B.fx*back + B.rx*side*0.6, dy = -B.fy*back + up, dz = -B.fz*back + B.rz*side*0.6;
-  const len = Math.hypot(dx, dy, dz); dx /= len; dy /= len; dz /= len;
-  let t = len; for(const b of BULLET){ const h = rayBox(ox, py, oz, dx, dy, dz, b, t); if(h >= 0 && h < t) t = h; }
-  t = Math.max(0.35, t - 0.22);
-  cam.position.set(ox + dx*t, Math.max(0.3, py + dy*t), oz + dz*t);
+  const py = PL.down ? 1.0 : 1.62;
+  // the camera boom is a thin slab of three parallel rays, so a fence or a corner met at a grazing angle
+  // cannot slip in between the camera and the hero
+  const boom = s=>{ const ox = PL.x + B.rx*s*0.4, oz = PL.z + B.rz*s*0.4;
+    let dx = -B.fx*back + B.rx*s*0.6, dy = -B.fy*back + up, dz = -B.fz*back + B.rz*s*0.6;
+    const len = Math.hypot(dx, dy, dz); dx /= len; dy /= len; dz /= len;
+    const hl = Math.hypot(dx, dz) || 1, px = -dz/hl*0.2, pz = dx/hl*0.2;
+    let t = len; for(const o of [0, 1, -1]) for(const b of BULLET){ const h = rayBox(ox + px*o, py, oz + pz*o, dx, dy, dz, b, t); if(h >= 0 && h < t) t = h; }
+    return { ox, oz, dx, dy, dz, t:t - 0.25 }; };
+  // backed against a wall on the shoulder side, the camera swings in behind the head instead of into the wall
+  let want = side;
+  if(side){ const r = boom(side); if(r.t < 1.2){ const c = boom(0); if(c.t > r.t + 0.3) want = 0; } }
+  PL.camSide = PL.camSide == null ? want : lerp(PL.camSide, want, 1 - Math.exp(-dt*10));
+  const r = boom(PL.camSide), t = Math.max(0.35, r.t);
+  cam.position.set(r.ox + r.dx*t, Math.max(0.3, py + r.dy*t), r.oz + r.dz*t);
   cam.rotation.set(PL.pitch + PL.kick, PL.yaw + PL.kickYaw, 0, 'YXZ');
   const fov = lerp(PL.sprint ? 74 : CAM.fov, adsFov, a);
   if(Math.abs(cam.fov - fov) > 0.05){ cam.fov = lerp(cam.fov, fov, 1 - Math.exp(-dt*14)); cam.updateProjectionMatrix(); }
@@ -530,6 +539,7 @@ C.hurtMember = function(m, dmg, from, quiet){
   if(m.fx && (m.fx.bulwark > 0)) return;
   if(m === PL && G.pow.shield > 0) return;
   if(G.over) return;
+  if(G.help) dmg *= 1 - 0.1*G.help;        // comeback help after failed tries (campaign only)
   m.hp -= dmg; m.hurtT = 0;
   if(m === PL && !quiet){ sfx('hurt'); W.shake(0.3); if(from) UI().hurtDir(from); }
   if(m === PL && dmg > 1) G.tookHit = true;
@@ -765,8 +775,15 @@ function bindInput(){
   addEventListener('mouseup', e=>{ if(buttonsMode()) return; if(e.button === 0) G.trigger = false; if(e.button === 2) G.adsHeld = false; });
   c.addEventListener('contextmenu', e=>e.preventDefault()); $('tc').addEventListener('contextmenu', e=>e.preventDefault());
   addEventListener('wheel', e=>{ if(playing() && Math.abs(e.deltaY) > 10) swapWeapon(); }, { passive:true });
-  addEventListener('mousemove', e=>{ if(!document.pointerLockElement || !playing()) return; look(e.movementX, e.movementY, 0.0022*S.data.settings.sens*(PL.adsT > 0.5 ? 0.6 : 1)); });
-  document.addEventListener('pointerlockchange', ()=>{ if(document.pointerLockElement){ $('clickWrap').classList.remove('show'); lockFails = 0; }
+  // browsers sometimes send one bogus move under pointer lock (the first after locking, or a jump back to the
+  // cursor's old spot when the page underneath changes); taken at face value it flicks the view to the sky
+  let skipMove = false;
+  addEventListener('mousemove', e=>{ if(!document.pointerLockElement || !playing()) return; const dx = e.movementX, dy = e.movementY;
+    if(skipMove){ skipMove = false; if(Math.abs(dx) + Math.abs(dy) > 60) return; }
+    if((dx || dy) && Math.abs(Math.abs(dx) - e.clientX) <= 1 && Math.abs(Math.abs(dy) - e.clientY) <= 1 && Math.abs(dx) + Math.abs(dy) > 60) return;
+    if(Math.abs(dx) > innerWidth*0.45 || Math.abs(dy) > innerHeight*0.45) return;
+    look(dx, dy, 0.0022*S.data.settings.sens*(PL.adsT > 0.5 ? 0.6 : 1)); });
+  document.addEventListener('pointerlockchange', ()=>{ if(document.pointerLockElement){ $('clickWrap').classList.remove('show'); lockFails = 0; skipMove = true; }
     else if(!buttonsMode() && playing()) C.setPaused(true); });
   document.addEventListener('pointerlockerror', ()=>lockFailed());
   $('clickWrap').addEventListener('click', ()=>{ A.unlock(); requestLock(true); });
@@ -885,7 +902,7 @@ function step(dt){
 C.step = step;
 
 // ---- loop ------------------------------------------------------------------------------------------
-let last = 0, fpsAcc = 0, fpsN = 0, fpsLow = 0;
+let last = 0, fpsAcc = 0, fpsN = 0, fpsLow = 0, fpsWarm = 2.5, fpsPhase = '', fpsQ = '';
 function loop(now){
   requestAnimationFrame(loop);
   if(W.sizeChanged()) W.resize();
@@ -904,9 +921,18 @@ function frame(dt){
   } else if(G.phase === 'menu') ZD.UI.menuStep(dt);
   W.tick(dt);
   W.render();
-  if(S.data.settings.quality === 'auto' && G.phase === 'play' && !G.paused && dt > 0){ fpsAcc += dt; fpsN++;
-    if(fpsAcc > 4){ const fps = fpsN/fpsAcc; fpsAcc = 0; fpsN = 0;
-      if(fps < 40 && ++fpsLow >= 2){ fpsLow = 0; const q = W.quality() === 'high' ? 'medium' : 'low'; if(q !== W.quality()){ W.setQuality(q); W.lowFx = q === 'low'; } } } }
+  // auto quality watches the real frame rate in play and in the menu too, the first thing a player sees on
+  // a portal: two slow 2.5 s windows in a row step the look down one notch. Shader warm-up after loading or
+  // a step, pauses, ads and hidden tabs do not count.
+  if(S.data.settings.quality === 'auto' && (G.phase === 'play' || G.phase === 'menu') && !G.paused && !G.adPaused && !document.hidden && dt > 0){
+    // a new map compiles its shaders, and a quality change (ours or the player's) starts a fresh measurement
+    if(G.phase !== fpsPhase || W.quality() !== fpsQ){ fpsPhase = G.phase; fpsQ = W.quality(); fpsWarm = 2; fpsAcc = 0; fpsN = 0; fpsLow = 0; }
+    if(fpsWarm > 0) fpsWarm -= dt;
+    else { fpsAcc += dt; fpsN++;
+      if(fpsAcc > 2.5){ const fps = fpsN/fpsAcc; fpsAcc = 0; fpsN = 0;
+        if(fps >= 40) fpsLow = 0;
+        else if(++fpsLow >= 2){ fpsLow = 0; const q = W.quality() === 'high' ? 'medium' : 'low';
+          if(q !== W.quality()){ W.setQuality(q); W.lowFx = q === 'low'; } } } } }
 }
 C.frame = frame;
 

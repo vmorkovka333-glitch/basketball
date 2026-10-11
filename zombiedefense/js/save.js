@@ -8,7 +8,7 @@ const fresh = ()=>({
   settings:{ sens:1, invert:false, vol:0.7, music:true, mute:false, quality:'auto', controls:(ZD.C && !ZD.C.TOUCH) ? 'mouse' : 'buttons', assist:true, tips:0 },
   owned:{ weapons:['pistol','smg','rifle','shotgun'], melee:['knife'], chars:['max','ace','doc','tank'], outfits:['woodland'] },
   loadout:{ primary:'rifle', secondary:'pistol', melee:'knife', char:'max', outfits:{} },
-  upgrades:{}, missions:{}, secrets:{}, notes:{}, symbols:{}, ach:{},
+  upgrades:{}, missions:{}, secrets:{}, notes:{}, symbols:{}, ach:{}, fails:{},
   records:{ waves:{}, runs:[], bossTimes:{}, mostKills:0 },
   stats:{}, daily:{ key:'', list:[] }, weekly:{ key:'', list:[] },
 });

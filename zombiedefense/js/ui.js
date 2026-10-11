@@ -47,7 +47,7 @@ UI.renderSquad = function(){
     (b.down ? '<em>DOWN</em>' : (b.ult >= 1 ? '<em class="ult">ULT</em>' : '')) + '</div>').join('');
 };
 UI.renderFeed = function(){ $('feed').innerHTML = C.feed().map(f=>'<div style="opacity:' + Math.min(1, f.t).toFixed(2) + '"><b style="color:' + f.css + '">' + esc(f.name) + '</b> ' + esc(f.text) + '</div>').join(''); };
-let _wv = null;
+let _wv = null, _tl = null, _tlT = 0;
 function waypoint(){
   const el = $('wp'), tg = G.over ? null : MO().objectiveTarget();
   if(!tg){ el.style.display = 'none'; return; }
@@ -59,6 +59,9 @@ function waypoint(){
   const out = behind || x < mx || x > vw - mx || y < top || y > vh - bot;
   if(out){ const dx = x - cx, dy = y - cy, k = Math.min(dx > 0 ? (vw - mx - cx)/dx : (dx < 0 ? (mx - cx)/dx : 1e9), dy > 0 ? (vh - bot - cy)/dy : (dy < 0 ? (top - cy)/dy : 1e9));
     if(k < 1){ x = cx + dx*k; y = cy + dy*k; }
+    // pinned to the left edge it would sit on the objective and squad panel: slide out past its right side
+    const now = performance.now(); if(!_tl || now - _tlT > 500){ _tl = $('topL').getBoundingClientRect(); _tlT = now; }
+    if(x < _tl.right + 30 && y < _tl.bottom + 20) x = _tl.right + 30;
     $('wpArrow').style.display = 'block'; $('wpArrow').style.transform = 'rotate(' + Math.atan2(dy, dx) + 'rad)'; }
   else $('wpArrow').style.display = 'none';
   el.style.transform = 'translate(' + x.toFixed(0) + 'px,' + y.toFixed(0) + 'px)';
@@ -118,13 +121,23 @@ UI.bossBar = function(b){ $('bossBar').classList.toggle('show', !!b); if(b){ $('
 UI.popPoints = function(n){ const el = document.createElement('div'); el.className = 'pp' + (n < 0 ? ' neg' : (n >= 100 ? ' big' : '')); el.textContent = (n > 0 ? '+' : '') + n; el.style.left = (Math.random()*40) + 'px';
   $('pops').appendChild(el); setTimeout(()=>el.remove(), 900); $('points').textContent = G.points.toLocaleString('en-US'); };
 UI.flashColor = function(css){ const f = $('flashC'); f.style.background = 'radial-gradient(ellipse at center, transparent 40%, ' + css + ' 140%)'; f.classList.remove('show'); void f.offsetWidth; f.classList.add('show'); };
-let bannerTimer = 0, toastT = 0;
+let bannerTimer = 0, toastT = 0, bannerEnd = 0;
 UI.banner = function(top, main, time, sub){
   $('bannerTop').textContent = top; $('bannerMain').textContent = main; $('bannerSub').textContent = sub || '';
   const b = $('banner'); b.classList.toggle('long', String(main).length > 14); b.style.animationDuration = (time || 2.5) + 's';
   b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); clearTimeout(bannerTimer); bannerTimer = setTimeout(()=>b.classList.remove('show'), (time || 2.5)*1000);
+  bannerEnd = Date.now() + (time || 2.5)*1000;
+  // the two share the top of the screen: a toast already up steps aside and comes back after the banner
+  const tl = $('toast'); if(tl.classList.contains('show')){ clearTimeout(toastT); tl.classList.remove('show'); UI.toast(tl.textContent, 2600); }
 };
-UI.toast = function(t, ms){ const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove('show'), ms || 2400); };
+// a toast waits for a banner on screen to finish, so the two never print over each other; the ones that
+// pile up meanwhile follow one another
+const toastQ = [];
+function showToast(t, ms){ const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove('show'), ms || 2400); }
+function flushToasts(){ const wait = bannerEnd - Date.now(); if(wait > 0){ setTimeout(flushToasts, wait + 150); return; }
+  const q = toastQ.shift(); if(!q) return; showToast(q[0], q[1]); if(toastQ.length) setTimeout(flushToasts, Math.min(q[1] || 2400, 2000)); }
+UI.toast = function(t, ms){ if(bannerEnd - Date.now() > 0){ if(!toastQ.some(q=>q[0] === t)){ toastQ.push([t, ms]); if(toastQ.length === 1) flushToasts(); } return; }
+  showToast(t, ms); };
 UI.glyphFound = function(glyph, order){ const c = $('glyphs').children[order]; if(c){ c.classList.add('on'); drawGlyphTo(c.querySelector('canvas'), glyph, '#7affc8'); } };
 function drawGlyphTo(cv, idx, color){ const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); ZD.drawGlyph(g, idx, cv.width, color); }
 
@@ -172,6 +185,10 @@ UI.openKeypad = function(M){
   $('keyGrid').querySelectorAll('.kg').forEach(b=>{ drawGlyphTo(b.querySelector('canvas'), +b.dataset.g, '#7affc8'); b.addEventListener('click', ()=>{ if(keySeq.length >= 3) return; keySeq.push(+b.dataset.g); A.sfx('beep', { f:1000 + keySeq.length*200 }); renderSeq();
     if(keySeq.length === 3){ setTimeout(()=>{ if(MO().tryCode(keySeq)){ UI.closeOverlays(); } else { $('keyMsg').textContent = 'Wrong order. The marks know the way.'; keySeq = []; renderSeq(); } }, 350); } }); });
   $('keyMsg').textContent = G.symbolsFound.size < 3 ? 'You have found ' + G.symbolsFound.size + ' of 3 marks. Each mark has lines under it.' : 'Enter the three marks in the order of their lines.';
+  // the marks found so far in their slots, as on the HUD (whose slots are hidden on low phones)
+  let kf = $('keyFound'); if(!kf){ kf = document.createElement('div'); kf.id = 'keyFound'; $('keySeq').before(kf); }
+  kf.innerHTML = '<span>Found</span>' + [0,1,2].map(()=>'<i><canvas width="36" height="36"></canvas></i>').join('');
+  kf.querySelectorAll('canvas').forEach((cv, i)=>{ const s = M.symbols.find(x=>x.order === i), got = s && G.symbolsFound.has(i); drawGlyphTo(cv, got ? s.glyph : -1, got ? '#7affc8' : '#444'); });
   renderSeq(); $('keyWrap').classList.add('show');
 };
 function renderSeq(){ $('keySeq').innerHTML = [0,1,2].map(i=>'<i>' + (keySeq[i] != null ? '<canvas width="48" height="48"></canvas>' : '') + '</i>').join('');

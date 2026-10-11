@@ -133,7 +133,8 @@ function shockwave(x, z, r, dmg, from, chill){
 // ---- bosses ---------------------------------------------------------------------------------
 const CD = { charge:7, cleave:0, slam:9, stomp:8, summon:14, buff:16, spit:4.5, gas:10, heal:18, teleport:9, pull:11, shards:8, cloak:16, meteor:14 };
 AI.spawnBoss = function(id, x, z, o){
-  o = o || {}; const def = ZD.BOSSES[id], rig = W.makeBoss(def), hp = Math.round(def.hp*(o.hpMul || 1));
+  // comeback help: each failed try on this mission (up to three) takes 12% off the boss
+  o = o || {}; const def = ZD.BOSSES[id], rig = W.makeBoss(def), hp = Math.round(def.hp*(o.hpMul || 1)*(G.mode === 'campaign' ? 1 - 0.12*(G.help || 0) : 1));
   const b = { boss:true, id, def, type:'boss', rig, x, z, y:0, yaw:0, hp, maxHp:hp, armor:0, speed:def.speed, dmg:Math.min(def.dmg*0.6, 24)*(o.dmgMul || 1), state:'roar', atkT:0, atkPose:0, phase:0,
     cds:{}, flinch:0, kx:0, kz:0, moveSpeed:0, deadT:0, fallDir:1, stuckT:0, lx:x, lz:z, losT:0, los:false, target:null, born:G.t, chase:o.chase || null, chaseIdx:0, invuln:true, life:0, hitT:0 };
   for(const k in CD) b.cds[k] = CD[k]*(0.3 + Math.random()*0.5);
