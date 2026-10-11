@@ -3,7 +3,7 @@
 (function(ZD){
 let T = window.THREE;
 const W = ZD.W = { lampSprites:[], anims:[], glowMats:[], lampMats:[], fires:[] };
-let renderer, scene, camera, quality = 'high', shadows = true;
+let renderer, scene, camera, quality = 'high', shadows = true, shadowsOn = true;   // shadows: built with them; shadowsOn: drawn now
 const geoCache = new Map(), matCache = new Map();
 const rnd = (a, b)=>a + Math.random()*(b - a);
 // boxes get softly rounded edges on Medium and High: the edges catch the light instead of ending in a hard line
@@ -26,6 +26,9 @@ function boxUV(w, h, d, su, sv){ const k = 'u'+w.toFixed(2)+'|'+h.toFixed(2)+'|'
   if(!g){ g = new T.BoxGeometry(w, h, d); const uv = g.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
     for(let f=0; f<6; f++) for(let v=0; v<4; v++){ const i = f*4 + v; uv.setXY(i, uv.getX(i)*dims[f][0]/su, uv.getY(i)*dims[f][1]/(sv || su)); }
     geoCache.set(k, g); } return g; }
+function plane(w, h){ const k = 'p'+w+'|'+h; let g = geoCache.get(k); if(!g){ g = new T.PlaneGeometry(w, h); geoCache.set(k, g); } return g; }
+// a random size snapped to a step, so the geometry cache holds a handful of sizes instead of one per object
+const rq = (a, b, s)=>+(Math.round((a + Math.random()*(b - a))/s)*s).toFixed(3);
 function cyl(rt, rb, h, seg){ const k = 'c'+rt+'|'+rb+'|'+h+'|'+(seg||8); let g = geoCache.get(k); if(!g){ g = new T.CylinderGeometry(rt, rb, h, seg||8); geoCache.set(k, g); } return g; }
 function cone(r, h, seg){ const k = 'k'+r+'|'+h+'|'+(seg||7); let g = geoCache.get(k); if(!g){ g = new T.ConeGeometry(r, h, seg||7); geoCache.set(k, g); } return g; }
 function sph(r, ws, hs){ const k = 's'+r+'|'+ws+'|'+hs; let g = geoCache.get(k); if(!g){ g = new T.SphereGeometry(r, ws||10, hs||8); geoCache.set(k, g); } return g; }
@@ -275,12 +278,17 @@ W.setLabel = function(s, text, css, opt){ opt = opt || {}; const c = s.userData.
 
 // ---- init, lighting presets ---------------------------------------------------------
 W.viewportSize = function(){ const m = W.mount; const w = (m && m.clientWidth) || innerWidth || 1, h = (m && m.clientHeight) || innerHeight || 1; return [Math.max(1, w), Math.max(1, h)]; };
+// the drawing buffer has a pixel budget per quality as well as a ratio cap, so a big or very sharp screen
+// (a full-screen Retina laptop would otherwise draw ~5 MP with the cinema passes) does not multiply the cost
+const PX_CAP = { high:2, medium:1.5, low:1 }, PX_BUDGET = { high:3.0e6, medium:2.1e6, low:1.2e6 };
+function pixelRatio(q){ const [w, h] = W.viewportSize();
+  return Math.max(0.5, Math.min(devicePixelRatio || 1, PX_CAP[q] || 1, Math.sqrt((PX_BUDGET[q] || PX_BUDGET.low)/(w*h)))); }
 W.init = function(mount, q, mobile){
-  T = window.THREE; W.T = T; W.mount = mount; quality = q; shadows = q === 'high'; W.mobile = !!mobile; phong = q !== 'low';
+  T = window.THREE; W.T = T; W.mount = mount; quality = q; shadows = shadowsOn = q === 'high'; W.mobile = !!mobile; phong = q !== 'low';
   RIMU.value = new T.Color(0x3a4a66);
   // the post pass anti-aliases on Medium and High, so the canvas itself only does it on Low
   renderer = new T.WebGLRenderer({ antialias:q === 'low' && !mobile, powerPreference:'high-performance' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, q === 'high' ? 2 : (q === 'medium' ? 1.5 : 1)));
+  renderer.setPixelRatio(pixelRatio(q));
   const [w, h] = W.viewportSize(); renderer.setSize(w, h);
   renderer.shadowMap.enabled = shadows; renderer.shadowMap.type = T.PCFSoftShadowMap;
   mount.appendChild(renderer.domElement);
@@ -303,10 +311,15 @@ W.init = function(mount, q, mobile){
 };
 W.follow = function(x, z){ W.focus = { x, z }; if(!W.sun) return; if(W.overhead) W.sun.position.set(x - 4, 40, z - 3); else W.sun.position.set(x - 30, 40, z - 20); W.sun.target.position.set(x, 0, z); if(W.weatherSys) W.weatherSys.center(x, z); };
 W.sizeChanged = function(){ const [w, h] = W.viewportSize(); return w !== W.lastSize[0] || h !== W.lastSize[1]; };
-W.resize = function(){ const [w, h] = W.viewportSize(); W.lastSize = [w, h]; renderer.setSize(w, h); camera.aspect = w/h; camera.updateProjectionMatrix();
+W.resize = function(){ const [w, h] = W.viewportSize(); W.lastSize = [w, h]; renderer.setPixelRatio(pixelRatio(quality)); renderer.setSize(w, h); camera.aspect = w/h; camera.updateProjectionMatrix();
   if(W.pUniforms) W.pUniforms.forEach(u=>u.uScale.value = h*renderer.getPixelRatio()*0.5); if(W.post) W.post.resize(true); };
 W.quality = ()=>quality;
-W.setQuality = function(q){ quality = q; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, q === 'high' ? 2 : (q === 'medium' ? 1.5 : 1))); W.resize(); W.post.setQuality(q); };
+// stepping down also drops the sun's shadow map and the lamp point lights (an invisible light leaves the
+// shaders); a map built on High keeps its shadow flags, so stepping back up brings them back
+W.setQuality = function(q){ quality = q; shadowsOn = shadows && q === 'high';
+  renderer.shadowMap.enabled = shadowsOn; if(W.sun) W.sun.castShadow = shadowsOn;
+  for(const l of (W.lampLights || [])) l.visible = q === 'high';
+  W.resize(); W.post.setQuality(q); };
 W.render = function(){ if(W.sky.visible){ W.sky.position.copy(camera.position); W.sky.material.uniforms.time.value += 1/60; } W.post.render(scene, camera); };
 
 // ---- the sky: a gradient dome with the sun or moon, drifting clouds and stars ------------------------
@@ -402,7 +415,7 @@ function tickEnv(dt){
   scene.background.copy(c.sky).multiplyScalar(Math.max(0.25, m) + f*0.8); scene.fog.color.copy(c.fogC).multiplyScalar(Math.max(0.3, m) + f*0.5);
   scene.fog.near = c.near*(0.6 + 0.4*m); scene.fog.far = c.far*(0.55 + 0.45*m);
   W.hemi.color.copy(c.hemiS); W.hemi.groundColor.copy(c.hemiG); W.hemi.intensity = c.hemiI*m + f*1.4; W.amb.intensity = c.amb*m + f*0.3;
-  W.sun.color.copy(c.sunC); W.sun.intensity = (c.sunI*(W.overhead && shadows ? 2.2 : 1))*m + f*0.6;
+  W.sun.color.copy(c.sunC); W.sun.intensity = (c.sunI*(W.overhead && shadowsOn ? 2.2 : 1))*m + f*0.6;
   W.horizon.material.color.copy(c.horC); W.horizon.material.opacity = c.horO*m;
   const u = W.sky.material.uniforms, sm = Math.max(0.3, m) + f*0.8;
   u.horizon.value.copy(scene.fog.color); u.top.value.copy(c.zen).multiplyScalar(sm); u.sunCol.value.copy(c.glowC).multiplyScalar(Math.max(0.2, m));
@@ -502,7 +515,7 @@ W.buildMap = function(M){
     for(const z of M.zones){ const ib = M.inner(z), w = 2.4;
       for(const [x0, x1, z0, z1] of [[ib.x0, ib.x1, ib.z0, ib.z0 + w], [ib.x0, ib.x1, ib.z1 - w, ib.z1], [ib.x0, ib.x0 + w, ib.z0 + w, ib.z1 - w], [ib.x1 - w, ib.x1, ib.z0 + w, ib.z1 - w]]){
         const m = new T.Mesh(boxUV(x1 - x0, 0.03, z1 - z0, 2, 2), walk); m.position.set((x0 + x1)/2, 0.015, (z0 + z1)/2); m.receiveShadow = shadows; G.add(m); } } }
-  if(M.T.evac === 'heli') for(const z of M.zones) if(z.kind === 'arena'){ const pad = new T.Mesh(new T.PlaneGeometry(12, 12), newMat({ map:tex('helipad'), polygonOffset:true, polygonOffsetFactor:-1 })); pad.rotation.x = -Math.PI/2; pad.position.set(z.cx, 0.03, z.cz); G.add(pad); }
+  if(M.T.evac === 'heli') for(const z of M.zones) if(z.kind === 'arena'){ const pad = new T.Mesh(plane(12, 12), newMat({ map:tex('helipad'), polygonOffset:true, polygonOffsetFactor:-1 })); pad.rotation.x = -Math.PI/2; pad.position.set(z.cx, 0.03, z.cz); G.add(pad); }
   // walls
   const facades = ['brick','teal','beige','brick2','beige2','diner'];
   const contCols = [0x7a3b2a, 0x2e5a6e, 0x5a6a2e, 0x8a6a2a, 0x4a4a6a, 0x6a2e3a];
@@ -530,7 +543,7 @@ W.buildMap = function(M){
     else if(TH.wall === 'palisade'){ Gw.add(mesh(box(bw + 0.1, 0.18, bd + 0.1), lam(0xf0f4f8), cx, w.h + 0.08, cz, false)); }
     else if(TH.wall === 'hesco'){ Gw.add(mesh(box(bw + 0.05, 0.12, bd + 0.05), lam(0x6a5a40), cx, w.h + 0.06, cz)); }
     else if(TH.wall === 'rock'){ for(let t=0; t<L; t+=2.2){ const x = along ? w.x0 + t : cx + (Math.random() - 0.5)*0.4, z = along ? cz + (Math.random() - 0.5)*0.4 : w.z0 + t;
-      const r = mesh(sph(0.9 + Math.random()*0.6, 6, 5), lam(0x3a3640), x, 0.3, z); r.scale.set(1, 0.7, 1); Gw.add(r); } }
+      const r = mesh(sph(rq(0.9, 1.5, 0.1), 6, 5), lam(0x3a3640), x, 0.3, z); r.scale.set(1, 0.7, 1); Gw.add(r); } }
     else if(!M.outdoor){ Gw.add(mesh(box(bw + 0.06, 0.25, bd + 0.06), lam(0x2a2a2a), cx, 0.12, cz, false)); }
   }
   for(const b of M.buildings) G.add(makeBuilding(b));
@@ -544,7 +557,7 @@ W.buildMap = function(M){
   W.horizon.visible = false; W.sky.visible = !!TH.outdoor;
   for(const w of M.walls) if(w.obj) batchStatic(w.obj);      // walls that can fall batch on their own
   batchStatic(G);
-  W.sun.castShadow = shadows; W.overhead = !TH.outdoor;     // indoors the shadows fall straight down, as from the ceiling lights
+  W.sun.castShadow = shadowsOn; W.overhead = !TH.outdoor;     // indoors the shadows fall straight down, as from the ceiling lights
 };
 // indoor maps get a ceiling (seen only from below, so the camera never loses the hero), beams or a cave roof,
 // and pipes running along the walls
@@ -555,7 +568,7 @@ function ceiling(G, M, TH){
   c.rotation.x = Math.PI/2; c.position.set(M.X0 + M.W/2, H + (cave ? 0.6 : 0), M.Z0 + M.H/2); c.userData.dyn = true; c.userData.ownGeo = true; c.userData.ownMap = true; G.add(c);
   const metal = lam(0x3a3e44, { shine:[0x333333, 30] }), pipeC = [lam(0x7a5a3a, { shine:[0x3a3a3a, 30] }), lam(0x5a6a7a, { shine:[0x3a3a3a, 30] }), lam(0x6a7a5a, { shine:[0x3a3a3a, 30] })];
   const flat = (geo, mat, x, y, z)=>{ const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.receiveShadow = shadows; G.add(m); return m; };
-  if(cave){ for(let i=0;i<M.W*M.H/60;i++){ const s = flat(cone(0.25 + Math.random()*0.4, 0.8 + Math.random()*1.6, 6), lam(0x4a4452), M.X0 + Math.random()*M.W, H, M.Z0 + Math.random()*M.H);     // stalactites
+  if(cave){ for(let i=0;i<M.W*M.H/60;i++){ const s = flat(cone(rq(0.25, 0.65, 0.05), rq(0.8, 2.4, 0.2), 6), lam(0x4a4452), M.X0 + Math.random()*M.W, H, M.Z0 + Math.random()*M.H);     // stalactites
       s.rotation.x = Math.PI; s.position.y = H + 0.3 - s.geometry.parameters.height/2; } return; }
   if(M.theme !== 'hospital' && M.theme !== 'mall') for(let x = M.X0 + 3; x < M.X0 + M.W; x += 6) flat(sbox(0.3, 0.42, M.H), metal, x, H - 0.21, M.Z0 + M.H/2);
   for(const z of M.zones){ const ib = M.inner(z);                                                                                   // pipes along one wall of each room
@@ -1076,7 +1089,7 @@ W.makeZombie = function(type, shirt, pants, mut){
     for(const f of [rig.foreL, rig.foreR]) for(let k=-1;k<=1;k++){ const c = mesh(box(0.022, 0.1, 0.022), claw, k*0.032, -0.4, -0.025, false); c.rotation.x = 0.35; f.add(c); }
     const v = Math.random();
     if(v < 0.4){ const hair = zmat([0x1a1410, 0x3a2a1a, 0x5a4a3a, 0x2a2a2a][(Math.random()*4)|0]);                                           // patchy hair
-      for(let k=0;k<3;k++) rig.head.add(mesh(box(0.11 + Math.random()*0.08, 0.05, 0.11 + Math.random()*0.08), hair, (Math.random() - 0.5)*0.14, 0.3, (Math.random() - 0.5)*0.12 + 0.03, false)); }
+      for(let k=0;k<3;k++) rig.head.add(mesh(box(rq(0.11, 0.19, 0.02), 0.05, rq(0.11, 0.19, 0.02)), hair, (Math.random() - 0.5)*0.14, 0.3, (Math.random() - 0.5)*0.12 + 0.03, false)); }
     else if(v < 0.55) rig.head.add(mesh(box(0.12, 0.04, 0.12), zmat(0x9a4a5a), 0.04, 0.3, 0.02, false));                                      // the skull is open
     if(Math.random() < 0.28 && (type === 'walker' || type === 'runner' || type === 'climber')){                                                 // ribs through the shirt
       rig.torso.add(mesh(box(0.3, 0.2, 0.012), basic(0x2a0606), 0, 0.42, -0.121, false));
@@ -1088,7 +1101,7 @@ W.makeZombie = function(type, shirt, pants, mut){
   if(type === 'brute' || type === 'captain') rig.torso.add(mesh(box(0.5, 0.3, 0.36), c.shirt, 0, 0.18, -0.06));
   if(type === 'captain'){ rig.head.add(mesh(box(0.34, 0.1, 0.34), dark, 0, 0.32, 0)); rig.head.add(mesh(box(0.22, 0.12, 0.22), dark, 0, 0.42, 0)); rig.foreR.add(mesh(box(0.08, 0.6, 0.14), steel, 0, -0.5, -0.05)); }
   if(type === 'bloater'){ const pus = basic(0x9cff3c); rig.torso.add(mesh(sph(0.36, 12, 10), zmat(0x7a8a4a), 0, 0.22, -0.1));
-    for(let i=0;i<5;i++) rig.torso.add(mesh(sph(0.06 + Math.random()*0.05, 8, 6), pus, (Math.random()-0.5)*0.5, 0.1 + Math.random()*0.4, -0.38 - Math.random()*0.04, false)); }
+    for(let i=0;i<5;i++) rig.torso.add(mesh(sph(rq(0.06, 0.11, 0.01), 8, 6), pus, (Math.random()-0.5)*0.5, 0.1 + Math.random()*0.4, -0.38 - Math.random()*0.04, false)); }
   if(type === 'armored' || mut === 'armor'){ rig.plates = new T.Group(); rig.torso.add(rig.plates);
     rig.plates.add(mesh(box(0.48, 0.36, 0.06), steel, 0, 0.34, -0.15)); rig.plates.add(mesh(box(0.48, 0.3, 0.06), steel, 0, 0.36, 0.15)); rig.plates.add(mesh(box(0.14, 0.12, 0.16), steel, -0.3, 0.6, 0)); rig.plates.add(mesh(box(0.14, 0.12, 0.16), steel, 0.3, 0.6, 0));
     if(d.helmet){ rig.helmet = mesh(box(0.33, 0.2, 0.33), steel, 0, 0.3, 0); rig.head.add(rig.helmet); } }
@@ -1146,7 +1159,8 @@ W.makeBoss = function(def){
   rig.phase = 0; rig.sway = 0; rig.tilt = 0;
   scene.add(rig.root); return rig;
 };
-W.remove = function(o){ if(o && o.parent) o.parent.remove(o); };
+W.remove = function(o){ if(!o) return; if(o.parent) o.parent.remove(o);
+  o.traverse(c=>{ if(!c.userData) return; if(c.userData.ownGeo && c.geometry){ c.geometry.dispose(); c.userData.ownGeo = false; } if(c.userData.ownMap && c.material && c.material.map){ c.material.map.dispose(); c.userData.ownMap = false; } }); };
 
 // ---- mission objects -------------------------------------------------------------------------
 function beacon(color, h){ const g = new T.Group();
@@ -1178,12 +1192,12 @@ W.makeNest = function(){
   const g = new T.Group(), flesh = lam(0x6a2a3a), dark = lam(0x3a1420), glowm = basic(0xff4a8a);
   const core = mesh(sph(1.1, 14, 10), flesh, 0, 0.8, 0); core.scale.set(1, 0.8, 1); g.add(core); g.userData.core = core;
   for(let i=0;i<7;i++){ const a = i/7*Math.PI*2, t = mesh(cyl(0.12, 0.3, 2.2, 6), dark, Math.cos(a)*1.1, 0.4, Math.sin(a)*1.1); t.rotation.z = Math.cos(a)*1.1; t.rotation.x = -Math.sin(a)*1.1; g.add(t); }
-  for(let i=0;i<9;i++) g.add(mesh(sph(0.1 + Math.random()*0.08, 8, 6), glowm, (Math.random()-0.5)*1.6, 0.6 + Math.random()*0.8, (Math.random()-0.5)*1.6, false));
+  for(let i=0;i<9;i++) g.add(mesh(sph(rq(0.1, 0.18, 0.02), 8, 6), glowm, (Math.random()-0.5)*1.6, 0.6 + Math.random()*0.8, (Math.random()-0.5)*1.6, false));
   g.add(beacon(0xff4a8a, 5)); scene.add(g); return g;
 };
 W.makeEvac = function(color){
   const g = new T.Group();
-  const ring = new T.Mesh(new T.PlaneGeometry(16, 16), new T.MeshBasicMaterial({ map:tex('ring'), color:color || 0x5be36b, transparent:true, opacity:0.55, depthWrite:false }));
+  const ring = new T.Mesh(plane(16, 16), new T.MeshBasicMaterial({ map:tex('ring'), color:color || 0x5be36b, transparent:true, opacity:0.55, depthWrite:false }));
   ring.rotation.x = -Math.PI/2; ring.position.y = 0.05; g.add(ring); g.userData.ring = ring;
   g.add(beacon(color || 0x5be36b, 9)); scene.add(g); return g;
 };

@@ -67,11 +67,14 @@ MO.zombieMix = function(){
 MO.pickType = function(mix){ let r = Math.random(); for(const k in mix){ r -= mix[k]; if(r < 0) return k; } return 'walker'; };
 // a spawn point in an open zone, away from the squad and preferably out of sight
 function spawnPoint(){
-  const M = G.M, cam = W.camera, B = C.camBasis(), list = [];
+  const M = G.M, cam = W.camera, B = C.camBasis(), list = [], near = [];
   const pz = C.zoneAt(PL.x, PL.z);
   for(const z of M.zones){ if(!G.zoneOpen[z.i] || z.kind === 'secret') continue;
-    for(const s of z.spawns){ const d = Math.min(...C.members().filter(m=>!m.down).map(m=>dist(m, s)).concat([dist(PL, s)])); if(d < 13 || d > 48) continue;
-      if(C.flowDist(s.x, s.z) > 75) continue; list.push(s); } }
+    for(const s of z.spawns){ const d = Math.min(...C.members().filter(m=>!m.down).map(m=>dist(m, s)).concat([dist(PL, s)])); if(d > 48) continue;
+      if(C.flowDist(s.x, s.z) > 75) continue; if(d >= 13) list.push(s); else if(d >= 5) near.push({ s, d }); } }
+  // a small indoor start room has no point 13 m away from the squad: use the farthest ones it has
+  // (zombies rise out of the floor, so a closer spawn still reads fair), or the wave would never fill
+  if(!list.length && near.length){ near.sort((a, b)=>b.d - a.d); return rnd(near.slice(0, 3)).s; }
   if(!list.length){ for(let k=0;k<30;k++){ const a = Math.random()*Math.PI*2, r = 16 + Math.random()*18, x = PL.x + Math.cos(a)*r, z = PL.z + Math.sin(a)*r, c = C.navCell(x, z);
       if(c < 0 || C.NAV.blocked[c] || C.NAV.dist[c] > 70) continue; const zi = C.zoneAt(x, z); if(zi < 0 || !G.zoneOpen[zi]) continue; return { x, z }; } return null; }
   for(let k=0; k<8; k++){ const s = rnd(list), dx = s.x - cam.position.x, dz = s.z - cam.position.z, dl = Math.hypot(dx, dz) || 1;
@@ -111,10 +114,13 @@ MO.startMission = function(mapIndex, missionIndex){
   const lo = S.data.loadout; PL.weapons = [C.makeWeapon(lo.primary, 0), C.makeWeapon(lo.secondary, 0)]; C.equip(0); PL.swapT = 0;
   // secret weapons stay legendary once found
   PL.weapons.forEach(w=>{ if(WEAP[w.id].secret){ w.rar = 3; const st = C.wstat(w); w.mag = st.mag; w.res = st.reserve; } });
+  // comeback help: every failed try on this mission (up to three) makes the next one gentler, see C.hurtMember and AI.spawnBoss
+  G.help = Math.min(3, (S.data.fails || {})[ms.id] || 0);
   Object.assign(G, { step:-1, st:null, spawnT:3, horde:0, hordeT:0, stepXP:0, mysteryT:ms.steps.length > 1 && Math.random() < 0.4 ? 30 + Math.random()*50 : -1, mystery:null, collapseDone:false });
   resetMystery();
   UI().setMode('campaign'); UI().hideScreens();
   C.beginPlay(); A.music.set(0.25, false);
+  if(G.help) setTimeout(()=>UI().toast('Reinforcements: your squad takes ' + G.help*10 + '% less damage' + (ms.steps.some(s=>s.type === 'boss' || s.type === 'chase') ? ' and the boss is weaker' : ''), 4200), 1200);
   nextStep();
   UI().banner('MISSION ' + (ZD.MISSION_LIST.indexOf(ms) + 1) + ' · ' + def.name, ms.name, 4, ms.brief);
   UI().updateHud(true); UI().renderSquad();
@@ -300,6 +306,7 @@ function winMission(){
   if(G.over) return;
   G.phase = 'over'; G.over = true; A.loop('rotor', false); A.loop('train', false); A.music.set(0.2, false);
   const ms = G.mission, time = Math.round(G.t), stars = missionStars(), first = S.missionDone(ms, stars);
+  if(S.data.fails) delete S.data.fails[ms.id];
   const xp = ZD.XP.mission + ZD.XP.star*stars, credits = 400 + 150*stars + G.kills*2 + (first ? 300 : 0);
   S.addXP(xp); S.addCredits(credits); A.sfx('objective');
   const k = ZD.MISSION_LIST.indexOf(ms), next = ZD.MISSION_LIST[k + 1];
@@ -313,7 +320,7 @@ function winMission(){
 MO.fail = function(reason){
   if(G.over) return; G.over = true; G.phase = 'over'; G.slow = 0.35; A.loop('rotor', false); A.loop('train', false); A.sfx('fail'); A.music.set(0, false);
   if(G.mode === 'survival'){ survivalOver(reason); return; }
-  const ms = G.mission;
+  const ms = G.mission; S.data.fails = S.data.fails || {}; S.data.fails[ms.id] = (S.data.fails[ms.id] || 0) + 1; S.persist();
   UI().showResult({ win:false, title:'MISSION FAILED', sub:reason, stats:[['Objective', (G.step + 1) + ' / ' + ms.steps.length], ['Kills', G.kills], ['Headshots', G.heads], ['Time', Math.round(G.t) + 's']],
     rewards:'+' + G.stepXP + ' XP kept from objectives' });
   if(typeof window.onGameplayStop === 'function') window.onGameplayStop();
@@ -323,7 +330,7 @@ MO.nestStep = ()=>G.mode === 'campaign' && G.st && G.st.type === 'destroy';
 // ---- survival ---------------------------------------------------------------------------------------
 MO.startSurvival = function(mapIndex){
   C.clearWorld(); MO.clearObjectives();
-  G.mode = 'survival'; G.mission = null; G.mapIndex = mapIndex; G.intensity = 1; G.st = null; G.step = -1;
+  G.mode = 'survival'; G.mission = null; G.mapIndex = mapIndex; G.intensity = 1; G.st = null; G.step = -1; G.help = 0;
   C.loadMap(mapIndex); usedSpots.clear(); computeOpenZones();
   hideSurvivalGear(false);
   for(const it of G.M.items){ if(it.kind === 'perk') W.setPerkPower(it, false); if(it.kind === 'power') W.setPower(it, false); if(it.kind === 'upgrade') W.setUpgradeOn(it, false);
