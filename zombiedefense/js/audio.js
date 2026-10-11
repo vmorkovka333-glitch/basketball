@@ -4,11 +4,11 @@
 const A = ZD.A = { ctx:null, master:null, sfxBus:null, musicBus:null, ambBus:null, noise:null, echo:null, muted:false };
 const clamp = (v, a, b)=>v < a ? a : (v > b ? b : v);
 A.unlock = function(){
-  if(A.ctx){ if(A.ctx.state === 'suspended') A.ctx.resume(); return; }
+  if(A.ctx){ if(A.ctx.state === 'suspended' && !A.muted) A.ctx.resume(); return; }
   try{
     const C = window.AudioContext || window.webkitAudioContext; if(!C) return;
     const ac = A.ctx = new C();
-    A.master = ac.createGain(); A.master.gain.value = A.muted ? 0 : ZD.S.data.settings.vol;
+    A.master = ac.createGain(); A.master.gain.value = A.silent() ? 0 : ZD.S.data.settings.vol;
     const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 5; A.master.connect(comp); comp.connect(ac.destination);
     A.sfxBus = ac.createGain(); A.sfxBus.connect(A.master);
     A.musicBus = ac.createGain(); A.musicBus.gain.value = ZD.S.data.settings.music ? 0.55 : 0; A.musicBus.connect(A.master);
@@ -17,11 +17,15 @@ A.unlock = function(){
     d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(A.sfxBus); A.echo = d;
     const len = ac.sampleRate*2; A.noise = ac.createBuffer(1, len, ac.sampleRate); const ch = A.noise.getChannelData(0); for(let i=0;i<len;i++) ch[i] = Math.random()*2 - 1;
     if(A.pendingAmb) A.ambience(A.pendingAmb);
-    Music.start();
+    Music.start(); if(A.muted) ac.suspend();
   }catch(e){ A.ctx = null; }
 };
-A.setMuted = function(on){ A.muted = on; if(A.master) A.master.gain.value = on ? 0 : ZD.S.data.settings.vol; };
-A.setVolume = function(v){ if(A.master && !A.muted) A.master.gain.value = v; };
+// two reasons for silence: an ad is playing (the context is suspended outright) or the player muted
+A.silent = ()=>A.muted || !!ZD.S.data.settings.mute;
+A.setMuted = function(on){ A.muted = on; if(A.master) A.master.gain.value = A.silent() ? 0 : ZD.S.data.settings.vol;
+  if(A.ctx){ try{ if(on) A.ctx.suspend(); else if(A.ctx.state === 'suspended') A.ctx.resume(); }catch(e){} } };
+A.setUserMute = function(on){ ZD.S.data.settings.mute = !!on; if(A.master) A.master.gain.value = A.silent() ? 0 : ZD.S.data.settings.vol; };
+A.setVolume = function(v){ if(A.master && !A.silent()) A.master.gain.value = v; };
 A.setMusic = function(on){ if(A.musicBus) A.musicBus.gain.value = on ? 0.55 : 0; };
 
 function env(g, t, peak, a, d){ g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
@@ -44,7 +48,7 @@ function panned(x, z, vol, far){
 }
 let lastPlay = {};
 A.sfx = function(name, opt){
-  if(!A.ctx || A.muted) return; const ac = A.ctx, t = ac.currentTime + 0.002; opt = opt || {};
+  if(!A.ctx || A.silent()) return; const ac = A.ctx, t = ac.currentTime + 0.002; opt = opt || {};
   // the same sound at the same moment only once (shotgun pellets, chain lightning)
   const now = ac.currentTime; if(lastPlay[name] && now - lastPlay[name] < (opt.gap || 0.025)) return; lastPlay[name] = now;
   const out = opt.at ? panned(opt.at[0], opt.at[1], opt.vol, opt.far) : (opt.vol ? (()=>{ const g = ac.createGain(); g.gain.value = opt.vol; g.connect(A.sfxBus); return g; })() : A.sfxBus);
