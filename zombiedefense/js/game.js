@@ -322,7 +322,8 @@ C.fire = function(){
           lastX = hx; lastY = hy; lastZ = hz; hitsDone++;
           if(res === 'block') break;
         }
-        if(hitsDone === 0){ const wh = tr.world.hit; if(wh && wh.kind === 'ground') W.dust(lastX, 0.05, lastZ, 3); else if(wh){ W.dust(lastX, lastY, lastZ, 3); W.sparks(lastX, lastY, lastZ, 3); } }
+        if(hitsDone === 0){ const wh = tr.world.hit; if(wh && wh.kind === 'ground'){ W.dust(lastX, 0.05, lastZ, 3); if(p < 2) W.bulletHole(lastX, 0.002, lastZ, 0, 1, 0); }
+          else if(wh){ W.dust(lastX, lastY, lastZ, 3); W.sparks(lastX, lastY, lastZ, 3); if(p < 2) hole(wh, lastX, lastY, lastZ); } }
       } else { lastX = blocked.x; lastY = blocked.y; lastZ = blocked.z; W.dust(lastX, lastY, lastZ, 2); W.sparks(lastX, lastY, lastZ, 2); }
       if(p < 3) W.tracer(muzzle.x, muzzle.y, muzzle.z, lastX, lastY, lastZ, st.element ? ZD.ELEMENTS[st.element].hex : null);
       if(d.chain && firstZ) C.chainLightning(firstZ, st.dmg*0.6, d.chain, PL);
@@ -330,10 +331,17 @@ C.fire = function(){
     if(anyHit) UI().hitmarker(killed ? 'kill' : (critHit ? 'crit' : (headHit ? 'head' : 'hit')));
   }
   W.muzzleFlash(muzzle, dirV, d.flash); sfx(d.sound);
+  if(!d.flame && !d.proj) W.casing(muzzle.x - B.fx*0.3, muzzle.y + 0.04, muzzle.z - B.fz*0.3, B.rx, B.rz, d.cat === 'shotgun' ? 'shell' : 'brass');
   const ads = 1 - PL.adsT*0.45; PL.kick += d.kick*ads; PL.kickYaw += (Math.random() - 0.5)*d.kickSide*2*ads; PL.bloom = Math.min(0.06, PL.bloom + d.kick*0.5);
   PL.recoil = 0.07; W.shake(d.pellets > 1 || d.cat === 'sniper' ? 0.2 : 0.04);
   UI().updateHud(true);
 };
+// a hole on the face of the box the bullet stopped in
+function hole(b, x, y, z){
+  if(b.y1 != null && b.y1 < 0.3) return;
+  const d = [[Math.abs(x - b.x0), -1, 0, 0], [Math.abs(x - b.x1), 1, 0, 0], [Math.abs(z - b.z0), 0, 0, -1], [Math.abs(z - b.z1), 0, 0, 1], [Math.abs(y - (b.y1 || 9)), 0, 1, 0]].sort((p, q)=>p[0] - q[0])[0];
+  if(d[0] < 0.06) W.bulletHole(x, y, z, d[1], d[2], d[3]);
+}
 function fireFlame(st, muzzle, B){
   W.flame(muzzle.x, muzzle.y, muzzle.z, B.fx, B.fy, B.fz, 3); A.loop('flame', true, 0.2); G.flameT = 0.15;
   const range = st.d.range;
@@ -410,13 +418,27 @@ C.killZombie = function(z, o){
     PL.ult = Math.min(1, PL.ult + ZD.ABILITY.killCharge); S.addXP(ZD.XP.kill + (o.head ? ZD.XP.head : 0)); sfx('kill'); C.checkStreak(); }
   else if(by && by.def){ G.botKills++; by.ult = Math.min(1, (by.ult || 0) + ZD.ABILITY.killCharge*0.8); if(Math.random() < 0.06) say(by, 'kill'); }
   if(o.head && z.rig.head){ z.rig.head.visible = false; W.goo(o.x, o.y, o.z, 0, 1, 0, 18, true); }
+  if(!z.boss) gibs(z, o);
   if(z.type === 'bloater') C.explode(z.x, z.z, ZT.bloater.blast.r, 160, by, { toxic:true, hurtSquad:true, hurtZombies:true, squadDmg:ZT.bloater.blast.dmg });
   if(z.mut === 'volatile') C.explode(z.x, z.z, 3.2, 90, by, { toxic:true, small:true, hurtSquad:true, hurtZombies:true, squadDmg:22, cloud:false });
   if(z.type === 'golden'){ S.track('goldenKills'); MO().onGolden && MO().onGolden(z, by); }
   if(z.stealth) W.fadeZombie(z.rig, 0.9);
+  W.splat(z.x, z.z, z.boss ? 3.2 : (z.type === 'bloater' || z.type === 'giant' ? 2.4 : 1.3));
   MO().onKill(z, o);
   if(z.boss) AI().bossDead(z, o);
 };
+// big hits take pieces off: a forearm flies, a blast takes both and some of the shirt
+const _gv = { x:0, y:0, z:0 };
+function gibs(z, o){
+  const blast = !!o.explosive, chance = blast ? 1 : (o.head ? 0.35 : (o.crit ? 0.4 : 0.18)); if(Math.random() > chance) return;
+  const s = ZT[z.type].scale, kx = (o.dx || 0)*3, kz = (o.dz || 0)*3, arms = [z.rig.foreL, z.rig.foreR].filter(a=>a.visible);
+  for(const arm of (blast ? arms : arms.slice(Math.random() < 0.5 ? 0 : 1).slice(0, 1))){
+    arm.updateMatrixWorld(true); const e = arm.matrixWorld.elements; _gv.x = e[12]; _gv.y = e[13]; _gv.z = e[14];
+    const m = arm.children[0] && arm.children[0].material; if(!m) continue;
+    arm.visible = false; W.gib(m, _gv.x, _gv.y - 0.15*s, _gv.z, 0.11*s, 0.34*s, 0.11*s, kx, kz); W.goo(_gv.x, _gv.y, _gv.z, 0, 0.6, 0, 8, true); }
+  if(blast || o.head){ const m = z.rig.chest && z.rig.chest.material; if(m) for(let i=0;i<(blast ? 3 : 2);i++){ const q = (0.07 + Math.random()*0.07)*s;
+    W.gib(m, z.x, (o.head ? 1.6 : 1.1)*s, z.z, q, q, q, kx, kz); } }
+}
 C.damageNest = function(n, dmg, x, y, z){
   if(n.dead) return;
   n.hp -= dmg; W.pinkGoo(x, y, z, 5); n.hit = 0.15;
@@ -689,24 +711,37 @@ function tryAct(it){
 }
 
 // ---- input --------------------------------------------------------------------------------------
-function requestLock(){
+// Some embeds block the mouse lock. A lock asked for without a click fails anyway, so only
+// failures right after the player clicked count; after two of those the game switches itself
+// to drag-to-aim (the buttons scheme) instead of asking for the lock forever.
+let lockAsked = 0, lockFails = 0;
+function requestLock(fromClick){
   const c = W.renderer.domElement; if(buttonsMode() || !c.requestPointerLock) return;
-  try{ const p = c.requestPointerLock(); if(p && p.catch) p.catch(()=>showClick()); }catch(e){ showClick(); }
-  setTimeout(()=>{ if(!document.pointerLockElement) showClick(); }, 300);
+  lockAsked = fromClick ? performance.now() : 0;
+  try{ const p = c.requestPointerLock(); if(p && p.catch) p.catch(()=>lockFailed()); }catch(e){ lockFailed(); }
+  setTimeout(()=>{ if(!document.pointerLockElement && !buttonsMode()) showClick(); }, 300);
+}
+function lockFailed(){
+  if(!lockAsked || performance.now() - lockAsked > 1500) { showClick(); return; }
+  lockAsked = 0;
+  if(++lockFails < 2){ showClick(); return; }
+  S.data.settings.controls = 'buttons'; S.persist(); C.applyControls(); $('clickWrap').classList.remove('show');
+  UI().toast('Mouse lock is not available here: drag to aim, Space or FIRE shoots', 5000);
 }
 C.requestLock = requestLock;
 function showClick(){ if(G.phase === 'play' && !G.over && !G.paused && !G.adPaused && !G.uiPause && !buttonsMode()) $('clickWrap').classList.add('show'); }
 C.setPaused = function(on){
   if(G.phase !== 'play' || G.over || G.paused === on) return; G.paused = on; UI().showPause(on); $('clickWrap').classList.remove('show');
   if(on){ G.trigger = false; G.adsHeld = false; G.sprintBtn = false; G.useHeld = false; if(document.pointerLockElement) document.exitPointerLock(); if(typeof window.onGameplayStop === 'function') window.onGameplayStop(); }
-  else { if(typeof window.onGameplayStart === 'function') window.onGameplayStart(); requestLock(); }
+  else { if(typeof window.onGameplayStart === 'function') window.onGameplayStart(); requestLock(true); }
 };
-C.setUiPause = function(on){ G.uiPause = on; if(on){ G.trigger = false; G.useHeld = false; if(document.pointerLockElement) document.exitPointerLock(); } else requestLock(); };
+C.setUiPause = function(on){ G.uiPause = on; if(on){ G.trigger = false; G.useHeld = false; if(document.pointerLockElement) document.exitPointerLock(); } else requestLock(true); };
 function look(dx, dy, s){ PL.yaw -= dx*s; PL.pitch -= dy*s*(S.data.settings.invert ? -1 : 1); PL.pitch = clamp(PL.pitch, -1.0, 0.75); }
 const playing = C.playing = ()=>G.phase === 'play' && !G.paused && !G.over && !G.adPaused && !G.uiPause;
 function bindInput(){
   const c = W.renderer.domElement;
   addEventListener('keydown', e=>{
+    if(e.code === 'KeyM' && !e.repeat){ UI().toggleMute(); return; }
     if(e.code === 'KeyP' || (e.code === 'Escape' && buttonsMode())){ if(G.uiPause){ UI().closeOverlays(); return; } if(G.phase === 'play' && !G.over) C.setPaused(!G.paused); return; }
     if(e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
     if(G.keys[e.code]) return; G.keys[e.code] = true;
@@ -722,17 +757,19 @@ function bindInput(){
     if(e.code === 'KeyQ' || (e.code === 'Digit1' && PL.cur !== 0) || (e.code === 'Digit2' && PL.cur !== 1)) swapWeapon();
   });
   addEventListener('keyup', e=>{ G.keys[e.code] = false; if(e.code === 'KeyE') G.useHeld = false; if(e.code === 'Space') G.trigger = false; });
-  addEventListener('blur', ()=>{ G.keys = {}; G.trigger = false; G.adsHeld = false; G.useHeld = false; G.sprintBtn = false; G.lookDrag = false; G.fireDrag = false; });
+  addEventListener('blur', ()=>{ G.keys = {}; G.trigger = false; G.adsHeld = false; G.useHeld = false; G.sprintBtn = false; G.lookDrag = false; G.fireDrag = false;
+    if(playing() && !TOUCH) C.setPaused(true); });           // clicked outside the game frame: stop, the pause menu waits
   c.addEventListener('mousedown', e=>{ A.unlock(); if(buttonsMode() || !playing()) return;
-    if(!document.pointerLockElement){ requestLock(); return; }
+    if(!document.pointerLockElement){ requestLock(true); return; }
     if(e.button === 0){ G.trigger = true; G.triggerPressed = true; } if(e.button === 2) G.adsHeld = true; });
   addEventListener('mouseup', e=>{ if(buttonsMode()) return; if(e.button === 0) G.trigger = false; if(e.button === 2) G.adsHeld = false; });
   c.addEventListener('contextmenu', e=>e.preventDefault()); $('tc').addEventListener('contextmenu', e=>e.preventDefault());
   addEventListener('wheel', e=>{ if(playing() && Math.abs(e.deltaY) > 10) swapWeapon(); }, { passive:true });
   addEventListener('mousemove', e=>{ if(!document.pointerLockElement || !playing()) return; look(e.movementX, e.movementY, 0.0022*S.data.settings.sens*(PL.adsT > 0.5 ? 0.6 : 1)); });
-  document.addEventListener('pointerlockchange', ()=>{ if(document.pointerLockElement) $('clickWrap').classList.remove('show');
+  document.addEventListener('pointerlockchange', ()=>{ if(document.pointerLockElement){ $('clickWrap').classList.remove('show'); lockFails = 0; }
     else if(!buttonsMode() && playing()) C.setPaused(true); });
-  $('clickWrap').addEventListener('click', ()=>{ A.unlock(); requestLock(); });
+  document.addEventListener('pointerlockerror', ()=>lockFailed());
+  $('clickWrap').addEventListener('click', ()=>{ A.unlock(); requestLock(true); });
   document.addEventListener('visibilitychange', ()=>{ if(document.hidden && G.phase === 'play' && !G.over) C.setPaused(true); });
   bindButtons();
 }
@@ -868,7 +905,8 @@ function frame(dt){
   W.tick(dt);
   W.render();
   if(S.data.settings.quality === 'auto' && G.phase === 'play' && !G.paused && dt > 0){ fpsAcc += dt; fpsN++;
-    if(fpsAcc > 4){ const fps = fpsN/fpsAcc; fpsAcc = 0; fpsN = 0; if(fps < 40 && ++fpsLow >= 2){ fpsLow = 0; W.setQuality('low'); W.lowFx = true; } } }
+    if(fpsAcc > 4){ const fps = fpsN/fpsAcc; fpsAcc = 0; fpsN = 0;
+      if(fps < 40 && ++fpsLow >= 2){ fpsLow = 0; const q = W.quality() === 'high' ? 'medium' : 'low'; if(q !== W.quality()){ W.setQuality(q); W.lowFx = q === 'low'; } } } }
 }
 C.frame = frame;
 
@@ -907,7 +945,10 @@ function boot(){
   bindInput(); ZD.UI.init();
   setLoad(0.9); last = performance.now(); requestAnimationFrame(loop);
 }
+const TIPS = ['Headshots deal extra damage. Aim high.', 'Your squad revives you. Stay close to them.', 'Bloaters burst: shoot them from a distance.',
+  'Hold USE to revive a teammate.', 'Every map hides three glowing marks.', 'Grenades are best thrown into a crowd.', 'Your ability charges as you deal damage.'];
 window.addEventListener('DOMContentLoaded', ()=>{
+  const tip = $('loadTip'); if(tip) tip.textContent = TIPS[(Math.random()*TIPS.length)|0];
   setLoad(0.15); loadTick();
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>setLoad(0.4)); else setLoad(0.4);
   const t0 = performance.now();

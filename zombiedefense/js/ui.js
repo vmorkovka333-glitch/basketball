@@ -70,6 +70,7 @@ UI.updateHudFrame = function(dt){
   const scoped = PL.adsT > 0.85 && (d.ads || 99) < 40;
   $('xhair').style.setProperty('--g', (4 + sp*520).toFixed(1) + 'px'); $('xhair').classList.toggle('hide', PL.sprint || PL.down || scoped); $('scope').classList.toggle('show', scoped);
   $('hurt').style.opacity = PL.down ? 0.9 : Math.min(0.85, (1 - PL.hp/PL.maxHp)*1.1).toFixed(2);
+  W.post.hurt = PL.down ? 1 : clamp(1 - PL.hp/PL.maxHp*2.2, 0, 1);
   // the prompt for whatever can be used
   const it = G.over ? null : G.interact, pr = $('prompt'), use = $('bUse');
   if(it){ const surv = G.mode === 'survival', btn = C.buttonsMode();
@@ -128,7 +129,7 @@ UI.glyphFound = function(glyph, order){ const c = $('glyphs').children[order]; i
 function drawGlyphTo(cv, idx, color){ const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); ZD.drawGlyph(g, idx, cv.width, color); }
 
 // ---- overlays: pause, results, keypad, notes ----------------------------------------------------
-UI.hideScreens = function(){ OVERLAYS.forEach(id=>$(id).classList.remove('show')); $('app').classList.remove('menu'); $('app').classList.add('play'); UI.bossBar(null); UI.setDown(false);
+UI.hideScreens = function(){ W.post.dof = 0; OVERLAYS.forEach(id=>$(id).classList.remove('show')); $('app').classList.remove('menu'); $('app').classList.add('play'); UI.bossBar(null); UI.setDown(false);
   for(const c of $('glyphs').children){ c.classList.remove('on'); drawGlyphTo(c.querySelector('canvas'), -1, '#444'); } };
 UI.showPause = function(on){ $('pauseWrap').classList.toggle('show', on); if(!on) $('setWrap').classList.remove('show');
   if(on){ const lines = []; if(G.mode === 'campaign') lines.push(G.mission.name + ' · ' + (G.mission.steps[G.step] ? G.mission.steps[G.step].text : '')); else lines.push('Wave ' + G.wave + ' · ' + G.points + ' points');
@@ -139,10 +140,31 @@ UI.showResult = function(r){
     $('rStars').innerHTML = r.stars ? [1,2,3].map(i=>'<span class="' + (i <= r.stars ? 'on' : '') + '">★</span>').join('') : ''; $('rStars').style.display = r.stars ? '' : 'none';
     $('rStats').innerHTML = r.stats.map(([l, v])=>'<div><b>' + esc(v) + '</b><span>' + esc(l) + '</span></div>').join('');
     $('rRewards').textContent = r.rewards || ''; $('rNote').textContent = r.note || ''; $('rNote').classList.toggle('best', !!r.best);
+    reward.credits = r.credits || 0; reward.used = false; reward.rewardsText = r.rewards || ''; syncRewarded();
     $('rNext').style.display = r.win && r.next ? '' : 'none'; $('rRetry').textContent = r.win ? 'Replay' : (r.survival ? 'Play again' : 'Retry');
     $('rRetry').classList.toggle('main', !(r.win && r.next));
     $('resWrap').classList.add('show'); UI.setDown(false); if(document.pointerLockElement) document.exitPointerLock(); updateProfile(); }, r.win ? 900 : 1400);
 };
+// ---- rewarded videos: only offered when the portal has one loaded, paid only for a full watch ------
+const reward = { credits:0, used:false, rewardsText:'', freeAt:0 };
+const FREE_CREDITS = 300, FREE_COOLDOWN = 180000;
+function rewardedReady(){ return typeof window.gameRewardedReady === 'function' && window.gameRewardedReady(); }
+function syncRewarded(){
+  const ready = rewardedReady();
+  $('rDouble').style.display = ready && reward.credits > 0 && !reward.used ? '' : 'none';
+  $('rDouble').innerHTML = '<span class="tv"></span>DOUBLE CREDITS<small>watch a short video · +' + reward.credits.toLocaleString('en-US') + ' credits</small>';
+  $('mFree').style.display = ready && Date.now() >= reward.freeAt ? '' : 'none';
+}
+function watchFor(onPaid){
+  if(!rewardedReady()) return;
+  window.gameShowRewarded(ok=>{ if(ok) onPaid(); else UI.toast('The video did not finish, so there is no reward this time', 3200); syncRewarded(); });
+}
+UI.syncRewarded = syncRewarded;
+
+// ---- sound on / off, on every screen and the M key -------------------------------------------------
+function syncMute(){ const m = !!S.data.settings.mute; document.querySelectorAll('.sndBtn').forEach(b=>{ b.classList.toggle('off', m); b.setAttribute('aria-label', m ? 'Sound off' : 'Sound on'); b.title = m ? 'Sound off (M)' : 'Sound on (M)'; }); }
+UI.toggleMute = function(){ A.unlock(); A.setUserMute(!S.data.settings.mute); S.persist(); syncMute(); };
+
 let keySeq = [];
 UI.openKeypad = function(M){
   C.setUiPause(true); keySeq = []; const all = M.code.concat(M.decoys).slice().sort(()=>Math.random() - 0.5);
@@ -157,34 +179,118 @@ function renderSeq(){ $('keySeq').innerHTML = [0,1,2].map(i=>'<i>' + (keySeq[i] 
 UI.showNote = function(text, count){ C.setUiPause(true); $('noteText').textContent = text; $('noteCount').textContent = 'Notes from the Watcher: ' + count + ' / ' + ZD.NOTES.length; $('noteWrap').classList.add('show'); };
 UI.closeOverlays = function(){ $('keyWrap').classList.remove('show'); $('noteWrap').classList.remove('show'); C.setUiPause(false); };
 
-// ---- the menu backdrop: the first map, zombies shuffling about -------------------------------------
-const menuZ = [];
+// ---- the menu backdrop: the squad holds a street at dusk while the dead come out of the rain ---------
+// Visual only: no damage, no sound. UI.showcase(layout) also frames the shots for the store art.
+const SC = { squad:[], zs:[], t:0, layout:'menu', S:null, f:null, r:null, b:null, ready:false };
+// try each way across the start zone and keep one where nothing stands between the lens, the squad and the street
+const SLOTS = { menu:[[0.6, 0], [-1.1, 1.3], [2.3, -0.7], [1.5, 1.7]], poster:[[0, -1.1], [-1.9, 0.2], [1.9, 0.3], [0.95, 1.5]] };
+function scCam(layout, S0, f, r){ const menu = layout === 'menu'; return { x:S0.x - f.x*(menu ? 5.6 : 6.6) + r.x*(menu ? 2.2 : 0.8), z:S0.z - f.z*(menu ? 5.6 : 6.6) + r.z*(menu ? 2.2 : 0.8) }; }
+function scBuild(){
+  const M = G.M, z0 = M.zones[M.start], ib = M.inner(z0), menu = SC.layout === 'menu';
+  const cx = (ib.x0 + ib.x1)/2, cz = (ib.z0 + ib.z1)/2, half = Math.min(ib.x1 - ib.x0, ib.z1 - ib.z0)/2;
+  const inside = p=>p.x > ib.x0 + 0.6 && p.x < ib.x1 - 0.6 && p.z > ib.z0 + 0.6 && p.z < ib.z1 - 0.6;
+  const free = p=>{ const q = { x:p.x, z:p.z }; C.pushOut(q, 0.55); return Math.hypot(q.x - p.x, q.z - p.z) < 0.02; };
+  let best = null;
+  for(const [fx, fz] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) for(const back of (menu ? [half - 8, half - 6.5, half - 9.5, half - 5] : [-1, 1, -3, 3])) for(const lat of [0, -3, 3]){
+    const f = { x:fx, z:fz }, r = { x:-fz, z:fx }, S0 = { x:cx - fx*back + r.x*lat, z:cz - fz*back + r.z*lat }, cam = scCam(SC.layout, S0, f, r);
+    if(!inside(cam) || !inside(S0)) continue;
+    const far = fx > 0 ? ib.x1 - S0.x : fx < 0 ? S0.x - ib.x0 : fz > 0 ? ib.z1 - S0.z : S0.z - ib.z0;
+    const roomy = (()=>{ let n = 0; for(const rr of [2, 3, 4.2]){ const q = { x:cam.x, z:cam.z }; C.pushOut(q, rr); if(Math.hypot(q.x - cam.x, q.z - cam.z) < 0.02) n++; } return n; })();
+    let score = far + (C.segClear(cam.x, cam.z, S0.x, S0.z, 0.7, true) ? 40 : 0) + (C.segClear(S0.x, S0.z, S0.x + fx*far*0.8, S0.z + fz*far*0.8, 1.2, true) ? 12 : 0) + roomy*9 - Math.abs(lat)*0.5;
+    score += SLOTS[menu ? 'menu' : 'poster'].filter(sl=>free({ x:S0.x + r.x*sl[0] + f.x*sl[1], z:S0.z + r.z*sl[0] + f.z*sl[1] })).length*6;
+    if(!best || score > best.score) best = { score, f, r, S0, far }; }
+  if(!best) best = { f:{ x:0, z:-1 }, r:{ x:1, z:0 }, S0:{ x:cx, z:cz }, far:half };        // a cramped zone: stand in the middle
+  SC.S = best.S0; SC.f = best.f; SC.r = best.r; SC.half = half; SC.far = best.far;
+  const lo = S.data.loadout, ids = [lo.char].concat(ZD.CHAR_ORDER.filter(c=>c !== lo.char && S.owns('chars', c)).slice(0, 3));
+  const slots = SLOTS[menu ? 'menu' : 'poster'];
+  ids.forEach((id, i)=>{ const def = ZD.CHARS[id], rig = W.makeSoldier(id, S.outfitOf(id), { weapon:i === 0 ? lo.primary : def.weapon });
+    const p = { x:SC.S.x + SC.r.x*slots[i][0] + SC.f.x*slots[i][1], z:SC.S.z + SC.r.z*slots[i][0] + SC.f.z*slots[i][1] }; C.pushOut(p, 0.5);
+    SC.squad.push({ rig, x:p.x, z:p.z, yaw:Math.atan2(-SC.f.x, -SC.f.z) + (i - 1.5)*0.12, aimYaw:0, fireT:0.6 + i*0.4, recoil:0, pitch:-0.02, pose:[0.55, 1.0, -0.95, -0.6][i] }); });
+  W.flashlight(!menu, 0.6);
+  // the poster gets a burning flare behind the squad: orange backlight against the blue night
+  if(!menu){ const T = THREE, fx = { x:SC.S.x + SC.f.x*7 - SC.r.x*3.2, z:SC.S.z + SC.f.z*7 - SC.r.z*3.2 };
+    const light = new T.PointLight(0xff6a24, 1.6, 14, 1.8); light.position.set(fx.x, 1.4, fx.z); W.scene.add(light);
+    const glow = W.helpers.glowSprite(0xff7a2a, 3, 0.7); glow.position.set(fx.x, 0.6, fx.z); W.scene.add(glow);
+    SC.flare = { light, glow, x:fx.x, z:fx.z }; }
+  SC.ready = true;
+}
+function scSpawn(z){
+  const far = SC.layout === 'menu' ? SC.far - 2 - Math.random()*Math.min(6, SC.far*0.4) : 4.5 + Math.random()*Math.max(1, SC.far - 7), side = (Math.random() - 0.5)*SC.half*(SC.layout === 'menu' ? 1.5 : 1.1);
+  z.x = SC.S.x + SC.f.x*far + SC.r.x*side; z.z = SC.S.z + SC.f.z*far + SC.r.z*side; const p = { x:z.x, z:z.z }; C.pushOut(p, 0.5); z.x = p.x; z.z = p.z;
+  z.lane = SC.layout === 'menu' ? 0 : (Math.random() < 0.5 ? -1 : 1)*(1.4 + Math.random()*3.8); z.depth = Math.random()*2.6;
+  z.state = 'chase'; z.hp = 2 + (Math.random()*3|0); z.deadT = 0; z.rig.root.position.y = 0; z.rig.body.rotation.x = 0; z.rig.body.rotation.z = 0; z.rig.body.position.y = 0; z.rig.landed = false; z.rig.twist = null; z.rig.root.visible = true;
+}
+function scZombie(){
+  const r = Math.random(), type = r < 0.14 ? 'runner' : (r < 0.24 ? 'brute' : (r < 0.3 ? 'bloater' : (r < 0.36 ? 'armored' : 'walker')));
+  const rig = W.makeZombie(type, ZD.SHIRTS[(Math.random()*7)|0], ZD.PANTS[(Math.random()*4)|0]);
+  const z = { rig, type, x:0, z:0, yaw:0, state:'chase', moveSpeed:0, flinch:0, atkPose:0, fuse:0, sp:ZD.ZOMBIES[type].speed*0.45, hp:3, deadT:0, fallDir:1 };
+  scSpawn(z); z.x += (Math.random() - 0.5)*4; SC.zs.push(z); return z;
+}
 UI.menuStep = function(dt){
   if(!G.M) return;
-  G.menuT += dt; const a = G.menuT*0.04, cam = W.camera, z0 = G.M.zones[G.M.start];
-  cam.position.set(z0.cx + Math.sin(a)*26, 26 + Math.sin(G.menuT*0.2)*2, z0.cz + Math.cos(a)*26); cam.lookAt(z0.cx, 0, z0.cz - 8); if(cam.fov !== 55){ cam.fov = 55; cam.updateProjectionMatrix(); }
-  W.follow(z0.cx, z0.cz);
-  while(menuZ.length < 12){ const r = Math.random(), type = r < 0.15 ? 'runner' : (r < 0.25 ? 'brute' : (r < 0.32 ? 'bloater' : (r < 0.38 ? 'armored' : 'walker')));
-    const zone = G.M.zones[(Math.random()*G.M.zones.length)|0]; if(!zone.spots.length || zone.kind === 'secret') continue;
-    const s = zone.spots[(Math.random()*zone.spots.length)|0], rig = W.makeZombie(type, ZD.SHIRTS[(Math.random()*7)|0], ZD.PANTS[(Math.random()*4)|0]);
-    menuZ.push({ rig, type, zone, x:s.x, z:s.z, yaw:0, state:'chase', moveSpeed:0, flinch:0, atkPose:0, fuse:0, tx:s.x, tz:s.z, sp:ZD.ZOMBIES[type].speed*0.6 }); }
-  for(const z of menuZ){ let dx = z.tx - z.x, dz = z.tz - z.z, d = Math.hypot(dx, dz);
-    if(d < 0.5){ const s = z.zone.spots[(Math.random()*z.zone.spots.length)|0]; z.tx = s.x; z.tz = s.z; continue; }
-    z.x += dx/d*z.sp*dt; z.z += dz/d*z.sp*dt; z.yaw = Math.atan2(-dx, -dz); z.moveSpeed = z.sp;
+  if(!SC.ready) scBuild();
+  G.menuT += dt; SC.t += dt;
+  while(SC.zs.length < (SC.layout === 'menu' ? 9 : 14)) scZombie();
+  // zombies shamble at the squad; those that get close fall back into the dark
+  for(const z of SC.zs){
+    if(z.state === 'dead'){ z.deadT += dt; if(z.deadT > 3.2) scSpawn(z); W.animZombie(z.rig, z, dt); continue; }
+    const near = SC.layout === 'menu' ? 3 : 1.6 + z.depth, tx = SC.S.x + SC.f.x*near + SC.r.x*z.lane, tz = SC.S.z + SC.f.z*near + SC.r.z*z.lane; let dx = tx - z.x, dz = tz - z.z; const d = Math.hypot(dx, dz) || 1;
+    if(d < 4 && SC.layout === 'menu'){ scSpawn(z); continue; }
+    const step = SC.layout === 'menu' || d > 0.4 ? z.sp*dt : 0;       // on the poster the horde lines up right behind the squad
+    z.x += dx/d*step; z.z += dz/d*step; const p = { x:z.x, z:z.z }; C.pushOut(p, 0.45); z.x = p.x; z.z = p.z;
+    z.yaw = Math.atan2(-dx, -dz); z.moveSpeed = step > 0 ? z.sp : 0; z.flinch = Math.max(0, z.flinch - dt);
     z.rig.root.position.set(z.x, 0, z.z); z.rig.root.rotation.y = z.yaw; W.animZombie(z.rig, z, dt); }
+  // the squad picks targets and fires: flashes, tracers and goo, nothing else
+  for(const m of SC.squad){
+    const live = SC.zs.filter(z=>z.state !== 'dead' && Math.hypot(z.x - m.x, z.z - m.z) < SC.half*1.6);
+    let tg = null, bd = 1e9; for(const z of live){ const d = Math.hypot(z.x - m.x, z.z - m.z); if(d < bd){ bd = d; tg = z; } }
+    const poster = SC.layout !== 'menu';
+    const want = poster ? Math.atan2(SC.f.x, SC.f.z) + m.pose : (tg ? Math.atan2(-(tg.x - m.x), -(tg.z - m.z)) : m.yaw);
+    m.aimYaw += C.wrap(want - (m.yaw + m.aimYaw))*(poster ? 1 : Math.min(1, dt*3));
+    m.rig.root.position.set(m.x, 0, m.z); m.rig.root.rotation.y = m.yaw + m.aimYaw;
+    m.fireT -= dt; m.recoil = Math.max(0, m.recoil - dt);
+    if(tg && m.fireT <= 0 && !poster){
+      m.fireT = 0.35 + Math.random()*1.1; m.recoil = 0.07; m.rig.root.updateMatrixWorld(true);
+      const mv = m.rig.muzzle.getWorldPosition(new THREE.Vector3());
+      W.muzzleFlash(mv, new THREE.Vector3(tg.x - mv.x, 1.3 - mv.y, tg.z - mv.z).normalize(), 0.8);
+      W.tracer(mv.x, mv.y, mv.z, tg.x, 1.3, tg.z); W.goo(tg.x, 1.35, tg.z, (tg.x - m.x)/bd, 0.2, (tg.z - m.z)/bd, 6, false); tg.flinch = 0.25;
+      if(--tg.hp <= 0){ tg.state = 'dead'; tg.deadT = 0; tg.fallDir = Math.random() < 0.8 ? 1 : -1; } }
+    W.animSoldier(m.rig, { moving:false, sprint:false, back:false, pitch:poster ? -0.12 : m.pitch, ads:!poster, reload:0, swap:0, melee:0, recoil:m.recoil, down:false }, dt); }
+  // depth of field: the squad sharp, the street behind them soft
+  W.post.dof = SC.layout === 'menu' ? 1 : 0.75; W.post.focus = Math.hypot(W.camera.position.x - SC.S.x, W.camera.position.z - SC.S.z) + (SC.layout === 'menu' ? 0.5 : 0);
+  if(SC.flare){ const fl = SC.flare; fl.light.intensity = 1.6 + Math.sin(SC.t*23)*0.2 + Math.sin(SC.t*7)*0.15; W.burn(fl.x, 0.15, fl.z); if(Math.random() < 0.5) W.smoke(fl.x, 1.4, fl.z); }
+  scCamera(dt);
 };
-function clearMenuZombies(){ menuZ.forEach(z=>W.remove(z.rig.root)); menuZ.length = 0; }
+// framing: 'menu' looks over the squad's shoulders at the street and keeps the left side free for the
+// buttons; 'poster' turns the squad to the lens with the horde behind them (store art)
+function scCamera(){
+  const cam = W.camera, S0 = SC.S, f = SC.f, r = SC.r, a = SC.t*0.05, L = SC.layout, aspect = cam.aspect || 1.6, c = scCam(L, S0, f, r);
+  let h, lf, lr, ly, fov, sway = Math.sin(a)*0.5;
+  if(L === 'menu'){ const narrow = aspect < 1.3; h = 2.3 + Math.sin(SC.t*0.3)*0.08; lf = 8; lr = narrow ? 0.4 : -2.4; ly = 1.15; fov = narrow ? 60 : 50; }
+  else { const wide = aspect > 2; h = 1.0; lf = 2.4; lr = wide ? 2.6 : 0.8; ly = 1.6; fov = wide ? 44 : (aspect < 1.1 ? 58 : 50); sway = 0; }
+  const o = SC.opt || {}; if(o.fov) fov = o.fov; if(o.ly != null) ly = o.ly; if(o.lr != null) lr = o.lr; if(o.h != null) h = o.h;
+  if(o.back){ c.x -= f.x*o.back; c.z -= f.z*o.back; } if(o.side){ c.x += r.x*o.side; c.z += r.z*o.side; }
+  cam.position.set(c.x + r.x*sway, h, c.z + r.z*sway);
+  cam.lookAt(S0.x + f.x*lf + r.x*lr, ly, S0.z + f.z*lf + r.z*lr);
+  if(cam.fov !== fov){ cam.fov = fov; cam.updateProjectionMatrix(); }
+  W.follow(S0.x, S0.z);
+}
+// store art: UI.showcase('poster', { fov, ly, lr, h, back, side }) frames the squad for a thumbnail
+UI.showcase = function(layout, opt){ clearMenuZombies(); SC.layout = layout || 'menu'; SC.opt = opt || null; };
+function clearMenuZombies(){ SC.zs.forEach(z=>W.remove(z.rig.root)); SC.squad.forEach(m=>W.remove(m.rig.root)); SC.zs.length = 0; SC.squad.length = 0; SC.ready = false;
+  if(SC.flare){ W.remove(SC.flare.light); W.remove(SC.flare.glow); SC.flare = null; } }
 
 // ---- screens ------------------------------------------------------------------------------------------
 UI.openMenu = function(){
   C.clearWorld(); if(MO().clearObjectives) MO().clearObjectives(); BOTS.forEach(b=>W.remove(b.rig.root)); BOTS.length = 0;
   if(PL.rig){ W.remove(PL.rig.root); PL.rig = null; }
+  clearMenuZombies();
   if(!G.M || G.M.index !== 0){ C.loadMap(0); }
   W.setEnv(G.M.T.env, 1); W.lightMul(1); W.flashlight(false); A.ambience('menu'); A.rain(0.6); A.music.set(0.15, false);
-  G.phase = 'menu'; G.paused = false; G.over = false; G.uiPause = false; G.mode = null;
+  G.phase = 'menu'; G.paused = false; G.over = false; G.uiPause = false; G.mode = null; W.post.hurt = 0;
   $('app').classList.add('menu'); $('app').classList.remove('play');
   OVERLAYS.forEach(id=>$(id).classList.remove('show')); $('menu').classList.add('show');
-  S.refreshChallenges(); updateProfile();
+  S.refreshChallenges(); updateProfile(); syncRewarded();
   const next = ZD.MISSION_LIST.find(m=>!S.data.missions[m.id]) || ZD.MISSION_LIST[ZD.MISSION_LIST.length - 1];
   $('mPlay').innerHTML = 'PLAY<small>' + esc(ZD.MAPS[next.mapIndex].name) + ' · ' + esc(next.name) + '</small>'; UI._next = next;
   const dDone = S.data.daily.list.filter(c=>c.done).length; $('mChal').innerHTML = 'Challenges' + (dDone < 3 ? '<em>' + (3 - dDone) + '</em>' : '');
@@ -345,6 +451,14 @@ UI.init = function(){
   on('rNext', ()=>{ const k = ZD.MISSION_LIST.indexOf(G.mission), n = ZD.MISSION_LIST[k + 1]; adThen(()=>MO().startMission(n.mapIndex, n.index)); });
   on('rRetry', ()=>{ const mi = G.mapIndex; if(G.mode === 'survival') adThen(()=>MO().startSurvival(mi)); else { const ms = G.mission; adThen(()=>MO().startMission(ms.mapIndex, ms.index)); } });
   on('rMenu', ()=>adThen(UI.openMenu));
+  on('rDouble', ()=>watchFor(()=>{ if(reward.used) return; reward.used = true; S.addCredits(reward.credits); A.sfx('jackpot');
+    $('rRewards').textContent = reward.rewardsText + '  ·  +' + reward.credits.toLocaleString('en-US') + ' bonus credits'; UI.toast('Credits doubled!'); updateProfile(); }));
+  on('mFree', ()=>watchFor(()=>{ S.addCredits(FREE_CREDITS); reward.freeAt = Date.now() + FREE_COOLDOWN; A.sfx('jackpot'); UI.toast('+' + FREE_CREDITS + ' credits'); updateProfile();
+    setTimeout(syncRewarded, FREE_COOLDOWN + 500); }));
+  document.querySelectorAll('.sndBtn').forEach(b=>b.addEventListener('click', e=>{ e.stopPropagation(); UI.toggleMute(); }));
+  if(window.GDBridge) window.GDBridge.onChange(syncRewarded);
+  syncMute(); syncRewarded();
+  if(C.TOUCH) document.querySelector('.mfoot').textContent = 'Stick to move · drag to aim · hold FIRE to shoot';
   on('keyClose', ()=>UI.closeOverlays()); on('keyClear', ()=>{ keySeq = []; renderSeq(); });
   on('noteClose', ()=>UI.closeOverlays());
   on('bReady', ()=>MO().skipBreak());
@@ -353,7 +467,7 @@ UI.init = function(){
     '<p><b>Campaign.</b> 27 missions on 13 maps: fuel generators, find fuses, follow radio signals, scan intel, rescue survivors, burn nests, chase bosses and get out alive. New areas unlock as the mission goes on.</p>' +
     '<p><b>Survival.</b> Endless waves. Kill zombies for points, buy doors to open the map, guns from the walls, perks (once the power is on), the mystery box and the upgrade station. Every 5th wave brings a Brute Captain, every 10th a boss.</p>' +
     '<p><b>Buttons.</b> The stick walks you; left or right turns. Drag the screen to look. Hold FIRE to shoot. ULT fires your character\'s ability when it is charged. USE opens, buys and revives.</p>' +
-    '<p><b>Keyboard.</b> W/S walk · A/D or ←/→ turn · Shift sprint · Space fire · G grenade · R reload · Q swap · V knife · E use · X ability · Enter skip the wave break · P pause. Prefer a locked mouse? Pick “Mouse aim” in Settings.</p>' +
+    '<p><b>Keyboard.</b> W/S walk · A/D or ←/→ turn · Shift sprint · Space fire · G grenade · R reload · Q swap · V knife · E use · X ability · Enter skip the wave break · P pause · M sound on / off. Prefer a locked mouse? Pick “Mouse aim” in Settings.</p>' +
     '<p class="tip">Every map hides three glowing marks with lines under them. Find them, then enter them in order at the sealed keypad. What waits behind the door is worth it. The altar is not.</p>';
   syncSettings(); UI.openMenu();
 };

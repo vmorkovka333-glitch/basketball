@@ -303,7 +303,7 @@ function winMission(){
   const xp = ZD.XP.mission + ZD.XP.star*stars, credits = 400 + 150*stars + G.kills*2 + (first ? 300 : 0);
   S.addXP(xp); S.addCredits(credits); A.sfx('objective');
   const k = ZD.MISSION_LIST.indexOf(ms), next = ZD.MISSION_LIST[k + 1];
-  UI().showResult({ win:true, title:'MISSION COMPLETE', sub:ms.name, stars,
+  UI().showResult({ win:true, title:'MISSION COMPLETE', sub:ms.name, stars, credits,
     stats:[['Time', Math.floor(time/60) + ':' + String(time % 60).padStart(2, '0')], ['Kills', G.kills], ['Headshots', G.heads], ['Downs', G.downs]],
     rewards:'+' + (xp + G.stepXP) + ' XP  ·  +' + credits + ' credits' + (first ? '  ·  first clear bonus' : ''),
     note:next ? 'Next: ' + next.name + (next.mapIndex !== ms.mapIndex ? '  ·  new map: ' + ZD.MAPS[next.mapIndex].name : '') : 'You finished the whole campaign. Try Survival on every map.',
@@ -397,7 +397,7 @@ function survivalOver(reason){
   const w = G.wave, time = Math.round(G.t), credits = w*60 + G.kills*2, xp = w*ZD.XP.wave;
   S.addCredits(credits);
   const best = S.recordRun({ map:G.M.id, wave:w, kills:G.kills, time, char:PL.char, date:Date.now() });
-  UI().showResult({ win:false, survival:true, title:'SQUAD OVERRUN', sub:reason + '  ·  ' + ZD.MAPS[G.mapIndex].name,
+  UI().showResult({ win:false, survival:true, credits, title:'SQUAD OVERRUN', sub:reason + '  ·  ' + ZD.MAPS[G.mapIndex].name,
     stats:[['Wave', w], ['Kills', G.kills], ['Points', G.points], ['Time', Math.floor(time/60) + ':' + String(time % 60).padStart(2, '0')]],
     rewards:'+' + credits + ' credits  ·  ' + xp + ' XP earned from waves', note:best ? 'NEW BEST WAVE ON THIS MAP!' : 'Best on this map: wave ' + (S.data.records.waves[G.M.id] || w), best });
   if(typeof window.onGameplayStop === 'function') window.onGameplayStop();

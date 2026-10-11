@@ -5,7 +5,7 @@ const KEY = 'zsquad.save.v2', OLD = 'zsquad.save.v1';
 const S = ZD.S = { data:null, listeners:[] };
 const fresh = ()=>({
   v:2, xp:0, level:1, credits:600,
-  settings:{ sens:1, invert:false, vol:0.7, music:true, quality:'auto', controls:'buttons', assist:true, tips:0 },
+  settings:{ sens:1, invert:false, vol:0.7, music:true, mute:false, quality:'auto', controls:(ZD.C && !ZD.C.TOUCH) ? 'mouse' : 'buttons', assist:true, tips:0 },
   owned:{ weapons:['pistol','smg','rifle','shotgun'], melee:['knife'], chars:['max','ace','doc','tank'], outfits:['woodland'] },
   loadout:{ primary:'rifle', secondary:'pistol', melee:'knife', char:'max', outfits:{} },
   upgrades:{}, missions:{}, secrets:{}, notes:{}, symbols:{}, ach:{},

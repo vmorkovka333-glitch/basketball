@@ -327,6 +327,7 @@ function botShoot(b, tg){
   const t = tg.z || tg.nest, d = Math.max(0.5, Math.hypot(t.x - b.x, t.z - b.z));
   b.rig.root.updateMatrixWorld(true); b.rig.muzzle.getWorldPosition(_v || (_v = new THREE.Vector3())); const mp = _v;
   W.botFlash(mp.x, mp.y, mp.z); A.sfx(wd.sound, { at:[b.x, b.z], vol:0.45 });
+  if(!wd.flame && !wd.proj) W.casing(mp.x, mp.y + 0.04, mp.z, Math.cos(b.yaw), -Math.sin(b.yaw), wd.cat === 'shotgun' ? 'shell' : 'brass');
   let chance = b.def.acc*clamp(1.2 - d/28, 0.25, 1); if(tg.z && (tg.z.type === 'runner' || tg.z.type === 'climber')) chance *= 0.8; if(tg.nest) chance = 0.85; if(fx.deadeye > 0) chance = 1;
   let hits = 0; for(let p=0; p<wd.pellets; p++) if(Math.random() < (wd.pellets > 1 ? (d < wd.range*0.6 ? 0.55 : 0.25) : chance)) hits++;
   const s = tg.z ? (tg.z.boss ? tg.z.def.scale : ZT[tg.z.type].scale) : 1, ty = tg.z ? 1.2*s : 0.9;
