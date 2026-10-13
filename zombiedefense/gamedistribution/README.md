@@ -4,6 +4,17 @@ Anleitung für den Upload auf [developer.gamedistribution.com](https://developer
 
 ## 1. Game ID eintragen
 
+**Die Game ID von Zombie Squad ist `c950aa9d1da242faa1d5a0c236d57555`** (angelegt am 13.10.2026).
+Damit baut das Skript das fertige Zip:
+
+```bash
+python3 tools/build-gd.py --game-id c950aa9d1da242faa1d5a0c236d57555
+```
+
+Im Repository bleibt `GD_GAME_ID` leer, damit die öffentliche Fassung auf GitHub Pages das SDK nicht lädt.
+
+Für ein anderes Spiel:
+
 1. Im Developer-Bereich ein neues Spiel anlegen. Unter **Upload** steht die **Game ID**.
 2. Die ID in `index.html` eintragen:
 
